@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     const { data: event, error: eventError } = await supabase
       .from('events')
       .select('event_name, venue_name, event_brief')
@@ -253,7 +253,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function logAIUsage(operation: string, tokensUsed: number, metadata: Record<string, any>) {
   try {
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     const { error } = await supabase
       .from('ai_usage_logs')
       .insert({

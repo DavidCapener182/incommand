@@ -195,8 +195,9 @@ class UsageAnalytics {
     this.eventBuffer = []
 
     try {
+      const client = supabase as any
       // Store in usage_events table (created in monitoring migration)
-      const { error } = await supabase
+      const { error } = await client
         .from('usage_events')
         .insert(eventsToFlush.map(e => ({
           event_id: e.id,
@@ -425,4 +426,3 @@ export const trackFormSubmit = (form: string, props?: Record<string, any>) =>
   usageAnalytics.trackFormSubmit(form, props)
 export const trackFeatureUse = (feature: string, props?: Record<string, any>) => 
   usageAnalytics.trackFeatureUse(feature, props)
-

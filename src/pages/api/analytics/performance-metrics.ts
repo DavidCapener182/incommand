@@ -11,9 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    let supabase;
+    let supabase: any;
     try {
-      supabase = getServiceSupabaseClient();
+      supabase = getServiceSupabaseClient() as any;
     } catch (configError) {
       console.error('Supabase configuration error', configError);
       return res.status(500).json({ error: 'Supabase environment variables are not configured' });
@@ -26,12 +26,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) return res.status(400).json({ error: error.message });
     // Calculate averages
     let responseTimes: number[] = [], resolutionTimes: number[] = [];
-    if (data && data.length > 0) {
-      for (const inc of data) {
-        const startTime = new Date(inc.timestamp).getTime();
+    const incidents = (data ?? []) as Array<{
+      timestamp?: string;
+      responded_at?: string | null;
+      resolved_at?: string | null;
+      updated_at?: string | null;
+      is_closed?: boolean | null;
+    }>;
+    if (incidents.length > 0) {
+      for (const inc of incidents) {
+        const startTime = inc.timestamp ? new Date(inc.timestamp).getTime() : NaN;
+        if (Number.isNaN(startTime)) continue;
         if (inc.responded_at) {
           const respondedTime = new Date(inc.responded_at).getTime();
-          if (!isNaN(respondedTime) && !isNaN(startTime)) {
+          if (!isNaN(respondedTime)) {
             responseTimes.push(respondedTime - startTime);
           }
         }
@@ -40,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const resolutionTimeValue = inc.resolved_at || inc.updated_at;
           if (resolutionTimeValue) {
             const resolutionTime = new Date(resolutionTimeValue).getTime();
-            if (!isNaN(resolutionTime) && !isNaN(startTime)) {
+            if (!isNaN(resolutionTime)) {
               resolutionTimes.push(resolutionTime - startTime);
             }
           }

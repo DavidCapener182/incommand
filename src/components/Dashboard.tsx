@@ -2,7 +2,6 @@
 'use client'
 
 import React, { useState, useEffect, useRef, Fragment, useCallback, useMemo } from 'react'
-import Image from 'next/image'
 import IncidentTable from './IncidentTable'
 import CurrentEvent from './CurrentEvent'
 import EventCreationModal from './EventCreationModal'
@@ -19,14 +18,12 @@ import {
   UsersIcon,
   ExclamationTriangleIcon,
   FolderOpenIcon,
-  ClockIcon,
   CheckCircleIcon,
   UserGroupIcon,
   CalendarIcon,
   HeartIcon,
   ClipboardDocumentCheckIcon,
   QuestionMarkCircleIcon,
-  PlusIcon,
   AcademicCapIcon,
   ChatBubbleLeftRightIcon,
   ShieldExclamationIcon,
@@ -41,6 +38,7 @@ import WeatherCard from './WeatherCard'
 import What3WordsSearchCard from './What3WordsSearchCard'
 import SupportToolsFootball from '@/components/cards/football/SupportToolsFootball'
 import FootballCard_LiveScore from '@/components/cards/football/FootballCard_LiveScore'
+import TimeCard, { type EventTiming } from './TimeCard'
 
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -56,8 +54,7 @@ import MultiSelectFilter from './ui/MultiSelectFilter'
 import { FilterState, filterIncidents, getUniqueIncidentTypes, getUniquePriorities, getUniqueStatuses } from '../utils/incidentFilters'
 import Toast, { useToast } from './Toast'
 import { AnimatePresence, motion } from 'framer-motion'
-import RotatingText from './RotatingText'
-import { createPortal } from 'react-dom';
+import NoEventSplash from './NoEventSplash'
 // import StaffDeploymentCard from './StaffDeploymentCard'
 import { useStaffAvailability } from '../hooks/useStaffAvailability'
 import { logger } from '../lib/logger'
@@ -71,6 +68,8 @@ import MiniTrendChart from './MiniTrendChart'
 import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
 import RealtimeStatusIndicator from './analytics/RealtimeStatusIndicator'
 import { useRealtimeAnalytics } from '@/hooks/useRealtimeAnalytics'
+import ReadinessIndexCard from './analytics/ReadinessIndexCard'
+import RadioAlertsWidget from './monitoring/RadioAlertsWidget'
 // Accessibility imports
 import SkipLinks from './SkipLinks'
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp'
@@ -78,6 +77,13 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useScreenReader } from '@/hooks/useScreenReader'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { FeatureGate } from '@/components/FeatureGate'
+import { useUserPlan } from '@/hooks/useUserPlan'
+import StatCardSkeleton from './dashboard/cards/StatCardSkeleton'
+import TimeCardSkeleton from './dashboard/cards/TimeCardSkeleton'
+import CardSkeleton from './dashboard/cards/CardSkeleton'
+import StatCard from './dashboard/cards/StatCard'
+import TopIncidentTypesCard from './dashboard/cards/TopIncidentTypesCard'
 
 const EVENT_TYPES = [
   'Concerts',
@@ -93,380 +99,7 @@ const EVENT_TYPES = [
   'Corporate Event',
 ];
 
-// Skeleton Loading Components
-const StatCardSkeleton = () => (
-  <Card className="card-skeleton">
-    <CardContent className="p-3 md:p-4">
-      <div className="flex flex-row items-center justify-between w-full">
-        <div className="flex flex-col items-start">
-          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-12 mb-1"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
-        </div>
-        <div className="h-6 w-6 bg-gray-200 dark:bg-gray-600 rounded"></div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const TimeCardSkeleton = () => (
-  <div className="card-time animate-pulse p-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="md:block relative">
-        <div className="hidden md:block">
-          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-32 mb-2"></div>
-          <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-24 mb-4"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-40 mb-2"></div>
-          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-28"></div>
-        </div>
-      </div>
-      <div>
-        <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-32 mb-2"></div>
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex justify-between items-center p-2">
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-12"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const CardSkeleton = () => (
-  <Card className="h-[130px] card-skeleton">
-    <CardContent className="p-4 h-full flex flex-col items-center justify-center">
-      <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
-      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-1"></div>
-      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
-    </CardContent>
-  </Card>
-);
-
-interface StatCardProps {
-  title: string
-  value: number
-  icon: React.ReactNode
-  color?: string
-  isSelected?: boolean
-  trendData?: number[]
-  onClick?: () => void
-  isFilterable?: boolean
-  className?: string
-  tooltip?: string
-  showPulse?: boolean
-  index?: number
-}
-
-interface EventTiming {
-  title: string
-  time: string
-  isNext?: boolean
-  isActuallyHappeningNow?: boolean
-}
-
-interface TimeCardProps {
-  companyId: string | null;
-  currentTime: string;
-  eventTimings: EventTiming[];
-  nextEvent: EventTiming | null;
-  countdown: string;
-  currentSlot?: EventTiming | null;
-  timeSinceLastIncident: string;
-}
-
-// Card styling is now centralized in globals.css using utility classes:
-// .card-depth, .card-depth-subtle, .card-time, .card-skeleton, etc.
-
-const TimeCard: React.FC<TimeCardProps> = ({ companyId, currentTime, eventTimings, nextEvent, countdown, currentSlot, timeSinceLastIncident }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className="h-full"
-    >
-      <Card className="h-full flex flex-col justify-between bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 sm:p-8">
-        <div className="flex flex-col space-y-8">
-          {/* Header Section */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <ClockIcon className="h-5 w-5 text-[#4361EE]" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Current Time</h3>
-              </div>
-              <motion.p
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight"
-              >
-                {currentTime}
-              </motion.p>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <hr className="border-gray-200 dark:border-gray-700" />
-
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column - Time Info */}
-            <div className="space-y-4">
-
-              <div className="flex items-start space-x-3">
-                <ClockIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 mt-1" />
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-300 mb-1">
-                    Time Since Last Incident
-                  </h4>
-                  <p className="text-lg font-semibold text-orange-600 dark:text-orange-300">
-                    {timeSinceLastIncident}
-                  </p>
-                </div>
-              </div>
-
-              {(currentSlot || nextEvent) && (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-700/30"
-                >
-                  <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                    {currentSlot?.isActuallyHappeningNow ? 'Happening Now' : 'Happening Next'}
-                  </h4>
-                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">
-                    {currentSlot?.title || nextEvent?.title}
-                  </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
-                    {currentSlot?.time || countdown}
-                  </p>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Right Column - Event Schedule */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <CalendarIcon className="h-5 w-5 text-[#4361EE]" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Schedule</h3>
-              </div>
-              {eventTimings.length > 0 && (
-                <div className="space-y-2">
-                  {eventTimings.map((timing, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.6 + index * 0.1 }}
-                      className={`flex justify-between items-center px-3 py-2 rounded-lg ${
-                        timing.isNext
-                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
-                      }`}
-                    >
-                      <span
-                        className={`text-sm font-medium ${
-                          timing.isNext
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : 'text-gray-600 dark:text-gray-300'
-                        }`}
-                      >
-                        {timing.title}
-                      </span>
-                      <span
-                        className={`text-sm font-bold ${
-                          timing.isNext
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : 'text-gray-900 dark:text-gray-100'
-                        }`}
-                      >
-                        {timing.time}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-              {eventTimings.length === 0 && !nextEvent && (
-                <p className="text-sm text-gray-400 dark:text-gray-400">No upcoming event timings</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-    </motion.div>
-  )
-}
-
-const StatCard: React.FC<StatCardProps> = ({ 
-  title, 
-  value, 
-  icon, 
-  color = 'blue', 
-  isSelected, 
-  onClick, 
-  isFilterable = false,
-  className,
-  tooltip,
-  showPulse,
-  index = 0,
-  trendData
-}) => {
-  const colorClasses = {
-    blue: 'text-blue-500',
-    red: 'text-red-500',
-    yellow: 'text-yellow-500',
-    green: 'text-green-500',
-  }
-
-  // Pulse animation when value changes
-  const [pulse, setPulse] = React.useState(false);
-  const prevValue = React.useRef(value);
-  React.useEffect(() => {
-    if (prevValue.current !== value) {
-      setPulse(true);
-      const timeout = setTimeout(() => setPulse(false), 400);
-      prevValue.current = value;
-      return () => clearTimeout(timeout);
-    }
-  }, [value]);
-
-  const [showTooltip, setShowTooltip] = React.useState(false);
-  const [isDesktop, setIsDesktop] = React.useState(true);
-  const [tooltipPosition, setTooltipPosition] = React.useState({ top: 0, left: 0 });
-  const cardRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const checkScreen = () => {
-      if (typeof window !== 'undefined') {
-        setIsDesktop(window.innerWidth >= 768);
-      }
-    };
-    checkScreen();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', checkScreen);
-      return () => window.removeEventListener('resize', checkScreen);
-    }
-  }, []);
-
-  const handleMouseEnter = () => {
-    if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      setTooltipPosition({
-        top: rect.top - 10,
-        left: rect.left + rect.width / 2
-      });
-    }
-    setShowTooltip(true);
-  };
-
-  const content = (
-    <Card className={cn(
-      'card-depth relative h-[75px] md:h-[80px] flex items-center justify-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]',
-      isFilterable && 'cursor-pointer touch-target',
-      isSelected && 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-[#0f172a] shadow-lg',
-      pulse && 'animate-pulse',
-      className
-    )}>
-      <CardContent className="p-1.5 md:p-2 flex flex-col items-center justify-center space-y-1">
-        <div className="flex items-center gap-1">
-          <motion.div
-            key={value}
-            initial={{ scale: 1.1, opacity: 0.8 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="text-lg font-bold text-gray-900 dark:text-white"
-          >
-            {value}
-          </motion.div>
-          <div className={`${colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'} h-4 w-4`}>
-            {icon}
-          </div>
-        </div>
-        <span className="text-[11px] font-semibold text-muted-foreground tracking-tight leading-none text-center">
-          {title}
-        </span>
-        {trendData && trendData.length > 0 && (
-          <div className="mt-1 hidden sm:block">
-            <MiniTrendChart data={trendData} height={20} width={60} />
-          </div>
-        )}
-        {showPulse && (
-          <div className="absolute top-2 right-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-            <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full"></div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  if (isFilterable) {
-    return (
-      <motion.div 
-        ref={cardRef}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ 
-          duration: 0.5, 
-          delay: index * 0.1,
-          ease: "easeOut"
-        }}
-        whileHover={{ 
-          y: -4,
-          scale: 1.03,
-          transition: { duration: 0.2 }
-        }}
-        whileTap={{ scale: 0.97 }}
-        onClick={onClick}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={() => setShowTooltip(false)}
-      >
-        {content}
-        {tooltip && showTooltip && isDesktop && createPortal(
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="fixed z-[99999] px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-xl whitespace-nowrap"
-            style={{
-              top: tooltipPosition.top,
-              left: tooltipPosition.left,
-              transform: 'translateX(-50%)',
-              pointerEvents: 'none'
-            }}
-          >
-            {tooltip}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-          </motion.div>,
-          document.body
-        )}
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        duration: 0.5, 
-        delay: index * 0.1,
-        ease: "easeOut"
-      }}
-      whileHover={{ 
-        y: -4,
-        transition: { duration: 0.2 }
-      }}
-    >
-      {content}
-    </motion.div>
-  );
-};
+// Card components are now in separate files in ./dashboard/cards/
 
 // Add a helper to fetch What3Words address via API route (to keep API key secret)
 async function fetchWhat3Words(lat: number, lon: number): Promise<string | null> {
@@ -485,109 +118,7 @@ const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
 
 
 
-// Top 3 Incident Types Card
-interface TopIncidentTypesCardProps {
-  incidents: any[];
-  onTypeClick: (type: string) => void;
-  selectedType: string | null;
-}
-
-function TopIncidentTypesCard({ incidents, onTypeClick, selectedType }: TopIncidentTypesCardProps) {
-  try {
-    // Ensure incidents is an array
-    const safeIncidents = Array.isArray(incidents) ? incidents : [];
-    
-    // Exclude Attendance, Sit Rep, Artist On/Off Stage, Artist On Stage, and Artist Off Stage, and match flow logs
-    const filtered = safeIncidents.filter((i: any) => {
-      // Exclude match flow logs
-      if (i.type === 'match_log') {
-        return false
-      }
-      return i && i.incident_type && !['Attendance', 'Sit Rep', 'Artist On/Off Stage', 'Artist On Stage', 'Artist Off Stage', 'Artist off Stage', 'Artist on Stage'].includes(i.incident_type);
-    });
-    
-    // Count by type
-    const counts = filtered.reduce((acc: Record<string, number>, i: any) => {
-      if (i.incident_type) {
-        acc[i.incident_type] = (acc[i.incident_type] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-    
-    // Sort by count desc, then alphabetically
-    const sorted = (Object.entries(counts) as [string, number][]) 
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, 3);
-
-    if (sorted.length === 0) {
-      return (
-        <Card className="card-depth w-full h-full shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-          <CardContent className="p-2 h-full flex flex-col items-center justify-center">
-            <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1 text-center">Top 3 Incident Types</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">No incidents yet</div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <Card className="w-full h-full card-depth shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-        <CardContent className="p-2 h-full flex flex-col items-center justify-center">
-        <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-2 text-center">Top 3 Incident Types</div>
-        <div className="flex flex-col gap-1 w-full">
-          {/* Clear Filter Button - Show when a filter is active */}
-          {selectedType && (
-            <button
-              onClick={() => onTypeClick('')}
-              className="flex items-center justify-center px-2 py-1 rounded text-xs font-medium transition-all duration-200 w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-            >
-              <span className="truncate">Clear Filter</span>
-            </button>
-          )}
-          
-          {sorted.map(([type, count]) => {
-            try {
-              const styleClasses = getIncidentTypeStyle(type);
-              const isSelected = selectedType === type;
-              return (
-                <button
-                  key={type}
-                  onClick={() => onTypeClick(type)}
-                  className={`flex items-center justify-between px-2 py-1 rounded text-xs font-medium transition-all duration-200 w-full ${styleClasses} ${
-                    isSelected 
-                      ? 'ring-2 ring-offset-1 ring-gray-400' 
-                      : 'hover:opacity-80'
-                  }`}
-                >
-                  <span className="truncate flex-1 text-left">{type}</span>
-                  <span className="ml-1 font-bold">{count}</span>
-                </button>
-              );
-            } catch (error) {
-              console.error('Error rendering incident type button:', error, type);
-              return (
-                <div key={type} className="px-2 py-1 text-xs text-gray-500">
-                  {type}: {count}
-                </div>
-              );
-            }
-          })}
-        </div>
-        </CardContent>
-      </Card>
-    );
-  } catch (error) {
-    console.error('Error in TopIncidentTypesCard:', error);
-    return (
-      <Card className="w-full h-full">
-        <CardContent className="p-2 h-full flex flex-col items-center justify-center">
-          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">Top 3 Incident Types</div>
-          <div className="text-xs text-red-500">Error loading data</div>
-        </CardContent>
-      </Card>
-    );
-  }
-}
+// TopIncidentTypesCard is now in ./dashboard/cards/TopIncidentTypesCard.tsx
 
 
 
@@ -595,6 +126,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { updateCounts } = useIncidentSummary()
   const { eventType, eventData, loading: eventLoading } = useEventContext()
+  const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
   
   // Wait for EventContext to load before rendering event-specific content
   const isEventContextReady = !eventLoading && eventType !== null
@@ -984,7 +516,7 @@ export default function Dashboard() {
       setLoadingCurrentEvent(false);
       setIsRefreshing(false);
     }
-  }, [companyId, userRole]);
+  }, [companyId]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -1183,35 +715,141 @@ export default function Dashboard() {
     fetchEventTimings();
     const refreshTimer = setInterval(fetchEventTimings, 60000);
     return () => clearInterval(refreshTimer);
-  }, [companyId]);
+  }, [companyId, eventType]);
 
   useEffect(() => {
     const fetchCompanyId = async () => {
-      if (!user) return;
-      console.log('Fetching company ID for user:', user.id);
+      if (!user) {
+        console.log('Dashboard: No user available yet');
+        return;
+      }
+      console.log('Dashboard: Fetching company ID for user:', user.id, 'email:', user.email);
       
-      const { data: profile, error: profileError } = await supabase
+      // First, check if profile exists
+      let { data: profile, error: profileError } = await supabase
         .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
-        .select('company_id')
+        .select('company_id, role, company')
         .eq('id', user.id)
         .single();
       
-      console.log('Profile fetch result:', { profile, profileError });
+      console.log('Dashboard: Profile fetch result:', { 
+        profile, 
+        profileError: profileError ? {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        } : null,
+        userId: user.id,
+        userEmail: user.email
+      });
       
-      if (profileError || !profile?.company_id) {
-        console.error('Profile error or missing company_id:', { profileError, profile });
-        setError('Could not determine your company. Please check your profile.');
+      // If profile doesn't exist, create it
+      if (profileError && profileError.code === 'PGRST116') {
+        console.log('Profile does not exist, creating one...');
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            company: user.user_metadata?.company || 'Default Company',
+            role: 'user',
+          })
+          .select('company_id, role, company')
+          .single();
+        
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          setError('Failed to create your profile. Please contact support.');
+          return;
+        }
+        
+        profile = newProfile;
+        profileError = null;
+      }
+      
+      // Handle profile fetch errors (other than "not found")
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Dashboard: Profile fetch error:', profileError);
+        setError(`Failed to load your profile: ${profileError.message || 'Unknown error'}`);
         return;
       }
       
-      console.log('Setting company ID:', profile.company_id);
-      setCompanyId(profile.company_id);
-      const { data: profileFull } = await supabase
-        .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      setUserRole(profileFull?.role || null);
+      // If profile exists but no company_id, try to find or create a company
+      if (profile && !profile.company_id) {
+        console.log('Dashboard: Profile exists but no company_id, attempting to resolve...');
+        
+        // Try to find a company by the profile's company name
+        if (profile.company) {
+          const { data: existingCompany, error: companySearchError } = await supabase
+            .from('companies')
+            .select('id')
+            .eq('name', profile.company)
+            .single();
+          
+          console.log('Dashboard: Company search result:', { existingCompany, companySearchError });
+          
+          if (existingCompany) {
+            // Update profile with found company_id
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ company_id: existingCompany.id })
+              .eq('id', user.id);
+            
+            if (!updateError) {
+              console.log('Dashboard: Found and linked existing company:', existingCompany.id);
+              setCompanyId(existingCompany.id);
+              setUserRole(profile?.role || null);
+              return;
+            } else {
+              console.error('Dashboard: Error updating profile with company_id:', updateError);
+            }
+          }
+        }
+        
+        // Create a default company for the user via API route
+        console.log('Dashboard: Creating default company for user via API...');
+        try {
+          const response = await fetch('/api/ensure-company', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Dashboard: Error creating company:', errorData);
+            setError('Could not create a company for your account. Please contact support.');
+            return;
+          }
+          
+          const { company_id } = await response.json();
+          
+          if (!company_id) {
+            console.error('Dashboard: No company_id returned from API');
+            setError('Could not create a company for your account. Please contact support.');
+            return;
+          }
+          
+          console.log('Dashboard: Created and linked new company:', company_id);
+          setCompanyId(company_id);
+          setUserRole(profile?.role || null);
+          return;
+        } catch (fetchError) {
+          console.error('Dashboard: Fetch error when creating company:', fetchError);
+          setError('Network error while creating company. Please try again.');
+          return;
+        }
+      }
+      
+      // Profile exists and has company_id
+      if (profile?.company_id) {
+        console.log('Dashboard: Setting company ID:', profile.company_id);
+        setCompanyId(profile.company_id);
+        setUserRole(profile.role || null);
+      } else {
+        console.error('Dashboard: Profile exists but company_id is null/undefined');
+        setError('Your profile is missing a company association. Please contact support.');
+      }
     };
     fetchCompanyId();
   }, [user]);
@@ -1306,7 +944,11 @@ export default function Dashboard() {
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
-    // No need to force refresh - real-time subscription will handle the update
+    // Force refresh as fallback - real-time subscription should handle it, but this ensures it appears
+    // Use a small delay to allow the database insert to complete
+    setTimeout(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 500);
   };
 
   // Helper function to reset to Total view (no filters)
@@ -1337,106 +979,74 @@ export default function Dashboard() {
 
   // Splash screen if no current event
   if (!currentEvent) {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#23408e] z-50 min-h-screen splash-bg">
-        <Image
-          src="/inCommand.png"
-          alt="inCommand Logo"
-          width={256}
-          height={128}
-          className="mb-8 object-contain drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]"
-          priority
-        />
-        {/* Create + Event type on same line under logo */}
-        <div className="flex flex-row items-center justify-center mb-8 gap-4">
-          <span className="text-2xl md:text-3xl font-extrabold text-white drop-shadow-lg md:drop-shadow-[0_6px_24px_rgba(0,0,0,0.45)]">Event Control for</span>
-          <RotatingText
-            items={eventTypes}
-            interval={2000}
-            className="bg-white rounded-xl px-6 py-2 shadow-lg flex items-center justify-center min-w-[160px] min-h-[40px] font-extrabold text-2xl md:text-3xl"
-          />
-        </div>
-        <div className="text-base text-blue-100 font-medium mt-2 mb-8 text-center max-w-xl mx-auto">
-          Modern incident tracking and event command for every scale of operation.
-        </div>
-        <div className="w-full max-w-md mx-auto bg-white/80 backdrop-blur-md rounded-2xl p-8 flex flex-col items-center mt-10 shadow-2xl shadow-[0_10px_32px_4px_rgba(34,41,120,0.15)]">
-          <button 
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white text-xl font-bold py-4 rounded-xl shadow-xl mb-4 transition hover:scale-[1.02] focus-visible:ring-4 focus-visible:ring-blue-300 outline-none hover:shadow-2xl hover:-translate-y-1 hover:ring-2 hover:ring-blue-400"
-            onClick={() => setShowCreateEvent(true)}
-          >
-            <PlusIcon className="h-6 w-6 mr-2" /> Start New Event
-          </button>
-          <button 
-            className="w-full flex items-center justify-center gap-2 border border-blue-300 text-blue-700 font-semibold py-3 rounded-xl bg-white/60 hover:bg-blue-50 transition focus-visible:ring-4 focus-visible:ring-blue-300 outline-none"
-            onClick={() => router.push('/settings/events')}
-          >
-            <ClockIcon className="h-5 w-5 mr-2" /> Open Previous Events
-          </button>
-        </div>
-        {showCreateEvent && (
-          <EventCreationModal isOpen={showCreateEvent} onClose={() => setShowCreateEvent(false)} onEventCreated={fetchCurrentEvent} />
-        )}
-        {/* Floating FABs removed; actions available in sticky bottom nav */}
-        <div className="absolute bottom-2 right-4 text-xs text-blue-100 opacity-70 select-none">v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
-      </div>
-    );
+    return <NoEventSplash onEventCreated={fetchCurrentEvent} />;
   }
 
   return (
-    <PageWrapper>
-      {/* Accessibility: Skip Links */}
-      <SkipLinks />
-      
-      {/* Accessibility: Keyboard Shortcuts Help */}
-      <KeyboardShortcutsHelp 
-        isOpen={showKeyboardShortcuts} 
-        onClose={() => setShowKeyboardShortcuts(false)} 
-      />
-      
-      {/* Event Header - Sticky */}
-      <div>
-        {/* Desktop view */}
-        <section className="hidden md:block rounded-2xl p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-            <div className="flex flex-col h-full">
-              <CurrentEvent
-                currentTime={currentTime}
-                currentEvent={currentEvent}
-                loading={loadingCurrentEvent}
-                error={error}
-                onEventCreated={fetchCurrentEvent}
-                eventTimings={eventTimings}
-              />
-            </div>
-
-            <div className="flex flex-col h-full">
-              {loadingCurrentEvent ? (
-                <TimeCardSkeleton />
-              ) : (
-                <TimeCard
-                  companyId={companyId}
-                  currentTime={currentTime}
-                  eventTimings={eventTimings}
-                  nextEvent={nextEvent}
-                  countdown={countdown}
-                  currentSlot={currentSlot}
-                  timeSinceLastIncident={timeSinceLastIncident}
-                />
-              )}
-            </div>
-
-            <div className="flex flex-col h-full">
-              <IncidentSummaryBar
-                onFilter={handleSummaryFilter}
-                activeStatus={activeSummaryStatus}
-                className="h-full"
-              />
-            </div>
+    <>
+      {/* Desktop view - Bento Layout */}
+      <section className="hidden md:block rounded-2xl p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+          {/* CurrentEvent - Large card, spans 4 columns */}
+          <div className="flex flex-col h-full lg:col-span-4">
+            <CurrentEvent
+              currentTime={currentTime}
+              currentEvent={currentEvent}
+              loading={loadingCurrentEvent}
+              error={error}
+              onEventCreated={fetchCurrentEvent}
+              eventTimings={eventTimings}
+            />
           </div>
-        </section>
 
-        {/* Mobile view */}
-        <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300 -mt-2">
+          {/* TimeCard - Medium card, spans 4 columns */}
+          <div className="flex flex-col h-full lg:col-span-4">
+            {loadingCurrentEvent ? (
+              <TimeCardSkeleton />
+            ) : (
+              <TimeCard
+                companyId={companyId}
+                currentTime={currentTime}
+                eventTimings={eventTimings}
+                nextEvent={nextEvent}
+                countdown={countdown}
+                currentSlot={currentSlot}
+                timeSinceLastIncident={timeSinceLastIncident}
+              />
+            )}
+          </div>
+
+          {/* ReadinessIndexCard - Medium card, spans 2 columns */}
+          <div className="flex flex-col h-full lg:col-span-2">
+            <ReadinessIndexCard eventId={currentEventId} className="h-full" />
+          </div>
+
+          {/* IncidentSummaryBar - Medium card, spans 2 columns */}
+          <div className="flex flex-col h-full lg:col-span-2">
+            <IncidentSummaryBar
+              onFilter={handleSummaryFilter}
+              activeStatus={activeSummaryStatus}
+              className="h-full"
+            />
+          </div>
+        </div>
+      </section>
+      
+      <FeatureGate feature="event-dashboard" plan={userPlan} showUpgradeModal={true}>
+        <PageWrapper>
+          {/* Accessibility: Skip Links */}
+          <SkipLinks />
+        
+        {/* Accessibility: Keyboard Shortcuts Help */}
+        <KeyboardShortcutsHelp 
+          isOpen={showKeyboardShortcuts} 
+          onClose={() => setShowKeyboardShortcuts(false)} 
+        />
+        
+        {/* Event Header - Sticky */}
+        <div>
+          {/* Mobile view */}
+          <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300 -mt-2">
           {!isFullyReady && <p className="p-3">Loading event...</p>}
           {isFullyReady && currentEvent && (
             <div>
@@ -1496,7 +1106,7 @@ export default function Dashboard() {
       </div>
 
 {/* Incident Dashboard */}
-<div className="mb-4 rounded-2xl bg-gray-100/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
+<div className="mb-3 rounded-2xl bg-gray-100/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
   {/* Header */}
   <div className="mb-3 flex flex-col gap-3">
     <div>
@@ -1515,7 +1125,7 @@ export default function Dashboard() {
 
   {/* Live Status + Alerts */}
   {currentEvent && (
-    <div className="mt-4 flex flex-col gap-4 lg:flex-row">
+    <div className="mt-3 flex flex-col gap-4 lg:flex-row">
       <div className="flex-1">
         <RealtimeStatusIndicator
           isConnected={realtimeAnalytics.isConnected}
@@ -1535,8 +1145,15 @@ export default function Dashboard() {
     </div>
   )}
 
+  {/* Radio Alerts Widget */}
+  {currentEvent && (
+    <div className="mt-3">
+      <RadioAlertsWidget eventId={currentEvent.id} />
+    </div>
+  )}
+
   {/* Dashboard Sections */}
-  <div className="mt-4 space-y-4">
+  <div className="mt-3 space-y-3">
     {/* Mobile-only Venue Occupancy */}
     <div className="block md:hidden">
       <div className="mb-4">
@@ -1568,166 +1185,170 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Grid */}
-      <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 sm:gap-4 pt-3 pb-4">
-        {!isFullyReady ? (
-          Array.from({ length: 8 }).map((_, index) => (
-            <StatCardSkeleton key={index} />
-          ))
-        ) : (
-          <>
-            <StatCard
-              title="High Priority"
-              value={incidentStats.high}
-              icon={<ExclamationTriangleIcon className="h-5 w-5 md:h-6 md:w-6 text-red-400" />}
-              isSelected={safeFilters.types.some(type =>
-                ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type)
-              )}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  types: [
-                    'Ejection',
-                    'Code Green',
-                    'Code Black',
-                    'Code Pink',
-                    'Aggressive Behaviour',
-                    'Missing Child/Person',
-                    'Hostile Act',
-                    'Counter-Terror Alert',
-                    'Fire Alarm',
-                    'Evacuation',
-                    'Medical',
-                    'Suspicious Behaviour',
-                    'Queue Build-Up',
-                  ],
-                  statuses: [],
-                  priorities: [],
-                }))
-              }
-              isFilterable
-              color="red"
-              tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
-              showPulse={incidentStats.hasOpenHighPrio}
-              index={0}
-            />
-            <StatCard
-              title="Medicals"
-              value={incidentStats.medicals}
-              icon={<HeartIcon className="h-5 w-5 md:h-6 md:w-6 text-red-400" />}
-              isSelected={safeFilters.types.includes('Medical')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  types: prev.types.includes('Medical')
-                    ? prev.types.filter(t => t !== 'Medical')
-                    : ['Medical'],
-                }))
-              }
-              isFilterable
-              tooltip="Medical-related incidents."
-              index={1}
-            />
-            <StatCard
-              title="Open"
-              value={incidentStats.open}
-              icon={<FolderOpenIcon className="h-5 w-5 md:h-6 md:w-6 text-yellow-400" />}
-              isSelected={safeFilters.statuses.includes('open')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  statuses: prev.statuses.includes('open')
-                    ? prev.statuses.filter(s => s !== 'open')
-                    : ['open'],
-                  types: [],
-                  priorities: [],
-                }))
-              }
-              isFilterable
-              color="yellow"
-              tooltip="Incidents that are currently open (is_closed = false)."
-              index={2}
-            />
-            <StatCard
-              title="Ejections"
-              value={incidentStats.ejections}
-              icon={<UsersIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />}
-              isSelected={safeFilters.types.includes('Ejection')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  types: prev.types.includes('Ejection')
-                    ? prev.types.filter(t => t !== 'Ejection')
-                    : ['Ejection'],
-                }))
-              }
-              isFilterable
-              tooltip="Incidents where someone was ejected."
-              index={3}
-            />
-            <StatCard
-              title="Refusals"
-              value={incidentStats.refusals}
-              icon={<UserGroupIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />}
-              isSelected={safeFilters.types.includes('Refusal')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  types: prev.types.includes('Refusal')
-                    ? prev.types.filter(t => t !== 'Refusal')
-                    : ['Refusal'],
-                }))
-              }
-              isFilterable
-              tooltip="Incidents where entry was refused."
-              index={4}
-            />
-            <StatCard
-              title="Total"
-              value={incidentStats.total}
-              icon={<ExclamationTriangleIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />}
-              isSelected={
-                safeFilters.types.length + safeFilters.statuses.length + safeFilters.priorities.length === 0
-              }
-              onClick={resetToTotal}
-              isFilterable
-              tooltip="All incidents (excluding Attendance and Sit Reps)."
-              index={5}
-            />
-            <StatCard
-              title="Closed"
-              value={incidentStats.closed}
-              icon={<CheckCircleIcon className="h-5 w-5 md:h-6 md:w-6 text-green-400" />}
-              isSelected={safeFilters.statuses.includes('closed')}
-              onClick={() =>
-                setFilters(prev => ({
-                  ...prev,
-                  statuses: prev.statuses.includes('closed')
-                    ? prev.statuses.filter(s => s !== 'closed')
-                    : ['closed'],
-                  types: [],
-                  priorities: [],
-                }))
-              }
-              isFilterable
-              color="green"
-              tooltip="Incidents that have been closed (is_closed = true)."
-              index={6}
-            />
-            <StatCard
-              title="Other"
-              value={incidentStats.other}
-              icon={<QuestionMarkCircleIcon className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />}
-              isSelected={
-                safeFilters.types.length > 0 &&
-                !['Refusal', 'Ejection', 'Medical'].some(t => safeFilters.types.includes(t))
-              }
-              onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
-              isFilterable
-              tooltip="All other incident types."
-              index={7}
-            />
-          </>
-        )}
+      <div className="hidden md:block pt-3 pb-4">
+        <div className="mx-auto grid grid-cols-1 gap-px rounded-xl bg-border sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 items-stretch">
+          {!isFullyReady ? (
+            Array.from({ length: 8 }).map((_, index) => (
+              <StatCardSkeleton key={index} />
+            ))
+          ) : (
+            <>
+              <StatCard
+                title="High Priority"
+                value={incidentStats.high}
+                icon={<ExclamationTriangleIcon className="h-4 w-4 text-red-400" />}
+                isSelected={safeFilters.types.some(type =>
+                  ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type)
+                )}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    types: [
+                      'Ejection',
+                      'Code Green',
+                      'Code Black',
+                      'Code Pink',
+                      'Aggressive Behaviour',
+                      'Missing Child/Person',
+                      'Hostile Act',
+                      'Counter-Terror Alert',
+                      'Fire Alarm',
+                      'Evacuation',
+                      'Medical',
+                      'Suspicious Behaviour',
+                      'Queue Build-Up',
+                    ],
+                    statuses: [],
+                    priorities: [],
+                  }))
+                }
+                isFilterable
+                color="red"
+                tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
+                showPulse={incidentStats.hasOpenHighPrio}
+                index={0}
+                isFirst={true}
+              />
+              <StatCard
+                title="Medicals"
+                value={incidentStats.medicals}
+                icon={<HeartIcon className="h-4 w-4 text-red-400" />}
+                isSelected={safeFilters.types.includes('Medical')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    types: prev.types.includes('Medical')
+                      ? prev.types.filter(t => t !== 'Medical')
+                      : ['Medical'],
+                  }))
+                }
+                isFilterable
+                tooltip="Medical-related incidents."
+                index={1}
+              />
+              <StatCard
+                title="Open"
+                value={incidentStats.open}
+                icon={<FolderOpenIcon className="h-4 w-4 text-yellow-400" />}
+                isSelected={safeFilters.statuses.includes('open')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    statuses: prev.statuses.includes('open')
+                      ? prev.statuses.filter(s => s !== 'open')
+                      : ['open'],
+                    types: [],
+                    priorities: [],
+                  }))
+                }
+                isFilterable
+                color="yellow"
+                tooltip="Incidents that are currently open (is_closed = false)."
+                index={2}
+              />
+              <StatCard
+                title="Ejections"
+                value={incidentStats.ejections}
+                icon={<UsersIcon className="h-4 w-4 text-gray-400" />}
+                isSelected={safeFilters.types.includes('Ejection')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    types: prev.types.includes('Ejection')
+                      ? prev.types.filter(t => t !== 'Ejection')
+                      : ['Ejection'],
+                  }))
+                }
+                isFilterable
+                tooltip="Incidents where someone was ejected."
+                index={3}
+              />
+              <StatCard
+                title="Refusals"
+                value={incidentStats.refusals}
+                icon={<UserGroupIcon className="h-4 w-4 text-gray-400" />}
+                isSelected={safeFilters.types.includes('Refusal')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    types: prev.types.includes('Refusal')
+                      ? prev.types.filter(t => t !== 'Refusal')
+                      : ['Refusal'],
+                  }))
+                }
+                isFilterable
+                tooltip="Incidents where entry was refused."
+                index={4}
+              />
+              <StatCard
+                title="Total"
+                value={incidentStats.total}
+                icon={<ExclamationTriangleIcon className="h-4 w-4 text-gray-400" />}
+                isSelected={
+                  safeFilters.types.length + safeFilters.statuses.length + safeFilters.priorities.length === 0
+                }
+                onClick={resetToTotal}
+                isFilterable
+                tooltip="All incidents (excluding Attendance and Sit Reps)."
+                index={5}
+              />
+              <StatCard
+                title="Closed"
+                value={incidentStats.closed}
+                icon={<CheckCircleIcon className="h-4 w-4 text-green-400" />}
+                isSelected={safeFilters.statuses.includes('closed')}
+                onClick={() =>
+                  setFilters(prev => ({
+                    ...prev,
+                    statuses: prev.statuses.includes('closed')
+                      ? prev.statuses.filter(s => s !== 'closed')
+                      : ['closed'],
+                    types: [],
+                    priorities: [],
+                  }))
+                }
+                isFilterable
+                color="green"
+                tooltip="Incidents that have been closed (is_closed = true)."
+                index={6}
+              />
+              <StatCard
+                title="Other"
+                value={incidentStats.other}
+                icon={<QuestionMarkCircleIcon className="h-4 w-4 text-gray-400" />}
+                isSelected={
+                  safeFilters.types.length > 0 &&
+                  !['Refusal', 'Ejection', 'Medical'].some(t => safeFilters.types.includes(t))
+                }
+                onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
+                isFilterable
+                tooltip="All other incident types."
+                index={7}
+                isLast={true}
+              />
+            </>
+          )}
+        </div>
       </div>
 
       {currentEvent && (
@@ -1753,9 +1374,9 @@ export default function Dashboard() {
       <div>
 
         {/* Desktop Grid - Event-Specific Dashboard */}
-        <div className="hidden md:grid grid-cols-2 gap-4 lg:grid-cols-4 pt-2">
+        <div className={`hidden md:grid grid-cols-2 gap-4 pt-2 ${eventType === 'concert' ? 'lg:grid-cols-4' : 'lg:grid-cols-4 xl:grid-cols-6'}`}>
           {!isFullyReady ? (
-            Array.from({ length: 4 }).map((_, index) => <CardSkeleton key={index} />)
+            Array.from({ length: eventType === 'concert' ? 4 : 5 }).map((_, index) => <CardSkeleton key={index} />)
           ) : eventType === 'concert' ? (
             /* 
               ⚠️  CONCERT DASHBOARD - PERMANENTLY LOCKED ⚠️
@@ -1780,15 +1401,16 @@ export default function Dashboard() {
                 </Card>
               </motion.div>
 
-              {/* Card 2: WeatherCard - Only shows if venue_address exists */}
-              {currentEvent?.venue_address && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
+              {/* Card 2: WeatherCard - Always show, use placeholder if no venue_address */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="col-span-1 h-[130px] transition-all duration-300 hover:shadow-lg"
+              >
+                {currentEvent?.venue_address ? (
                   <WeatherCard
                     lat={coordinates?.lat}
                     lon={coordinates?.lon}
@@ -1797,8 +1419,16 @@ export default function Dashboard() {
                     startTime={currentEvent.main_act_start_time ?? ''}
                     curfewTime={currentEvent.curfew_time ?? ''}
                   />
-                </motion.div>
-              )}
+                ) : (
+                  <Card className="card-depth h-full shadow-sm dark:shadow-md">
+                    <CardContent className="flex h-full flex-col items-center justify-center p-4">
+                      <div className="text-center text-gray-500 dark:text-gray-400 text-sm">
+                        Weather data unavailable
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </motion.div>
 
               {/* Card 3: What3WordsSearchCard - Wrapped in Card with specific props */}
               <motion.div
@@ -1845,9 +1475,12 @@ export default function Dashboard() {
             <>
               {/* Football Event Cards */}
               {eventType === 'football' && (
-                <div className="col-span-full">
-                  <SupportToolsFootball />
-                </div>
+                <>
+                  <div className="col-span-full">
+                    <SupportToolsFootball />
+                  </div>
+                  
+                </>
               )}
 
               {/* Festival Event Cards */}
@@ -2130,7 +1763,7 @@ export default function Dashboard() {
                       }}
                       selectedType={safeFilters.types[0] || null}
                     />
-                  </motion.div>
+                    </motion.div>
                 </>
               )}
             </>
@@ -2145,7 +1778,7 @@ export default function Dashboard() {
       {/* Incident Table and Staff Deployment */}
       <main 
         id="main-content" 
-        className="mt-8 lg:mt-10"
+        className="mt-7 lg:mt-9 mb-6"
         role="main"
         aria-label="Incident logs"
         tabIndex={-1}
@@ -2212,5 +1845,7 @@ export default function Dashboard() {
         )}
 
     </PageWrapper>
+    </FeatureGate>
+    </>
   )
 }

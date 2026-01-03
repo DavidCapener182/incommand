@@ -75,9 +75,10 @@ export async function POST(request: NextRequest) {
         .eq('event_id', body.event_id)
         .single()
 
+      const profileData = profile as any;
       const userCallsign = (assignment as any)?.callsign_positions?.callsign || 
                           (assignment as any)?.callsign_positions?.short_code ||
-                          `${profile?.first_name?.[0]}${profile?.last_name?.[0]}`.toUpperCase() ||
+                          `${profileData?.first_name?.[0]}${profileData?.last_name?.[0]}`.toUpperCase() ||
                           'Unknown'
 
       // Generate log number
@@ -87,9 +88,10 @@ export async function POST(request: NextRequest) {
         .eq('id', body.event_id)
         .single()
 
-      const eventNameValue = eventData?.event_name ?? eventData?.name ?? 'Event'
+      const eventDataTyped = eventData as any;
+      const eventNameValue = eventDataTyped?.event_name ?? eventDataTyped?.name ?? 'Event'
       const eventPrefix = eventNameValue.substring(0, 3).toUpperCase()
-      const resolvedDate = eventData?.event_date ?? eventData?.date
+      const resolvedDate = eventDataTyped?.event_date ?? eventDataTyped?.date
       const eventDate = resolvedDate ? new Date(resolvedDate).toISOString().split('T')[0].replace(/-/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '')
       
       // Get count for log number

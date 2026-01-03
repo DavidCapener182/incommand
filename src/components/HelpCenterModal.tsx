@@ -95,14 +95,15 @@ export default function HelpCenterPanel({ isOpen, onClose, initialTab, initialMe
 
   useEffect(() => {
     const fetchEvent = async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('events')
         .select('id, event_name')
         .eq('is_current', true)
         .single();
-      if (data?.event_name && data?.id) {
-        setEventName(data.event_name);
-        setEventId(data.id);
+      const eventData = data as any;
+      if (eventData?.event_name && eventData?.id) {
+        setEventName(eventData.event_name);
+        setEventId(eventData.id);
       } else {
         setEventName('Current Event');
         setEventId(null);

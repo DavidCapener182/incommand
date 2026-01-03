@@ -1,14 +1,21 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { supabase } from '../lib/supabase'
+import React, { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import EventCreationModal from './EventCreationModal'
-import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import { useEventContext } from '@/contexts/EventContext'
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { 
+  MapPin, 
+  Calendar, 
+  Sparkles, 
+  MoreHorizontal, 
+  AlertCircle,
+  TrendingUp,
+  Music // Added Music icon import
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 
+// --- Types ---
 interface Event {
   id: string
   event_name: string
@@ -23,29 +30,48 @@ interface Event {
 interface EventTiming {
   title: string
   time: string
-  isNext?: boolean
-  isActuallyHappeningNow?: boolean
 }
 
 interface CurrentEventProps {
-  currentTime?: string;
-  currentEvent: Event | null;
-  loading: boolean;
-  error: string | null;
-  onEventCreated: () => void;
-  eventTimings: EventTiming[];
+  currentTime?: string
+  currentEvent: Event | null
+  loading: boolean
+  error: string | null
+  onEventCreated: () => void
+  eventTimings: EventTiming[]
 }
 
 interface AIInsight {
-  title: string;
-  content: string;
+  title: string
+  content: string
 }
 
-export default function CurrentEvent({ 
-  currentTime,
+// --- Helper Components ---
+const CardFrame = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <div className={cn("flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md h-full", className)}>
+    {children}
+  </div>
+)
+
+const CardHeader = ({ icon: Icon, title, action }: { icon: any; title: string; action?: () => void }) => (
+  <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+        <Icon className="h-4 w-4" />
+      </div>
+      <span className="text-sm font-semibold text-slate-700">{title}</span>
+    </div>
+    {action && (
+      <button onClick={action} className="text-slate-400 hover:text-slate-600 transition-colors">
+        <MoreHorizontal className="h-5 w-5" />
+      </button>
+    )}
+  </div>
+)
+
+export default function CurrentEvent({
   currentEvent,
   loading,
-  error,
   onEventCreated,
   eventTimings,
 }: CurrentEventProps) {
@@ -57,354 +83,267 @@ export default function CurrentEvent({
   const [autoAdvance, setAutoAdvance] = useState(true)
   const { eventType } = useEventContext()
 
-  // Function to check if current time is between first and last event timing
-  const isEventLive = () => {
+  const currentEventId = currentEvent?.id
+
+  // --- Logic: Check if Live ---
+  const isEventLive = useCallback(() => {
     if (!eventTimings || eventTimings.length === 0) return false
-    
     const now = new Date()
     const today = now.toDateString()
     
-    // Get first and last timing
     const sortedTimings = [...eventTimings].sort((a, b) => {
-      const timeA = new Date(`${today} ${a.time}`).getTime()
-      const timeB = new Date(`${today} ${b.time}`).getTime()
-      return timeA - timeB
+      return new Date(`${today} ${a.time}`).getTime() - new Date(`${today} ${b.time}`).getTime()
     })
-    
+
     if (sortedTimings.length === 0) return false
-    
-    const firstTiming = sortedTimings[0]
-    const lastTiming = sortedTimings[sortedTimings.length - 1]
-    
-    const startTime = new Date(`${today} ${firstTiming.time}`)
-    const endTime = new Date(`${today} ${lastTiming.time}`)
+    const startTime = new Date(`${today} ${sortedTimings[0].time}`)
+    const endTime = new Date(`${today} ${sortedTimings[sortedTimings.length - 1].time}`)
     
     return now >= startTime && now <= endTime
-  }
+  }, [eventTimings])
 
-  // Function to extract a title from a paragraph
+  // --- Logic: Extract Title ---
   const extractTitleFromParagraph = (paragraph: string): string => {
-    // First, try to extract the actual markdown header if it exists
-    const headerMatch = paragraph.match(/^#{1,6}\s*(.+)$/m);
-    if (headerMatch) {
-      return headerMatch[1].trim();
-    }
+    const headerMatch = paragraph.match(/^#{1,6}\s*(.+)$/m)
+    if (headerMatch) return headerMatch[1].trim()
 
-    // Look for common patterns to extract meaningful titles
-    const lowerText = paragraph.toLowerCase();
-    
-    if (lowerText.includes('current event status') || (lowerText.includes('incident') && (lowerText.includes('total') || lowerText.includes('open') || lowerText.includes('status')))) {
-      return 'Current Event Status'
-    } else if (lowerText.includes('attendance') || lowerText.includes('capacity') || lowerText.includes('occupancy')) {
-      return 'Attendance & Capacity Analysis'
-    } else if (lowerText.includes('security') || lowerText.includes('safety') || lowerText.includes('operational concerns')) {
-      return 'Security & Operational Concerns'
-    } else if (lowerText.includes('urgent') || lowerText.includes('priority') || lowerText.includes('critical')) {
-      return 'Urgent Patterns or Concerns'
-    } else if (lowerText.includes('trend') || lowerText.includes('pattern') || lowerText.includes('location') || lowerText.includes('hotspot')) {
-      return 'Trending Locations or Incident Types'
-    } else if (lowerText.includes('recommendation') || lowerText.includes('suggest') || lowerText.includes('action')) {
-      return 'Actionable Recommendations'
-    } else if (lowerText.includes('recent') || lowerText.includes('activity') || lowerText.includes('hour')) {
-      return 'Recent Activity'
-    } else if (lowerText.includes('weather') || lowerText.includes('condition')) {
-      return 'Weather Status'
-    } else if (lowerText.includes('behavioral') || lowerText.includes('crowd') || lowerText.includes('monitor')) {
-      return 'Crowd Analysis'
-    } else {
-      // Fallback: create a meaningful title based on content
-      return 'Event Analysis'
-    }
+    const lower = paragraph.toLowerCase()
+    if (lower.includes('attendance') || lower.includes('capacity')) return 'Attendance Analysis'
+    if (lower.includes('security') || lower.includes('safety')) return 'Security Alert'
+    if (lower.includes('urgent') || lower.includes('critical')) return 'Critical Update'
+    if (lower.includes('weather')) return 'Weather Impact'
+    if (lower.includes('crowd')) return 'Crowd Dynamics'
+    return 'Event Summary'
   }
 
-  const fetchAiInsights = async () => {
+  // --- Logic: Fetch AI ---
+  const fetchAiInsights = useCallback(async () => {
     try {
       setAiLoading(true)
       setAiError(null)
-      
-      if (!currentEvent?.id) {
-        throw new Error('No current event selected')
-      }
-      
-      const response = await fetch(`/api/notifications/ai-summary?eventId=${currentEvent.id}`)
-      if (!response.ok) throw new Error('Failed to fetch AI insights')
+      if (!currentEventId) throw new Error('No event')
+
+      const response = await fetch(`/api/notifications/ai-summary?eventId=${currentEventId}`)
+      if (!response.ok) throw new Error('Failed to fetch')
       
       const data = await response.json()
       const summary = data.summary || ''
       
-      // Split into paragraphs and filter out empty ones
-      const paragraphs = summary
-        .split('\n\n')
-        .filter((para: string) => para.trim().length > 0)
-        .map((para: string) => para.trim())
+      const paragraphs = summary.split('\n\n').filter((p: string) => p.trim().length > 0)
+      
+      const insights = paragraphs.map((p: string) => ({
+        title: extractTitleFromParagraph(p),
+        content: p.replace(/[#*`_]/g, '').trim() // Simple cleanup
+      }))
 
-      // Create insights with extracted titles and cleaned content
-      const insights: AIInsight[] = paragraphs.map((paragraph: string) => ({
-        title: extractTitleFromParagraph(paragraph),
-        content: paragraph
-          .replace(/###\s*/g, '') // Remove markdown headers with optional spaces
-          .replace(/##\s*/g, '') // Remove markdown headers with optional spaces
-          .replace(/#\s*/g, '') // Remove markdown headers with optional spaces
-          .replace(/\*\*\*/g, '') // Remove triple asterisks
-          .replace(/\*\*/g, '') // Remove double asterisks
-          .replace(/\*/g, '') // Remove single asterisks
-          .replace(/`([^`]+)`/g, '$1') // Remove backticks but keep content
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove markdown links but keep text
-          .replace(/_{2,}/g, '') // Remove multiple underscores
-          .replace(/_([^_]+)_/g, '$1') // Remove italic underscores but keep content
-          .replace(/~~([^~]+)~~/g, '$1') // Remove strikethrough but keep content
-          .replace(/^\s*>\s+/gm, '') // Remove blockquotes
-          .replace(/^\s*\|\s*/gm, '') // Remove table formatting
-          .replace(/^\s*[-•]\s+/gm, '• ') // Convert bullet points to clean bullets
-          .replace(/^\s*\d+\.\s+/gm, '• ') // Convert numbered lists to bullets
-          .replace(/\b\d+\.\s+/g, '• ') // Convert inline numbered lists to bullets
-          .replace(/\s+/g, ' ') // Normalize whitespace
-          .trim()
-      }));
-
-      setAiInsights(insights)
-    } catch (error) {
-      console.error('Error fetching AI insights:', error)
-      setAiError('Failed to load insights')
+      setAiInsights(insights.length > 0 ? insights : [{ title: 'Status', content: 'No AI insights generated yet.' }])
+    } catch (err) {
+      console.error(err)
+      setAiError('Unable to load AI insights')
     } finally {
       setAiLoading(false)
     }
-  }
+  }, [currentEventId])
 
   useEffect(() => {
-    if (currentEvent) {
+    if (currentEventId) {
       fetchAiInsights()
-      // Refresh every 5 minutes
       const interval = setInterval(fetchAiInsights, 5 * 60 * 1000)
       return () => clearInterval(interval)
     }
-  }, [currentEvent])
+  }, [currentEventId, fetchAiInsights])
 
-  // Auto-advance logic - increased to 45 seconds
+  // --- Logic: Auto Advance ---
   useEffect(() => {
     if (aiInsights.length > 1 && autoAdvance) {
       const interval = setInterval(() => {
-        setCurrentInsightIndex((prevIndex) => 
-          (prevIndex + 1) % aiInsights.length
-        )
-      }, 45000) // 45 seconds
-      
+        setCurrentInsightIndex((prev) => (prev + 1) % aiInsights.length)
+      }, 15000) // 15 seconds per slide
       return () => clearInterval(interval)
     }
   }, [aiInsights.length, autoAdvance])
 
-  const goToPrevious = () => {
+  const handleManualChange = (index: number) => {
     setAutoAdvance(false)
-    setCurrentInsightIndex((prevIndex) => 
-      prevIndex === 0 ? aiInsights.length - 1 : prevIndex - 1
-    )
-    // Resume auto-advance after 2 minutes
-    setTimeout(() => setAutoAdvance(true), 120000)
+    setCurrentInsightIndex(index)
+    setTimeout(() => setAutoAdvance(true), 60000)
   }
 
-  const goToNext = () => {
-    setAutoAdvance(false)
-    setCurrentInsightIndex((prevIndex) => 
-      (prevIndex + 1) % aiInsights.length
-    )
-    // Resume auto-advance after 2 minutes
-    setTimeout(() => setAutoAdvance(true), 120000)
-  }
-
-  const handleCloseModal = () => {
-    setShowModal(false)
-  }
-
-  const handleEventCreated = () => {
-    onEventCreated();
-    setShowModal(false)
-  }
-
+  // --- Render: Loading State ---
   if (loading) {
     return (
-      <div className="card-depth p-6">
-        <div className="animate-pulse flex space-x-4">
-          <div className="flex-1 space-y-4 py-1">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="space-y-2">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <CardFrame className="animate-pulse">
+        <div className="h-8 w-32 bg-slate-100 rounded mb-4" />
+        <div className="h-6 w-3/4 bg-slate-100 rounded mb-2" />
+        <div className="h-4 w-1/2 bg-slate-100 rounded" />
+      </CardFrame>
     )
   }
 
+  // --- Render: No Event State ---
+  if (!currentEvent) {
+    return (
+      <CardFrame className="border-dashed border-2 border-slate-300 bg-slate-50/50">
+        <div className="flex flex-col items-center justify-center h-full text-center py-8">
+          <div className="h-12 w-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
+            <Calendar className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900">No Active Event</h3>
+          <p className="text-sm text-slate-500 max-w-[200px] mt-2 mb-6">
+            There is no event currently selected or live right now.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+          >
+            Create Event
+          </button>
+        </div>
+        <EventCreationModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onEventCreated={() => {
+            onEventCreated()
+            setShowModal(false)
+          }}
+        />
+      </CardFrame>
+    )
+  }
+
+  // --- Render: Main Card ---
+  const currentInsight = aiInsights[currentInsightIndex]
+
   return (
-    <motion.div
-      className="flex-1"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <Card className="h-full flex flex-col justify-between relative bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-6 sm:p-8">
-        {currentEvent ? (
-          <div className="flex flex-col space-y-8">
-            {/* Event Info Section */}
-            <div>
-              {/* Venue row */}
-              <div className="flex items-center space-x-3 mb-4">
-                <MapPinIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                  {currentEvent.venue_name}
-                  {isEventLive() && (
-                    <span className="ml-2 relative flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-xs font-medium">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-600"></span>
-                      </span>
-                      LIVE
-                    </span>
-                  )}
-                </h2>
-              </div>
-              
-              {/* Event row */}
-              <div className="flex items-start space-x-3">
-                <CalendarIcon className="h-5 w-5 text-gray-500 dark:text-gray-400 mt-1" />
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {eventType === 'football' 
-                      ? currentEvent.event_name.replace(/\s*-\s*\d{2}\/\d{2}\/\d{4}$/, '') // Remove " - DD/MM/YYYY" from end
-                      : currentEvent.event_name
-                    }
-                  </h3>
-                  {currentEvent.support_acts && (() => {
-                    let acts = currentEvent.support_acts
-                    if (typeof acts === 'string') {
-                      try {
-                        acts = JSON.parse(acts)
-                      } catch {
-                        acts = []
-                      }
-                    }
-                    return Array.isArray(acts) && acts.length > 0 ? (
-                      <p className="text-gray-600 dark:text-gray-300">
-                        {'+ ' + acts.slice().reverse().map((act: any) => act.act_name).join(', ')}
-                      </p>
-                    ) : null
-                  })()}
-                </div>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <hr className="border-gray-200 dark:border-gray-700" />
-
-            {/* Event Summary Section */}
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <svg className="h-5 w-5 text-[#4361EE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Summary</h3>
-              </div>
-              
-              {/* AI Insights Content */}
-              <div>
-                {aiLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-4/5"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
-                  </div>
-                ) : aiError ? (
-                  <div>
-                    <h4 className="text-sm font-bold text-red-700 dark:text-red-400 mb-2">System Error</h4>
-                    <div className="text-sm text-red-600 dark:text-red-300 leading-relaxed">
-                      {aiError}
-                      <button 
-                        onClick={fetchAiInsights}
-                        className="ml-2 text-red-700 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 underline transition-colors"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  </div>
-                ) : aiInsights.length > 0 ? (
-                  <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {aiInsights[currentInsightIndex]?.content}
-                  </div>
-                ) : (
-                  <p className="text-gray-600 dark:text-gray-300">No insights available yet.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Navigation Dots */}
-            {!aiLoading && aiInsights.length > 1 && (
-              <div className="flex justify-center items-center mt-8 pt-4">
-                <button
-                  onClick={goToPrevious}
-                  className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  aria-label="Previous insight"
-                >
-                  <ChevronLeftIcon className="h-5 w-5" />
-                </button>
-                <div className="flex space-x-2 mx-4">
-                  {aiInsights.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setCurrentInsightIndex(index);
-                        setAutoAdvance(false);
-                        setTimeout(() => setAutoAdvance(true), 120000);
-                      }}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentInsightIndex
-                          ? 'bg-[#4361EE]'
-                          : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                      aria-label={`Go to insight ${index + 1}`}
-                    />
-                  ))}
-                </div>
-                <button
-                  onClick={goToNext}
-                  className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  aria-label="Next insight"
-                >
-                  <ChevronRightIcon className="h-5 w-5" />
-                </button>
-              </div>
+    <CardFrame>
+      {/* Header Section */}
+      <div>
+        <CardHeader 
+           icon={MapPin} 
+           title="Venue Status" 
+        />
+        
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {currentEvent.venue_name}
+            </h3>
+            {isEventLive() && (
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 ring-2 ring-white"></span>
+              </span>
             )}
           </div>
-        ) : (
-          <CardContent>
-            <div className="space-y-3">
-              <CardTitle className="text-sm font-medium text-gray-900 dark:text-white">
-                No Current Event
-              </CardTitle>
-              <CardDescription>
-                No event is currently selected. Create a new event to get started.
-              </CardDescription>
-              <div>
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-[#2A3990] hover:bg-[#1e2a6a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2A3990]"
-                >
-                  Create Event
-                </button>
-              </div>
-            </div>
-          </CardContent>
-        )}
-      </Card>
+          
+          <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
+            <Calendar className="h-4 w-4" />
+            <span>
+              {eventType === 'football'
+                ? currentEvent.event_name.replace(/\s*-\s*\d{2}\/\d{2}\/\d{4}$/, '')
+                : currentEvent.event_name}
+            </span>
+          </div>
+
+          {/* ------------------------------------------------------- */}
+          {/*  SUPPORT ACTS SECTION (INSERTED HERE)                   */}
+          {/* ------------------------------------------------------- */}
+          {(() => {
+             let hasActs = false;
+             try {
+               const acts = typeof currentEvent.support_acts === 'string' 
+                 ? JSON.parse(currentEvent.support_acts) 
+                 : currentEvent.support_acts;
+               hasActs = Array.isArray(acts) && acts.length > 0;
+             } catch { hasActs = false }
+
+             if (!hasActs) return null;
+
+             return (
+               <div className="flex items-center gap-2 text-xs text-slate-400 pl-6 mt-1">
+                  <Music className="h-3 w-3" />
+                  <span className="truncate max-w-[250px]">
+                    {typeof currentEvent.support_acts === 'string'
+                      ? JSON.parse(currentEvent.support_acts).map((a: any) => a.act_name).join(', ')
+                      : (currentEvent.support_acts as any[]).map((a: any) => a.act_name).join(', ')}
+                  </span>
+               </div>
+             );
+          })()}
+          {/* ------------------------------------------------------- */}
+
+        </div>
+      </div>
+
+      {/* AI Status Box */}
+      <div className="mt-6 flex-1">
+        <AnimatePresence mode='wait'>
+          <motion.div
+            key={currentInsightIndex}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 min-h-[100px]"
+          >
+            {aiLoading ? (
+               <div className="space-y-2 w-full">
+                 <div className="h-4 w-1/3 bg-slate-200 rounded animate-pulse" />
+                 <div className="h-3 w-full bg-slate-200 rounded animate-pulse" />
+                 <div className="h-3 w-2/3 bg-slate-200 rounded animate-pulse" />
+               </div>
+            ) : aiError ? (
+               <div className="flex gap-3 text-red-600">
+                 <AlertCircle className="h-5 w-5 shrink-0" />
+                 <div className="text-xs">
+                   <p className="font-bold">Analysis Failed</p>
+                   <button onClick={fetchAiInsights} className="underline mt-1">Retry connection</button>
+                 </div>
+               </div>
+            ) : (
+               <>
+                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm text-blue-600 ring-1 ring-slate-100">
+                   {currentInsight?.title.includes('Security') ? <AlertCircle className="h-5 w-5" /> :
+                    currentInsight?.title.includes('Crowd') ? <TrendingUp className="h-5 w-5" /> :
+                    <Sparkles className="h-5 w-5" />}
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-0.5">
+                      {currentInsight?.title || 'Event Update'}
+                    </div>
+                    <div className="text-sm font-medium text-slate-900 leading-snug line-clamp-3">
+                      {currentInsight?.content}
+                    </div>
+                 </div>
+               </>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Pagination / Progress Bars */}
+      <div className="mt-5 flex items-center gap-1.5 h-2">
+         {aiInsights.length > 1 && aiInsights.map((_, i) => (
+           <button
+             key={i}
+             onClick={() => handleManualChange(i)}
+             className={cn(
+               "h-1.5 rounded-full transition-all duration-500",
+               i === currentInsightIndex ? "w-8 bg-blue-600" : "w-1.5 bg-slate-200 hover:bg-slate-300"
+             )}
+             aria-label={`View insight ${i + 1}`}
+           />
+         ))}
+      </div>
 
       <EventCreationModal
-        isOpen={showModal && !currentEvent}
-        onClose={handleCloseModal}
-        onEventCreated={handleEventCreated}
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onEventCreated={() => {
+          onEventCreated()
+          setShowModal(false)
+        }}
       />
-    </motion.div>
+    </CardFrame>
   )
 }

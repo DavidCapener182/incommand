@@ -19,6 +19,7 @@ import { TypingIndicator } from '@/components/ui/TypingIndicator'
 import QuickAddInput, { ParsedIncidentData } from '@/components/ui/QuickAddInput'
 import VoiceInputButton, { VoiceInputCompact } from '@/components/VoiceInputButton'
 import VoiceInputField from '@/components/VoiceInputField'
+import RecentRadioMessages from './incidents/RecentRadioMessages'
 import { parseVoiceCommand } from '@/hooks/useVoiceInput'
 import { detectPriority } from '@/utils/priorityDetection'
 import { detectIncidentFromText } from '@/utils/incidentLogic'
@@ -32,7 +33,27 @@ import { useSwipeModal } from '../hooks/useSwipeGestures'
 import { useOfflineSync } from '@/hooks/useOfflineSync'
 import useIncidentSOP from '@/hooks/useIncidentSOP'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MicrophoneIcon, ArrowPathIcon, CloudArrowUpIcon, WifiIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { 
+  MicrophoneIcon, 
+  ArrowPathIcon, 
+  CloudArrowUpIcon, 
+  WifiIcon, 
+  XMarkIcon,
+  ChatBubbleBottomCenterTextIcon,
+  ListBulletIcon,
+  BookOpenIcon,
+  SparklesIcon,
+  ClipboardDocumentCheckIcon,
+  CheckCircleIcon,
+  ShieldCheckIcon,
+  ExclamationTriangleIcon,
+  MapPinIcon,
+  PlusSmallIcon,
+  DocumentPlusIcon,
+  CalendarDaysIcon,
+  LockClosedIcon,
+  PaperAirplaneIcon
+} from '@heroicons/react/24/outline'
 import { validateEntryType, formatTimeDelta } from '@/lib/auditableLogging'
 import { EntryType } from '@/types/auditableLog'
 import QuickTabs from './QuickTabs'
@@ -49,6 +70,25 @@ import type { Coordinates } from '@/hooks/useGeocodeLocation'
 import type { IncidentSOPStep } from '@/types/sop'
 import SOPModal from './SOPModal'
 import { detectMatchFlowType, isMatchFlowType, type MatchFlowType } from '@/utils/matchFlowParser'
+import type { User } from '@supabase/supabase-js'
+import type { Event } from '@/types/shared'
+// Import card components from separate files
+import IncidentCreationModalHeader from './incidents/cards/IncidentCreationModalHeader'
+import CallsignInformationCard from './incidents/cards/CallsignInformationCard'
+import IncidentConfigurationCard from './incidents/cards/IncidentConfigurationCard'
+import DetailedInformationCard from './incidents/cards/DetailedInformationCard'
+import GreenGuideBestPracticesCard from './incidents/cards/GreenGuideBestPracticesCard'
+import LocationAndActionsCard from './incidents/cards/LocationAndActionsCard'
+import AdditionalOptionsCard from './incidents/cards/AdditionalOptionsCard'
+import AIToolsPanel from './incidents/cards/AIToolsPanel'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog'
 
 interface Props {
   isOpen: boolean
@@ -1949,6 +1989,8 @@ function saveUsageCounts(counts: Record<string, number>) {
   } catch {}
 }
 
+// Card components are now imported from separate files in ./incidents/cards/
+
 export default function IncidentCreationModal({
   isOpen,
   onClose,
@@ -1972,7 +2014,7 @@ export default function IncidentCreationModal({
   }, [incidentTypes]);
 
   // Function to determine the "To" field based on user's role
-  const getCallsignTo = () => {
+  const getCallsignTo = useCallback(() => {
     if (!membership?.role) return 'Event Control';
     
     const role = membership.role.toLowerCase();
@@ -1994,7 +2036,7 @@ export default function IncidentCreationModal({
       default:
         return 'Event Control';
     }
-  };
+  }, [membership?.role]);
 
   // Swipe gestures for modal interaction
   const swipeGestures = useSwipeModal(
@@ -2121,6 +2163,18 @@ export default function IncidentCreationModal({
     outcome: '',
     use_structured_template: true
   });
+  
+  // State to collect AI-generated data
+  const [aiGeneratedData, setAiGeneratedData] = useState<{
+    tags?: string[]
+    riskMatrix?: any
+    logQualityScore?: number
+    dispatchAdvisor?: any
+    ethaneReport?: any
+    radioScript?: string
+    translatedText?: string
+    chronology?: any[]
+  }>({});
   const [refusalDetails, setRefusalDetails] = useState<RefusalDetails>({
     policeRequired: false,
     description: '',
@@ -2159,7 +2213,7 @@ export default function IncidentCreationModal({
     if (formData.callsign_to !== newCallsignTo) {
       setFormData(prev => ({ ...prev, callsign_to: newCallsignTo }));
     }
-  }, [membership?.role, formData.callsign_to]);
+  }, [formData.callsign_to, getCallsignTo, membership?.role]);
   
   // New state for tabbed interface and AI parsing
   const [currentTab, setCurrentTab] = useState<'quick' | 'details' | 'people' | 'priority' | 'additional'>('quick')
@@ -2191,6 +2245,7 @@ export default function IncidentCreationModal({
   const [mapCoordinates, setMapCoordinates] = useState<Coordinates | null>(null);
   const [mapCoordinatesSource, setMapCoordinatesSource] = useState<'geocoded' | 'manual' | null>(null);
   const [showSOPModal, setShowSOPModal] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { steps: sopSteps, isLoading: sopLoading, error: sopError } = useIncidentSOP(formData.incident_type || null);
   const { hasGuidedActions } = useGuidedActions();
   const [usageCounts, setUsageCounts] = useState(() => getUsageCounts());
@@ -2261,7 +2316,10 @@ export default function IncidentCreationModal({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   // Enhanced voice recognition setup with fallback
+  // The recognition lifecycle must remain stable; re-running this effect whenever helper callbacks change
+  // interrupts the microphone mid-dictation, so we intentionally scope the deps to config values only.
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -2496,7 +2554,8 @@ export default function IncidentCreationModal({
         clearTimeout(recognitionTimeout);
       }
     };
-  }, [transcript, voiceError]);
+  }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // Offline mode detection and local storage
   useEffect(() => {
@@ -2882,7 +2941,7 @@ export default function IncidentCreationModal({
       }
     };
     fetchEvents();
-  }, [user]);
+  }, [membership?.event_id, user]);
   
   // Map AI outputs into the incident form in one place to avoid duplication
   type AICommonData = { incidentType?: string; description?: string; callsign?: string; location?: string; priority?: string; confidence?: number; actionTaken?: string };
@@ -3272,211 +3331,6 @@ export default function IncidentCreationModal({
   };
 
 
-  // Create a debounced function for processing input
-  const debouncedProcessInput = useCallback(
-    debounce(async (input: string) => {
-      if (!input.trim()) {
-        setFormData(prev => ({ 
-          ...prev, 
-          occurrence: '', 
-          action_taken: '',
-          incident_type: 'Select Type',
-          callsign_from: '',
-          log_number: ''
-        }));
-        return;
-      }
-
-      try {
-        // Get current event for team name extraction (for match flow detection)
-        const selectedEvent = events.find(e => e.id === selectedEventId);
-        const homeTeam = selectedEvent?.home_team;
-        const awayTeam = selectedEvent?.away_team;
-        
-        const incidentType = detectIncidentType(input, homeTeam, awayTeam);
-        const callsign = detectCallsign(input) || '';
-        const location = extractLocation(input) || '';
-        const priorityDetected = detectPriority(input);
-        let processedData: IncidentParserResult | null = null;
-
-        // Check if this is a match flow type
-        if (isMatchFlowType(incidentType)) {
-          processedData = await parseMatchFlowIncident(input, incidentType, homeTeam, awayTeam);
-        } else if (
-          // Custom handler for showdown
-          incidentType === 'Event Timing' && input.toLowerCase().includes('showdown')
-        ) {
-          processedData = {
-            occurrence: 'Showdown',
-            action_taken: 'The show has ended',
-            callsign_from: 'PM',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          incidentType === 'Event Timing' &&
-          (input.toLowerCase().includes('doors open') || input.toLowerCase().includes('doors green') || input.toLowerCase().includes('venue open'))
-        ) {
-          processedData = {
-            occurrence: 'Doors Open',
-            action_taken: 'The venue is now open and customers are entering',
-            callsign_from: 'A1',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          incidentType === 'Event Timing' && input.toLowerCase().includes('venue clear')
-        ) {
-          processedData = {
-            occurrence: 'Venue is clear of public',
-            action_taken: 'Venue Clear',
-            callsign_from: 'A1',
-            incident_type: 'Event Timing'
-          };
-        } else if (
-          incidentType === 'Event Timing' && (input.toLowerCase().includes('staff briefed') || input.toLowerCase().includes('staff briefed and in position'))
-        ) {
-          processedData = {
-            occurrence: 'Staff briefed and in position',
-            action_taken: 'All staff have been briefed and are in position',
-            callsign_from: 'A1',
-            incident_type: 'Event Timing'
-          };
-        } else {
-        switch (incidentType) {
-          case 'Medical':
-            processedData = await parseMedicalIncident(input);
-            break;
-          case 'Ejection':
-            processedData = await parseEjectionIncident(input);
-            break;
-          case 'Refusal':
-            processedData = await parseRefusalIncident(input);
-            break;
-          case 'Attendance':
-            const selectedEvent = events.find(e => e.id === selectedEventId);
-            const expectedAttendance = selectedEvent?.expected_attendance || 3500;
-            processedData = await parseAttendanceIncident(input, expectedAttendance);
-            break;
-          case 'Welfare':
-            processedData = await parseWelfareIncident(input);
-            break;
-          case 'Lost Property':
-            processedData = await parseLostPropertyIncident(input);
-            break;
-          case 'Suspicious Behaviour':
-            processedData = await parseSuspiciousBehaviourIncident(input);
-            break;
-          case 'Aggressive Behaviour':
-            processedData = await parseAggressiveBehaviourIncident(input);
-            break;
-          case 'Queue Build-Up':
-            processedData = await parseQueueBuildUpIncident(input);
-            break;
-          case 'Technical Issue':
-            processedData = await parseTechnicalIncident(input);
-            break;
-          case 'Weather Disruption':
-            processedData = await parseWeatherDisruptionIncident(input);
-            break;
-          default:
-            // Use the general incident endpoint for all other types
-            try {
-              const response = await fetch('/api/generate-incident-details', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  input,
-                  incident_type: incidentType,
-                  location,
-                  description: input,
-                  callsign
-                })
-              });
-
-              if (!response.ok) {
-                throw new Error('Failed to generate incident details');
-              }
-
-              const data = await response.json();
-               processedData = {
-                occurrence: data.occurrence || input,
-                action_taken: data.action_taken || '',
-                callsign_from: callsign,
-                incident_type: incidentType
-              };
-              } catch (error) {
-              console.error('Error generating incident details:', error);
-              // Unified fallback using parseIncidentUnified; keep local heuristics as backup
-              try {
-                const { data, source } = await parseIncidentUnified(input, incidentTypes);
-                if (data) {
-                  processedData = {
-                    occurrence: data.description || input,
-                    action_taken: '',
-                    callsign_from: detectCallsign(input) || '',
-                    incident_type: normalizeIncidentType(data.incidentType || '', incidentTypes) || incidentType,
-                  } as IncidentParserResult;
-                  if (data.priority) setFormData(prev => ({ ...prev, priority: data.priority || prev.priority }));
-                } else {
-                  processedData = {
-                    occurrence: input,
-                    action_taken: '',
-                    callsign_from: callsign,
-                    incident_type: incidentType
-                  };
-                }
-              } catch (err2) {
-                processedData = {
-                  occurrence: input,
-                  action_taken: '',
-                  callsign_from: callsign,
-                  incident_type: incidentType
-                };
-              }
-              }
-            }
-        }
-
-        // Get current event for log number generation
-        const { data: currentEvent } = await supabase
-          .from('events')
-          .select('id, event_name')
-          .eq('is_current', true)
-          .single();
-
-        if (!currentEvent) {
-          console.error('No current event found');
-          return;
-        }
-
-        // Generate log number
-        const logNumber = await generateNextLogNumber(currentEvent.event_name);
-        const safeLogNumber = logNumber || '';
-
-        if (processedData) {
-          setFormData(prev => ({
-            ...prev,
-            occurrence: processedData.occurrence,
-            action_taken: processedData.action_taken,
-            incident_type: processedData.incident_type || incidentType,
-            callsign_from: processedData.callsign_from || prev.callsign_from,
-            log_number: safeLogNumber,
-            priority: priorityDetected || prev.priority
-          }));
-        } else {
-          setFormData(prev => ({ 
-            ...prev,
-            incident_type: incidentType,
-            log_number: safeLogNumber,
-            priority: priorityDetected || prev.priority
-          }));
-        }
-      } catch (error) {
-        console.error('Error processing input:', error);
-      }
-    }, 500),
-    []
-  );
-
   // Handle input change
   const handleQuickInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const input = e.target.value;
@@ -3645,10 +3499,68 @@ export default function IncidentCreationModal({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitClick = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log('🔵 handleSubmitClick called, showing confirmation dialog');
+    console.log('🔵 Current state:', { showConfirmDialog, isOpen, loading });
+    
+    // Validate required fields before showing dialog
+    if (!formData.incident_type) {
+      addToast({
+        type: 'error',
+        title: 'Incident Type Required',
+        message: 'Please select an incident type before logging.',
+        duration: 5000
+      });
+      return;
+    }
+    
+    if (!formData.occurrence || !formData.occurrence.trim()) {
+      addToast({
+        type: 'error',
+        title: 'Incident Details Required',
+        message: 'Please provide incident details before logging.',
+        duration: 5000
+      });
+      return;
+    }
+    
+    // Show confirmation dialog instead of directly submitting
+    setShowConfirmDialog(true);
+    console.log('🔵 Set showConfirmDialog to true');
+  };
+
+  const handleConfirmSubmit = async () => {
+    console.log('🔵 handleConfirmSubmit called - confirming and submitting');
+    try {
+      setShowConfirmDialog(false);
+      console.log('🔵 Dialog closed, calling performSubmit');
+      await performSubmit();
+      console.log('🔵 performSubmit completed');
+    } catch (error) {
+      console.error('❌ Error in handleConfirmSubmit:', error);
+      // Ensure dialog closes even on error
+      setShowConfirmDialog(false);
+    }
+  };
+
+  const performSubmit = async () => {
     setLoading(true);
     setError(null);
+    
+    console.log('🔵 performSubmit called', { 
+      loading, 
+      formData: {
+        incident_type: formData.incident_type,
+        occurrence: formData.occurrence?.substring(0, 50),
+        hasOccurrence: !!formData.occurrence,
+        hasActionTaken: !!formData.action_taken
+      }
+    });
 
 
     try {
@@ -3824,6 +3736,7 @@ export default function IncidentCreationModal({
         is_closed: shouldBeLogged,
         event_id: effectiveEvent.id,
         status: shouldBeLogged ? 'logged' : (formData.status || 'open'),
+        priority: isMatchFlowLog ? 'low' : (formData.priority || 'medium'),
         ai_input: formData.ai_input || null,
         location: formData.location || '',
         created_at: now,
@@ -3841,13 +3754,21 @@ export default function IncidentCreationModal({
         ...(isMatchFlowLog && {
           type: 'match_log',
           category: 'football',
-          priority: 'low',
         }),
         // Add GPS coordinates if map coordinates are available
         ...(resolvedCoordinates && {
           latitude: resolvedCoordinates.lat,
           longitude: resolvedCoordinates.lng
-        })
+        }),
+        // AI-generated data
+        ai_tags: aiGeneratedData.tags || null,
+        risk_matrix_scores: aiGeneratedData.riskMatrix || null,
+        log_quality_score: aiGeneratedData.logQualityScore || null,
+        dispatch_advisor: aiGeneratedData.dispatchAdvisor || null,
+        ethane_reports: aiGeneratedData.ethaneReport || null,
+        generated_radio_script: aiGeneratedData.radioScript || null,
+        translated_text: aiGeneratedData.translatedText || null,
+        chronology: aiGeneratedData.chronology || null
       };
 
       // First, check if the log number already exists
@@ -3898,16 +3819,18 @@ export default function IncidentCreationModal({
       // Insert the incident
       console.log('About to insert incident with logged_by_user_id:', user.id);
       let insertedIncident: { id: number } | null = null;
+      console.log('🔵 Inserting incident into database:', { logNumber, eventId: effectiveEvent.id, incidentType: resolvedType });
       const { data: insertReturn, error: insertError } = await supabase
         .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .insert([incidentData])
         .select('id')
         .maybeSingle();
       if (insertError) {
-        console.error('Insert error:', insertError);
+        console.error('❌ Insert error:', insertError);
         throw new Error((insertError as any)?.message || 'Insert failed');
       }
       insertedIncident = insertReturn as any;
+      console.log('✅ Incident inserted successfully:', { id: insertedIncident?.id, logNumber });
       if (!insertedIncident?.id) {
         // Some RLS policies disable returning representation; fetch by unique log_number as fallback
         const { data: fetchedByLog, error: fetchByLogError } = await supabase
@@ -4021,8 +3944,49 @@ export default function IncidentCreationModal({
         // Don't fail the incident creation if broadcast fails
       }
 
+      // Auto-create task if incident contains task keywords
+      if (insertedIncident?.id && !shouldBeLogged && !formData.is_closed) {
+        try {
+          const { processIncidentForTask } = await import('@/lib/radio/taskCreator')
+          const result = await processIncidentForTask(
+            {
+              id: insertedIncident.id,
+              occurrence: resolvedOccurrence,
+              incident_type: resolvedType,
+              priority: formData.priority || 'medium',
+              location: formData.location || '',
+              callsign_from: formData.callsign_from,
+              callsign_to: formData.callsign_to || 'Event Control',
+              event_id: effectiveEvent.id,
+              is_closed: false,
+              created_at: now,
+            },
+            user.id,
+            supabase,
+            true
+          )
+          
+          if (result.taskCreated) {
+            console.log('✅ Auto-created task from incident:', result.taskId)
+          }
+        } catch (taskError) {
+          // Don't fail incident creation if task creation fails
+          console.warn('Could not auto-create task from incident:', taskError)
+        }
+      }
+
+      // Show success toast
+      addToast({
+        type: 'success',
+        title: 'Incident Created',
+        message: `Incident ${logNumber} has been logged successfully.`,
+        duration: 5000
+      });
+
       // Call onIncidentCreated callback with the created incident and close modal
+      console.log('🔵 Calling onIncidentCreated callback');
       await onIncidentCreated(insertedIncident);
+      console.log('🔵 onIncidentCreated completed, closing modal');
       onClose();
 
       let photoUrl = null;
@@ -4040,7 +4004,14 @@ export default function IncidentCreationModal({
     } catch (error) {
       console.error('Error creating incident:', error);
       const message = (error as any)?.message || (error instanceof Error ? error.message : null) || 'Failed to create incident. Please try again.';
-      alert(message);
+      setError(message);
+      // Show toast error message
+      addToast({
+        type: 'error',
+        title: 'Failed to Create Incident',
+        message: message,
+        duration: 8000
+      });
     } finally {
       setLoading(false);
     }
@@ -4288,7 +4259,7 @@ export default function IncidentCreationModal({
         if (diff !== 0) return diff;
         return a.localeCompare(b);
       });
-  }, [usageCounts]);
+  }, [INCIDENT_TYPES, usageCounts]);
 
   // Use sortedIncidentTypes for grid
   const desktopVisibleTypes = sortedIncidentTypes.slice(0, desktopVisibleCount);
@@ -4519,7 +4490,7 @@ export default function IncidentCreationModal({
                 Cancel
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={handleSubmitClick}
                 disabled={loading}
                 className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target min-h-[44px] text-base font-medium"
               >
@@ -4556,60 +4527,165 @@ export default function IncidentCreationModal({
         <CursorTracker users={presenceUsers} containerRef={modalRef} />
 
         {/* 🔹 Sticky Header */}
-        <header className="sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 sm:px-8 flex items-center justify-between shadow-sm">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">New Incident</h1>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              Event: <strong className="text-gray-900 dark:text-white">
-                {(() => {
-                  const chosen = events.find(e => e.id === selectedEventId)
-                    || events.find(e => e.is_current)
-                    || currentEventFallback
-                    || events[0];
-                  if (chosen?.event_name) return chosen.event_name;
-                  return eventsLoading ? 'Loading...' : 'No events available';
-                })()}
-              </strong>
-            </span>
-          </div>
-          <div className="flex items-center space-x-3">
-            {/* Quick log buttons - keeping existing functionality */}
-            <QuickTabs
-              eventId={selectedEventId || ''}
-              onIncidentLogged={async () => {
-                await onIncidentCreated();
-              }}
-              currentUser={user}
-            />
-            <button
-              onClick={() => {
-                resetForm()
-                onClose()
-              }}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              aria-label="Close"
-            >
-              <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </header>
+        <IncidentCreationModalHeader
+          events={events}
+          selectedEventId={selectedEventId}
+          eventsLoading={eventsLoading}
+          currentEventFallback={currentEventFallback}
+          user={user}
+          onIncidentCreated={onIncidentCreated}
+          onClose={onClose}
+          onResetForm={resetForm}
+        />
 
-                {/* Quick Add Bar - Full Width */}
-        <div className="px-6 py-4 sm:px-8 border-b bg-gray-50 dark:bg-slate-800 space-y-3">
-          {/* Divider */}
-          <div className="flex items-center gap-4">
-            <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Natural Language Input</span>
-            <div className="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+        {/* 🔹 Main Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-4 py-6 sm:px-8 flex-grow overflow-y-auto pb-32">
+            {/* Left Column - Incident Type Categories (Sidebar) */}
+            <aside className="hidden lg:block col-span-3">
+              <div className="bg-gray-100/50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-gray-700 p-4 h-full max-h-[calc(100vh-200px)] overflow-y-auto sticky top-0">
+                <IncidentTypeCategories
+                  selectedType={formData.incident_type}
+                  onTypeSelect={handleIncidentTypeSelect}
+                  usageStats={incidentTypeUsageStats}
+                  availableTypes={incidentTypes}
+                />
+              </div>
+            </aside>
+
+            {/* Middle Column - Main Form Section */}
+            <section className="col-span-12 lg:col-span-6 space-y-6 pb-8">
+              <CallsignInformationCard
+                callsignFrom={formData.callsign_from}
+                callsignTo={formData.callsign_to}
+                onCallsignFromChange={(value) => setFormData({ ...formData, callsign_from: value })}
+                onCallsignToChange={(value) => setFormData({ ...formData, callsign_to: value })}
+                getCallsignTo={getCallsignTo}
+                presenceUsers={presenceUsers}
+                updateFocus={updateFocus}
+                updateTyping={updateTyping}
+              />
+
+              <IncidentConfigurationCard
+                priority={formData.priority}
+                entryType={formData.entry_type}
+                timeOfOccurrence={formData.time_of_occurrence}
+                timeLogged={formData.time_logged}
+                retrospectiveJustification={formData.retrospective_justification}
+                onPriorityChange={(value) => setFormData({ ...formData, priority: value })}
+                onEntryTypeChange={(value) => setFormData({ ...formData, entry_type: value })}
+                onTimeOfOccurrenceChange={(value) => setFormData({ ...formData, time_of_occurrence: value })}
+                onTimeLoggedChange={(value) => setFormData({ ...formData, time_logged: value })}
+                onRetrospectiveJustificationChange={(value) => setFormData({ ...formData, retrospective_justification: value })}
+                showAdvancedTimestamps={showAdvancedTimestamps}
+                onShowAdvancedTimestampsChange={setShowAdvancedTimestamps}
+                entryTypeWarnings={entryTypeWarnings}
+                onEntryTypeWarningsChange={setEntryTypeWarnings}
+                description={formData.facts_observed}
+              />
+
+              <DetailedInformationCard
+                headline={formData.headline}
+                source={formData.source}
+                factsObserved={formData.facts_observed}
+                actionsTaken={formData.actions_taken}
+                outcome={formData.outcome}
+                incidentType={formData.incident_type}
+                onHeadlineChange={(value) => setFormData({ ...formData, headline: value })}
+                onSourceChange={(value) => setFormData({ ...formData, source: value })}
+                onFactsObservedChange={(value) => setFormData({ ...formData, facts_observed: value })}
+                onActionsTakenChange={(value) => setFormData({ ...formData, actions_taken: value })}
+                onOutcomeChange={(value) => setFormData({ ...formData, outcome: value })}
+                getHeadlineWordCount={getHeadlineWordCount}
+                factualValidationWarnings={factualValidationWarnings}
+                onFactualValidationWarningsChange={setFactualValidationWarnings}
+                validateFactualLanguage={validateFactualLanguage}
+                generateStructuredOccurrence={generateStructuredOccurrence}
+                showSOPButton={showSOPButton}
+                sopLoading={sopLoading}
+                onShowSOPModal={() => setShowSOPModal(true)}
+                hasGuidedActions={hasGuidedActions}
+                onShowGuidedActions={() => setShowGuidedActions(true)}
+                guidedActionsGenerated={guidedActionsGenerated}
+              />
+
+              <LocationAndActionsCard
+                location={formData.location}
+                onLocationChange={(value) => setFormData({ ...formData, location: value })}
+                shouldRenderMap={shouldRenderMap}
+                mapCoordinates={mapCoordinates}
+                mapLocationQuery={mapLocationQuery}
+                onMapLocationChange={handleMapLocationChange}
+              />
+            </section>
+
+            {/* Right Column - AI Tools Panel */}
+            <aside className="col-span-12 lg:col-span-3 flex flex-col gap-4 h-full max-h-[calc(100vh-200px)]">
+              <div className="flex-1 min-h-0">
+                <AIToolsPanel
+                  formData={formData}
+                  onApplySuggestion={(field, value) => {
+                    setFormData(prev => ({ ...prev, [field]: value }));
+                  }}
+                  onUpdateFactsObserved={(updatedText) => {
+                    setFormData(prev => ({ ...prev, facts_observed: updatedText }));
+                  }}
+                  guidedActionsApplied={guidedActionsGenerated || !hasGuidedActions(formData.incident_type)}
+                  incidentType={formData.incident_type}
+                  showBestPracticeHints={showBestPracticeHints}
+                  onShowBestPracticeHintsChange={setShowBestPracticeHints}
+                  onOccurrenceAppend={(text) => setFormData(prev => {
+                    const current = prev.occurrence || ''
+                    // Append with space if there's existing content, otherwise just add the text
+                    const newText = current.trim() ? `${current.trim()} ${text}` : text
+                    return { ...prev, occurrence: newText }
+                  })}
+                  onActionsTakenAppend={(text) => setFormData(prev => {
+                    const current = prev.actions_taken || ''
+                    // Append with space if there's existing content, otherwise just add the text
+                    const newText = current.trim() ? `${current.trim()} ${text}` : text
+                    return { ...prev, actions_taken: newText }
+                  })}
+                  onAIDataChange={(data) => setAiGeneratedData(data)}
+                  onPriorityChange={(priority) => setFormData(prev => ({ ...prev, priority }))}
+                />
+              </div>
+            </aside>
           </div>
-          
-          {/* AI Parsing Instructions */}
-          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-            💡 Type incident details and press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Enter</kbd> or click <span className="text-blue-600 dark:text-blue-400">✨</span> to auto-fill structured fields
+
+        {/* 🔹 Fixed Bottom Input Bar (ChatGPT/Gemini Style) - Starts from middle, extends to right */}
+        <div className="fixed bottom-0 left-1/2 right-0 z-30 bg-white/90 dark:bg-[#1a2a57]/95 backdrop-blur-md border-t border-l border-slate-200 dark:border-[#2d437a] shadow-lg rounded-tl-2xl">
+          <div className="max-w-4xl px-4 py-4 sm:px-6 flex flex-col gap-3">
+            
+            {/* Recent Radio Messages - Compact */}
+            {selectedEventId && (
+              <div className="mb-1">
+          <RecentRadioMessages 
+            eventId={selectedEventId || currentEventFallback?.id}
+            onSelectMessage={(incident) => {
+              if (incident.occurrence) {
+                handleQuickAdd(incident.occurrence)
+              }
+              if (incident.callsign_from) {
+                setFormData(prev => ({ ...prev, callsign_from: incident.callsign_from || prev.callsign_from }))
+              }
+              if (incident.callsign_to) {
+                setFormData(prev => ({ ...prev, callsign_to: incident.callsign_to || prev.callsign_to }))
+              }
+              if (incident.source) {
+                setFormData(prev => ({ 
+                  ...prev, 
+                  source: prev.source 
+                    ? `${prev.source}, ${incident.source}` 
+                    : incident.source 
+                }))
+              }
+            }}
+                  className="mb-1"
+                />
           </div>
-          
+            )}
+
+            {/* QuickAddInput - Main Input */}
           <div className="relative">
             <QuickAddInput 
               aiSource={quickAddAISource} 
@@ -4625,7 +4701,6 @@ export default function IncidentCreationModal({
               homeTeam={eventData?.home_team}
               awayTeam={eventData?.away_team}
               onChangeValue={(value: string) => {
-                // Clear auto-populated fields when user starts typing new text
                 if (value.trim() && value.trim() !== formData.occurrence) {
                   setFormData(prev => ({
                     ...prev,
@@ -4633,10 +4708,8 @@ export default function IncidentCreationModal({
                     callsign_from: '',
                     callsign_to: 'Event Control',
                     priority: 'medium',
-                    // Don't clear location - let AI parsing populate it
                     action_taken: '',
                     outcome: '',
-                    // Clear structured fields that were auto-populated
                     facts_observed: '',
                     actions_taken: '',
                     headline: '',
@@ -4648,29 +4721,26 @@ export default function IncidentCreationModal({
             <div aria-live="polite" className="sr-only">
               {quickAddAISource && `Processing with ${quickAddAISource === 'cloud' ? 'cloud AI' : 'browser AI'}`}
             </div>
-            
           </div>
 
-          {/* Voice Transcript Display */}
+            {/* Voice Transcript Display - Compact */}
           <AnimatePresence>
             {transcript && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl"
+                  className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg"
               >
-                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <MicrophoneIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Voice Input:</span>
+                      <MicrophoneIcon className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                      <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Voice Input</span>
                   </div>
                                      {isListening && (
                      <div className="flex items-center gap-2">
-                       <div className="flex items-center gap-1">
-                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                          <span className="text-xs text-green-600 dark:text-green-400">Listening...</span>
-                       </div>
                        <button
                          onClick={() => {
                            if (recognition && isListening) {
@@ -4678,30 +4748,15 @@ export default function IncidentCreationModal({
                              recognition.stop();
                            }
                          }}
-                         className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-                         title="Stop listening"
+                          className="px-2 py-0.5 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
                        >
                          Stop
                        </button>
                      </div>
                    )}
-                   {transcript && !isListening && (
-                     <div className="flex items-center gap-1">
-                       <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                       <span className="text-xs text-blue-600 dark:text-blue-400">Ready to submit</span>
                      </div>
-                   )}
-                   {isRetrying && (
-                     <div className="flex items-center gap-1">
-                       <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                       <span className="text-xs text-yellow-600 dark:text-yellow-400">Retrying...</span>
-                     </div>
-                   )}
-                </div>
-                <p className="text-sm text-blue-800 dark:text-blue-200">{transcript}</p>
-                
-                {/* Manual Submit Button */}
-                <div className="mt-3 flex gap-2">
+                  <p className="text-xs text-blue-800 dark:text-blue-200 mb-2">{transcript}</p>
+                  <div className="flex gap-2">
                   <button
                     onClick={() => {
                       const cleanTranscript = transcript.replace(/\s*\[interim\].*$/, '').trim();
@@ -4710,13 +4765,13 @@ export default function IncidentCreationModal({
                         setTranscript('');
                       }
                     }}
-                    className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors"
+                      className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
                   >
                     Use This Text
                   </button>
                   <button
                     onClick={() => setTranscript('')}
-                    className="px-3 py-1 bg-gray-500 text-white text-xs rounded-lg hover:bg-gray-600 transition-colors"
+                      className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 transition-colors"
                   >
                     Clear
                   </button>
@@ -4725,28 +4780,25 @@ export default function IncidentCreationModal({
             )}
           </AnimatePresence>
 
-          {/* Voice Error Display */}
+            {/* Voice Error Display - Compact */}
           <AnimatePresence>
             {voiceError && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mt-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl"
+                  className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg"
               >
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="flex items-start gap-2">
+                    <svg className="h-4 w-4 text-yellow-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                     </svg>
-                  </div>
                   <div className="flex-1">
-                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">Voice Recognition Error</h4>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-3">{voiceError}</p>
-                    <div className="flex space-x-3">
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400 mb-2">{voiceError}</p>
+                      <div className="flex gap-2">
                       <button
                         onClick={() => setVoiceError(null)}
-                        className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
+                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 underline"
                       >
                         Dismiss
                       </button>
@@ -4755,21 +4807,10 @@ export default function IncidentCreationModal({
                           setVoiceError(null);
                           startListening();
                         }}
-                        className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
+                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 underline"
                       >
                         Try Again
                       </button>
-                      {voiceError.includes('permission') && (
-                        <button
-                          onClick={() => {
-                            // Open browser settings help
-                            window.open('https://support.google.com/chrome/answer/2693767?hl=en', '_blank');
-                          }}
-                          className="text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200 underline"
-                        >
-                          Fix Permissions
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -4777,731 +4818,66 @@ export default function IncidentCreationModal({
             )}
           </AnimatePresence>
 
-          {/* Offline Status Indicator */}
+            {/* Offline Status Indicator - Compact */}
           <AnimatePresence>
             {isOfflineMode && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mt-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl"
+                  className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg"
               >
-                <div className="flex items-center gap-3">
-                  <WifiIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                  <div className="flex items-center gap-2">
+                    <WifiIcon className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                   <div className="flex-1">
-                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Offline Mode</h4>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                      You&apos;re currently offline. Incidents will be saved locally and synced when you&apos;re back online.
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                        Offline mode - syncing when online
                     </p>
                   </div>
                   <motion.button
                     type="button"
                     onClick={() => offlineActions.triggerManualSync()}
                     disabled={offlineState.isSyncInProgress}
-                    className="p-2 bg-yellow-100 dark:bg-yellow-800 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-700 transition-colors duration-200 touch-target"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                      className="p-1.5 bg-yellow-100 dark:bg-yellow-800 rounded hover:bg-yellow-200 transition-colors"
                   >
-                    <ArrowPathIcon className={`h-4 w-4 text-yellow-600 dark:text-yellow-400 ${offlineState.isSyncInProgress ? 'animate-spin' : ''}`} />
+                      <ArrowPathIcon className={`h-3 w-3 text-yellow-600 dark:text-yellow-400 ${offlineState.isSyncInProgress ? 'animate-spin' : ''}`} />
                   </motion.button>
                 </div>
-                
-                {/* Sync Progress */}
-                {offlineState.isSyncInProgress && (
-                  <div className="mt-3">
-                    <div className="flex justify-between text-xs text-yellow-600 dark:text-yellow-400 mb-1">
-                      <span>Syncing...</span>
-                      <span>{offlineState.syncProgress.completed}/{offlineState.syncProgress.total}</span>
-                    </div>
-                    <div className="w-full bg-yellow-200 dark:bg-yellow-800 rounded-full h-2">
-                      <motion.div
-                        className="bg-yellow-500 h-2 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ 
-                          width: offlineState.syncProgress.total > 0 
-                            ? `${(offlineState.syncProgress.completed / offlineState.syncProgress.total) * 100}%` 
-                            : 0 
-                        }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    </div>
-                  </div>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
 
-        {/* 🔹 Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-6 py-6 sm:px-8 sm:py-8 flex-grow overflow-y-auto">
-            {/* Left Column - Incident Type Categories (Sidebar) */}
-            <aside className="col-span-3 bg-gray-50 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm h-fit">
-              <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                </div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Incident Type</h3>
+            {/* Action Row - Below Input */}
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                  AI Online
+                </span>
               </div>
                 
-
-              <IncidentTypeCategories
-                selectedType={formData.incident_type}
-                onTypeSelect={handleIncidentTypeSelect}
-                usageStats={incidentTypeUsageStats}
-                availableTypes={incidentTypes}
-              />
-            </aside>
-
-            {/* Middle Column - Main Form Section */}
-            <section className="col-span-6 space-y-6">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
-              {/* Callsign Information Card */}
-              <div role="region" aria-labelledby="callsign-title">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                  </div>
-                  <h3 id="callsign-title" className="text-sm font-semibold text-gray-900 dark:text-white">Callsign Information</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                <div>
-                    <label htmlFor="callsign-from" className="block text-sm font-medium text-gray-700 mb-1">From</label>
-                  <div className="relative">
-                    <input
-                        id="callsign-from"
-                      type="text"
-                      value={formData.callsign_from || ''}
-                      onChange={(e) => setFormData({ ...formData, callsign_from: e.target.value })}
-                      onFocus={() => updateFocus('callsign-from')}
-                      onBlur={() => updateTyping('callsign-from', false)}
-                      onKeyDown={() => updateTyping('callsign-from', true)}
-                      placeholder="Enter callsign..."
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
-                    />
-                    <TypingIndicator users={presenceUsers} fieldName="callsign-from" position="bottom" />
-                  </div>
-                </div>
-                <div>
-                    <label htmlFor="callsign-to" className="block text-sm font-medium text-gray-700 mb-1">To</label>
-                  <input
-                      id="callsign-to"
-                    type="text"
-                    value={formData.callsign_to || getCallsignTo()}
-                    onChange={(e) => setFormData({ ...formData, callsign_to: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
-                  />
-                </div>
-              </div>
-            </div>
-
-              {/* Incident Configuration Card */}
-              <div className={`${
-                formData.priority === 'high' ? 'border-l-4 border-l-red-500 pl-4' : ''
-              }`} role="region" aria-labelledby="configuration-title">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <h3 id="configuration-title" className="text-sm font-semibold text-gray-900 dark:text-white">Incident Configuration</h3>
-                </div>
-                <div>
-                  <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
-                  <div className="relative">
-                  <select
-                      id="priority"
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm appearance-none font-sans"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                </div>
-                    </div>
-                  </div>
-                
-                {/* Entry Type Section */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Entry Type
-                    <span className="ml-1 text-gray-400" title="Select whether this is being logged in real-time or retrospectively">ⓘ</span>
-                  </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="entry_type"
-                        value="contemporaneous"
-                        checked={formData.entry_type === 'contemporaneous'}
-                        onChange={(e) => {
-                          setFormData({ ...formData, entry_type: e.target.value as EntryType })
-                          setEntryTypeWarnings([])
-                        }}
-                        className="text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">⏱️ Contemporaneous (Real-time)</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="entry_type"
-                        value="retrospective"
-                        checked={formData.entry_type === 'retrospective'}
-                        onChange={(e) => {
-                          setFormData({ ...formData, entry_type: e.target.value as EntryType })
-                          setShowAdvancedTimestamps(true)
-                        }}
-                        className="text-amber-600 focus:ring-amber-500"
-                      />
-                      <span className="text-sm text-gray-700">🕓 Retrospective (Delayed)</span>
-                    </label>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formData.entry_type === 'contemporaneous' 
-                      ? 'This entry is being logged in real-time or shortly after the incident'
-                      : 'This entry is being logged after a significant delay from when the incident occurred'
-                    }
-                  </p>
-                </div>
-
-                {/* Retrospective Justification (Conditional) */}
-                {formData.entry_type === 'retrospective' && (
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <label htmlFor="retro-justification" className="block text-sm font-medium text-amber-800 mb-2">
-                      Retrospective Justification *
-                    </label>
-                    <textarea
-                      id="retro-justification"
-                      value={formData.retrospective_justification || ''}
-                      onChange={(e) => setFormData({ ...formData, retrospective_justification: e.target.value })}
-                      placeholder="Explain why this entry is being logged retrospectively (e.g., 'Live comms prevented immediate logging')"
-                      rows={2}
-                      className="w-full rounded-md border border-amber-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm font-sans"
-                      required
-                    />
-                    <p className="text-xs text-amber-700 mt-1">Required for retrospective entries</p>
-                  </div>
-                )}
-
-                {/* Advanced Timestamps (Collapsible) */}
-                {(showAdvancedTimestamps || formData.entry_type === 'retrospective') && (
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => setShowAdvancedTimestamps(!showAdvancedTimestamps)}
-                      className="flex items-center gap-2 text-sm font-medium text-blue-800 mb-3"
-                    >
-                      {showAdvancedTimestamps ? '▼' : '▶'} Advanced Timestamps
-                    </button>
-                  {showAdvancedTimestamps && (
-                      <div className="space-y-3">
-                      <div>
-                        <label htmlFor="time-occurred" className="block text-xs font-medium text-blue-800 mb-1">
-                          Time of Occurrence
-                        </label>
-                        <input
-                          id="time-occurred"
-                          type="datetime-local"
-                          value={formData.time_of_occurrence?.slice(0, 16) || ''}
-                          onChange={(e) => {
-                            const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
-                            setFormData({ ...formData, time_of_occurrence: newTime })
-
-                              // Validate entry type
-                            const validation = validateEntryType(
-                              new Date(newTime),
-                              new Date(formData.time_logged || new Date().toISOString()),
-                                formData.entry_type || 'contemporaneous'
-                            )
-                            setEntryTypeWarnings(validation.warnings)
-                          }}
-                          className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-sans"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="time-logged" className="block text-xs font-medium text-blue-800 mb-1">
-                          Time Logged
-                        </label>
-                        <input
-                          id="time-logged"
-                          type="datetime-local"
-                          value={formData.time_logged?.slice(0, 16) || ''}
-                          onChange={(e) => {
-                            const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
-                            setFormData({ ...formData, time_logged: newTime })
-                          }}
-                          className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-sans"
-                          disabled
-                        />
-                        <p className="text-xs text-blue-600 mt-1">Auto-set to current time</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                )}
-
-                {/* Entry Type Warnings */}
-                {entryTypeWarnings.length > 0 && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex gap-2">
-                      <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-yellow-800 mb-1">Entry Type Warning</p>
-                        {entryTypeWarnings.map((warning, idx) => (
-                          <p key={idx} className="text-xs text-yellow-700">{warning}</p>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Detailed Information Card */}
-              <div role="region" aria-labelledby="detailed-info-title">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <h3 id="detailed-info-title" className="text-sm font-semibold text-gray-900 dark:text-white">Detailed Information</h3>
-                </div>
-              <div className="space-y-3">
-                {/* Always use structured template */}
-                  <div className="space-y-3">
-                    {/* Headline */}
-                    <div>
-                      <label htmlFor="headline" className="block text-sm font-medium text-gray-700 mb-1">
-                        Headline (≤15 words)
-                        <span className="ml-2 text-xs text-blue-600 font-normal" title="Brief summary of the incident">💡 Brief summary</span>
-                      </label>
-                      <input
-                        id="headline"
-                        type="text"
-                        value={formData.headline || ''}
-                        onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
-                        placeholder="e.g., Medical incident at north gate - person collapsed"
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
-                        maxLength={150}
-                      />
-                      <div className="flex justify-between items-center mt-1">
-                        <p className="text-xs text-gray-500">Brief, factual headline</p>
-                        <span className={`text-xs font-medium ${getHeadlineWordCount(formData.headline || '') > 15 ? 'text-red-600' : 'text-green-600'}`}>
-                          {getHeadlineWordCount(formData.headline || '')}/15 words
-                        </span>
-                      </div>
-                      {/* Debug info */}
-                      <div className="text-xs text-gray-400 mt-1">
-                        Debug: headline=&quot;{formData.headline || ''}&quot; wordCount={getHeadlineWordCount(formData.headline || '')}
-                      </div>
-                    </div>
-
-                    {/* Source */}
-                    <div>
-                      <label htmlFor="source" className="block text-sm font-medium text-gray-700 mb-1">
-                        Source
-                        <span className="ml-2 text-xs text-blue-600 font-normal" title="Who reported this or where did the information come from">💡 Who/what reported</span>
-                      </label>
-                      <input
-                        id="source"
-                        type="text"
-                        value={formData.source || ''}
-                        onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                        placeholder="e.g., R3, CCTV North Gate, Security Team"
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Callsign, person, or source of information</p>
-                    </div>
-
-                    {/* Facts Observed */}
-                    <div>
-                      <label htmlFor="facts-observed" className="block text-sm font-medium text-gray-700 mb-1">
-                        Facts Observed
-                        <span className="ml-2 text-xs text-blue-600 font-normal" title="Stick to verifiable facts - avoid opinions or adjectives">💡 Stick to facts</span>
-                      </label>
-                      <textarea
-                        id="facts-observed"
-                        value={formData.facts_observed || ''}
-                        onChange={(e) => {
-                          const newValue = e.target.value
-                          setFormData({ ...formData, facts_observed: newValue })
-                          
-                          // Validate factual language
-                          const validation = validateFactualLanguage(newValue)
-                          setFactualValidationWarnings(validation.warnings)
-                        }}
-                        placeholder="e.g., 15:03 - Person collapsed near north gate entrance. Crowd of approximately 20 people present. Person appears unconscious, not responsive to voice. No visible injuries observed."
-                        rows={4}
-                        className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 resize-none shadow-sm font-sans ${
-                          factualValidationWarnings.length > 0 
-                            ? 'border-amber-300 focus:ring-amber-500 focus:border-amber-500' 
-                            : 'border-gray-300 focus:ring-[#3B82F6] focus:border-[#3B82F6]'
-                        }`}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">What was actually observed - who, what, where, when (no opinions)</p>
-                      
-                      {/* Factual Validation Warnings */}
-                      {factualValidationWarnings.length > 0 && (
-                        <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
-                          <div className="flex gap-1">
-                            <span className="text-amber-600 font-semibold">⚠️ Factual Language Check:</span>
-                          </div>
-                          <ul className="mt-1 space-y-1">
-                            {factualValidationWarnings.map((warning, idx) => (
-                              <li key={idx} className="text-amber-700">• {warning}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Actions Taken */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label htmlFor="actions-taken" className="block text-sm font-medium text-gray-700">
-                          Actions Taken
-                          <span className="ml-2 text-xs text-blue-600 font-normal" title="What was done and by whom">💡 What was done</span>
-                        </label>
-                        <div className="flex items-center gap-3">
-                          {showSOPButton && (
-                            <button
-                              type="button"
-                              onClick={() => setShowSOPModal(true)}
-                              disabled={sopLoading}
-                              className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors disabled:opacity-60"
-                              aria-label="View Standard Operating Procedure"
-                            >
-                              <span>📘</span>
-                              <span>{sopLoading ? 'Loading…' : 'View SOP'}</span>
-                            </button>
-                          )}
-                          {formData.incident_type && hasGuidedActions(formData.incident_type) && (
-                            <button
-                              type="button"
-                              onClick={() => setShowGuidedActions(true)}
-                              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                              aria-label="Open Guided Actions Assistant"
-                            >
-                              <span>💡</span>
-                              <span>Guided Actions</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <textarea
-                        id="actions-taken"
-                        value={formData.actions_taken || ''}
-                        onChange={(e) => setFormData({ ...formData, actions_taken: e.target.value })}
-                        placeholder="e.g., R3 called medical team at 15:04. Crowd control established by security. Medical team arrived at 15:06. Person assessed and transported to medical tent at 15:08."
-                        rows={3}
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] resize-none shadow-sm font-sans"
-                      />
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-xs text-gray-500">What actions were taken and by whom</p>
-                        {guidedActionsGenerated && (
-                          <span className="text-xs text-green-600 flex items-center gap-1">
-                            <span>✓</span>
-                            <span>AI + Green Guide</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Outcome */}
-                    <div>
-                      <label htmlFor="outcome" className="block text-sm font-medium text-gray-700 mb-1">
-                        Outcome
-                        <span className="ml-2 text-xs text-blue-600 font-normal" title="Final state or current status">💡 Current status</span>
-                      </label>
-                      <textarea
-                        id="outcome"
-                        value={formData.outcome || ''}
-                        onChange={(e) => setFormData({ ...formData, outcome: e.target.value })}
-                        placeholder="e.g., Person transported to medical tent. Incident ongoing. Crowd dispersed. Medical team monitoring."
-                        rows={3}
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] resize-none shadow-sm font-sans"
-                      />
-                    </div>
-
-                    {/* Preview of Structured Output */}
-                    {(formData.headline || formData.source || formData.facts_observed || formData.actions_taken || formData.outcome) && (
-                      <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                          📋 Preview of Log Entry
-                          <span className="text-xs text-gray-500 font-normal">(How this will appear in the system)</span>
-                        </h4>
-                        <div className="card-depth p-3 text-sm font-mono whitespace-pre-wrap text-gray-800">
-                          {generateStructuredOccurrence(formData)}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              </div>
-            </section>
-
-            {/* Right Column - Right-hand Panel */}
-            <aside className="col-span-3 space-y-6">
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 space-y-6">
-              {/* Green Guide Best Practices */}
-              {(
-                <div role="region" aria-labelledby="best-practices-title">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                        <svg className="w-4 h-4 text-emerald-700 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <h3 id="best-practices-title" className="text-sm font-semibold text-gray-900 dark:text-white">Best Practices (Green Guide)</h3>
-                    </div>
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={showBestPracticeHints}
-                        onChange={(e) => setShowBestPracticeHints(e.target.checked)}
-                        className="text-emerald-600 focus:ring-emerald-500"
-                      />
-                      Show
-                    </label>
-                  </div>
-                  {showBestPracticeHints && (
-                    <div className="space-y-3">
-                      {(() => {
-                        // @ts-ignore - JSON import typing
-                        const bp = formData.incident_type ? (greenGuideBestPractices as any)[formData.incident_type] : null
-                        if (!bp) {
-                          return (
-                            <div className="p-2 bg-gray-50 border border-gray-200 rounded text-xs text-gray-700">
-                              Select a specific incident type to view brief best‑practice hints and quick‑insert templates.
-                              <div className="mt-2 flex items-center justify-between">
-                                <span className="text-[11px] text-gray-500">Examples: Medical, Ejection, Refusal, Queue Build‑Up</span>
-                                <a href="/green-guide" target="_blank" rel="noreferrer" className="text-[11px] text-emerald-700 hover:underline">Open Green Guide (PDF)</a>
-                              </div>
-                            </div>
-                          )
-                        }
-                        return (
-                          <>
-                            {Array.isArray(bp.summary) && bp.summary.length > 0 && (
-                              <ul className="list-disc list-inside text-xs text-gray-700 space-y-1">
-                                {bp.summary.slice(0, 3).map((s: string, i: number) => (
-                                  <li key={i}>{s}</li>
-                                ))}
-                              </ul>
-                            )}
-                            {Array.isArray(bp.checklists) && bp.checklists.length > 0 && (
-                              <div className="space-y-2">
-                                {bp.checklists.map((c: any, idx: number) => (
-                                  <div key={idx} className="border rounded-md p-2">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-xs font-medium text-gray-800">{c.label}</span>
-                                      <div className="flex gap-2">
-                                        {c.occurrence && (
-                                          <button
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({
-                                              ...prev,
-                                              occurrence: (prev.occurrence ? prev.occurrence + '\n' : '') + c.occurrence
-                                            }))}
-                                            className="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50 focus:ring-1 focus:ring-emerald-500"
-                                          >
-                                            Insert occurrence
-                                          </button>
-                                        )}
-                                        {c.actions_taken && (
-                                          <button
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({
-                                              ...prev,
-                                              actions_taken: (prev.actions_taken ? prev.actions_taken + '\n' : '') + c.actions_taken
-                                            }))}
-                                            className="px-2 py-1 text-[11px] rounded border border-gray-200 hover:bg-gray-50 focus:ring-1 focus:ring-emerald-500"
-                                          >
-                                            Insert action
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            <div className="flex items-center justify-between pt-1">
-                              <a href="/green-guide" target="_blank" rel="noreferrer" className="text-xs text-emerald-700 hover:underline">
-                                Open Green Guide (PDF)
-                              </a>
-                              {Array.isArray(bp.cautions) && bp.cautions.length > 0 && (
-                                <span className="text-[11px] text-amber-700">Keep logs factual. Amend, don’t overwrite.</span>
-                              )}
-                            </div>
-                          </>
-                        )
-                      })()}
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* Location & Actions Card */}
-              <div className="card-depth p-3" role="region" aria-labelledby="location-actions-title">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <h3 id="location-actions-title" className="text-sm font-semibold text-gray-900">Location & Actions</h3>
-                </div>
-              <div className="space-y-3">
-                <div>
-                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                      Location
-                    </label>
-                    <input
-                        id="location"
-                        type="text"
-                        value={formData.location}
-                        onChange={(e) => handleLocationChange(e.target.value)}
-                        placeholder="e.g., Stage, Main Gate, North Entrance"
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] shadow-sm font-sans"
-                      />
-                  {shouldRenderMap && (
-                    <IncidentLocationMap
-                      coordinates={mapCoordinates}
-                      locationQuery={mapLocationQuery}
-                      overlays={[]}
-                      onLocationChange={handleMapLocationChange}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-
-              {/* Additional Options Card */}
-              <div className="card-depth p-3" role="region" aria-labelledby="additional-options-title">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                  <h3 id="additional-options-title" className="text-sm font-semibold text-gray-900">Additional Options</h3>
-                </div>
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="closed"
-                      checked={formData.is_closed || false}
-                      onChange={(e) => setFormData({ ...formData, is_closed: e.target.checked })}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
-                    />
-                      <label htmlFor="closed" className="text-sm font-medium text-gray-700">
-                      Mark as Closed
-                    </label>
-                  </div>
-                  {/* Auto-close indicator */}
-                  {formData.is_closed && formData.incident_type && shouldAutoClose(formData.incident_type) && (
-                    <div className="ml-7 p-2 bg-green-50 border border-green-200 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="text-xs text-green-700 font-medium">
-                          Auto-closed: {getAutoCloseReason(formData.incident_type)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                    <label htmlFor="photo-upload" className="block text-sm font-medium text-gray-700 mb-2">Attach Photo (optional, max 5MB)</label>
-                    <input
-                      id="photo-upload"
-                      type="file"
-                      accept="image/jpeg,image/png,image/jpg,image/heic"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                    />
-                    <label htmlFor="photo-upload" className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors cursor-pointer block">
-                      <div className="text-gray-500">
-                        {photoPreviewUrl ? (
-                          <div className="space-y-2">
-                            <Image
-                              src={photoPreviewUrl}
-                              alt="Selected incident attachment preview"
-                              width={64}
-                              height={64}
-                              className="mx-auto h-16 w-16 object-cover rounded"
-                              unoptimized
-                            />
-                            <p className="text-sm">Photo selected</p>
-                          </div>
-                        ) : (
-                          <>
-                            <svg className="mx-auto h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <p className="text-sm">Click to upload or drag and drop</p>
-                      <p className="text-xs mt-1">PNG, JPG, GIF up to 5MB</p>
-                          </>
-                        )}
-                    </div>
-                    </label>
-                    {photoError && (
-                      <p className="text-xs text-red-600 mt-1">{photoError}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              </div>
-            </aside>
-          </div>
-
-        {/* 🔹 Sticky Footer */}
-        <footer className="sticky bottom-0 z-20 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4 sm:px-8 flex items-center justify-end space-x-4 shadow-sm">
-          {/* Use existing handlers – do not change onClick or data flow */}
+              <div className="flex items-center gap-3">
           <button
             onClick={() => {
               resetForm()
               onClose()
             }}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-gray-500 rounded-md transition-colors font-medium font-sans"
+                  className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6] transition-colors font-medium font-sans"
+            onClick={handleSubmitClick}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg hover:shadow-xl transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save as Draft
+                  Log Incident <PaperAirplaneIcon className="w-4 h-4" />
           </button>
-          <button
-            onClick={handleSubmit}
-            className="px-6 py-3 text-sm bg-[#3B82F6] text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6] rounded-md shadow-sm transition-colors flex items-center justify-center gap-2 font-medium font-sans"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Log Incident
-          </button>
-        </footer>
+              </div>
+            </div>
+          </div>
+        </div>
+                
       </div>
     </div>
 
@@ -5524,6 +4900,73 @@ export default function IncidentCreationModal({
         onCopyStep={handleApplySopStep}
         onCopyAll={(steps) => steps.forEach(handleApplySopStep)}
       />
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={(open) => {
+        console.log('🔵 Dialog onOpenChange called:', open, 'showConfirmDialog:', showConfirmDialog);
+        setShowConfirmDialog(open);
+      }}>
+        <DialogContent className="sm:max-w-md !z-[10000]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <DocumentPlusIcon className="h-6 w-6 text-blue-600" />
+              Confirm Incident Creation
+            </DialogTitle>
+            <DialogDescription className="mt-2">
+              Are you sure you want to create this incident? This will add it to the incident log.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-2">
+            {formData.incident_type && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">Type:</span>
+                <span className="text-sm text-gray-900 dark:text-white">{formData.incident_type}</span>
+              </div>
+            )}
+            {formData.occurrence && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">Details:</span>
+                <span className="text-sm text-gray-900 dark:text-white line-clamp-3">
+                  {formData.occurrence.substring(0, 150)}{formData.occurrence.length > 150 ? '...' : ''}
+                </span>
+              </div>
+            )}
+            {formData.priority && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[100px]">Priority:</span>
+                <span className="text-sm text-gray-900 dark:text-white capitalize">{formData.priority}</span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <button
+              onClick={() => setShowConfirmDialog(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmSubmit}
+              disabled={loading}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <CheckCircleIcon className="h-4 w-4" />
+                  Confirm & Create
+                </>
+              )}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Guided Actions Modal */}
       <GuidedActionsModal

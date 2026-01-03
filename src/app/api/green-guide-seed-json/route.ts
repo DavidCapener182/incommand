@@ -66,7 +66,7 @@ export async function POST() {
       const batch = toEmbed.slice(i, i + batchSize)
       const embeddings = await embedBatch(batch)
       const payload = batch.map((c, idx) => ({ content: c, page: null as any, heading: null as any, embedding: embeddings[idx] as any }))
-      const { error } = await supabase.from('green_guide_chunks').upsert(payload)
+      const { error } = await (supabase as any).from('green_guide_chunks').upsert(payload)
       if (error) throw new Error(error.message)
       total += payload.length
     }

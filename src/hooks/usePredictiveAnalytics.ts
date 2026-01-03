@@ -105,7 +105,7 @@ export const usePredictiveAnalytics = (eventId: string, refreshInterval: number 
         error: error instanceof Error ? error.message : 'Failed to fetch predictive data'
       }));
     }
-  }, [eventId]);
+  }, []);
 
   const refreshPredictions = useCallback(async () => {
     await fetchPredictiveData();

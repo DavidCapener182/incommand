@@ -1,8 +1,8 @@
-import { getServiceSupabaseClient } from './supabaseServer';
-import { logger } from './logger';
+import { getServiceSupabaseClient } from './supabaseServer'
+import { logger } from './logger'
 
 export async function cleanupExpiredInvites() {
-  const supabase = getServiceSupabaseClient();
+  const supabase = getServiceSupabaseClient() as any;
   
   try {
     const now = new Date().toISOString();
@@ -71,7 +71,7 @@ export async function cleanupExpiredInvites() {
 
 // Function to revoke a specific invite and invalidate any existing sessions
 export async function revokeInviteAndSessions(inviteId: string, eventId: string) {
-  const supabase = getServiceSupabaseClient();
+  const supabase = getServiceSupabaseClient() as any;
   
   try {
     // Get all members associated with this invite

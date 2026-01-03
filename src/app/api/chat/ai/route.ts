@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
+import { retrieveContext, formatContextForPrompt, needsKnowledgeContext, needsGreenGuideContext } from '@/lib/ai/retrieveContext'
 
 const supabase = getServiceSupabaseClient()
 
@@ -44,9 +45,9 @@ export async function POST(request: NextRequest) {
     const lastMessage = messages[messages.length - 1]
     const userMessageContentLower = lastMessage.content.toLowerCase()
     
-    // Check if user wants Green Guide context
-    const wantsGreenGuide = /green guide|procedure|best practice|safety|regulation|guideline|what should i do/.test(userMessageContentLower)
-    let greenGuideContext = ''
+    // Check if user wants knowledge context (Green Guide or Knowledge Base)
+    const wantsKnowledgeContext = needsGreenGuideContext(userMessageContent) || needsKnowledgeContext(userMessageContent)
+    let knowledgeContext = ''
     let citations: { text: string; page: number }[] = []
 
     // Check if user wants incident data
@@ -54,47 +55,50 @@ export async function POST(request: NextRequest) {
     let incidentContext = ''
     
     console.log('User message:', userMessageContent)
+    console.log('Wants knowledge context:', wantsKnowledgeContext)
     console.log('Wants incident data:', wantsIncidentData)
     
     // Diagnostic logging for debugging
     console.log('Detection results:', {
       userMessage: userMessageContent,
-      wantsGreenGuide,
+      wantsKnowledgeContext,
       wantsIncidentData,
       eventId,
       companyId
     })
 
-    if (wantsGreenGuide) {
+    if (wantsKnowledgeContext) {
       try {
-        console.log('Attempting Green Guide search for:', userMessageContent)
-        const greenGuideResponse = await fetch(`${request.nextUrl.origin}/api/green-guide-search`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: userMessageContent, topK: 3 })
+        console.log('Retrieving unified knowledge context for:', userMessageContent)
+        const contexts = await retrieveContext(userMessageContent, {
+          organizationId: companyId,
+          eventId: eventId,
+          topK: 5,
+          useHybrid: true
         })
 
-        if (greenGuideResponse.ok) {
-          const { results } = await greenGuideResponse.json()
-          console.log('Green Guide results:', results)
-          if (Array.isArray(results) && results.length) {
-            try {
-              greenGuideContext = results.map((r: any, i: number) => {
-                const content = r.content || r.text || 'No content available'
-                const page = r.page || '?'
-                citations.push({ text: `Green Guide, p.${page}`, page: page })
-                return `(${i + 1}) p.${page}: ${content.slice(0, 400)}`
-              }).join('\n')
-            } catch (mapError) {
-              console.error('Error processing Green Guide results:', mapError)
-              greenGuideContext = 'Green Guide context available but could not be processed'
+        if (contexts.length > 0) {
+          knowledgeContext = formatContextForPrompt(contexts)
+          
+          // Extract citations
+          contexts.forEach(ctx => {
+            if (ctx.source === 'green-guide' && ctx.metadata.page) {
+              citations.push({ 
+                text: `Green Guide, p.${ctx.metadata.page}`, 
+                page: ctx.metadata.page 
+              })
+            } else if (ctx.source === 'knowledge-base' && ctx.metadata.title) {
+              citations.push({ 
+                text: ctx.metadata.title, 
+                page: ctx.metadata.chunkIndex || 0 
+              })
             }
-          }
-        } else {
-          console.log('Green Guide search failed:', greenGuideResponse.status)
+          })
+          
+          console.log(`Retrieved ${contexts.length} knowledge contexts`)
         }
-      } catch (ggError) {
-        console.error('Error fetching Green Guide context:', ggError)
+      } catch (kbError) {
+        console.error('Error retrieving knowledge context:', kbError)
       }
     }
 
@@ -129,14 +133,14 @@ export async function POST(request: NextRequest) {
     
     if (eventId) {
       try {
-        const { data: event } = await supabase
+        const { data: event } = await (supabase as any)
           .from('events')
           .select('event_type')
           .eq('id', eventId)
           .single()
         
-        if (event?.event_type) {
-          eventType = event.event_type
+        if ((event as any)?.event_type) {
+          eventType = (event as any).event_type
           // Import event strategies dynamically
           const { getEventStrategy } = await import('@/lib/strategies/eventStrategies')
           const strategy = getEventStrategy(eventType)
@@ -185,11 +189,12 @@ export async function POST(request: NextRequest) {
     If the user asks about "last incident", use the most recent entry in the ACTUAL INCIDENTS list.
 
     For Green Guide procedures and safety questions, refer to the provided Green Guide context and cite sections using [GG p.<page number>].
+    For uploaded knowledge base documents, cite using the document title (e.g., [Creamfields Briefing.pdf]).
     
     Current User ID: ${userId}
     ${eventId ? `Current Event ID: ${eventId}` : ''}
     ${companyId ? `Current Company ID: ${companyId}` : ''}
-    ${greenGuideContext ? `\nGreen Guide Context:\n${greenGuideContext}` : ''}
+    ${knowledgeContext ? `\nKnowledge Context:\n${knowledgeContext}` : ''}
     ${incidentContext ? `\nLive Incident Data:\n${incidentContext}` : ''}`
 
     // Call OpenAI API
@@ -259,7 +264,7 @@ async function fetchIncidentContext(eventId: string, companyId?: string) {
     console.log('🔍 Fetching comprehensive incident data for event:', eventId)
 
     // Fetch main incidents from incident_logs table
-    const { data: incidents, error: incidentError } = await supabase
+    const { data: incidents, error: incidentError } = await (supabase as any)
       .from('incident_logs')
       .select(`
         id,
@@ -293,7 +298,7 @@ async function fetchIncidentContext(eventId: string, companyId?: string) {
     const occurrences: any[] = []
 
     console.log(`✅ Found ${incidents.length} incidents, ${updates.length} updates, ${actions.length} actions, ${occurrences.length} occurrences`)
-    console.log('🔍 Incident status breakdown:', incidents.reduce((acc: Record<string, number>, i) => {
+    console.log('🔍 Incident status breakdown:', (incidents as any[]).reduce((acc: Record<string, number>, i: any) => {
       const status = i.status || 'NULL'
       acc[status] = (acc[status] || 0) + 1
       return acc
@@ -307,7 +312,7 @@ async function fetchIncidentContext(eventId: string, companyId?: string) {
     }
 
     // Separate actual incidents from operational logs
-    const actualIncidents = incidents.filter(i => {
+    const actualIncidents = ((incidents as any[]) || []).filter((i: any) => {
       const type = (i.incident_type || '').toLowerCase()
       const occurrence = (i.occurrence || '').toLowerCase()
       const status = (i.status || '').toLowerCase()
@@ -334,7 +339,7 @@ async function fetchIncidentContext(eventId: string, companyId?: string) {
     console.log(`🔍 Filtered results: ${actualIncidents.length} actual incidents, ${openIncidents.length} open, ${closedIncidents.length} closed`)
     console.log('🔍 Open incidents:', openIncidents.map(i => `${i.incident_type} (${i.status})`))
     
-    const operationalLogs = incidents.filter(i => {
+    const operationalLogs = (incidents as any[]).filter((i: any) => {
       const type = (i.incident_type || '').toLowerCase()
       const occurrence = (i.occurrence || '').toLowerCase()
       
@@ -488,14 +493,14 @@ function analyzeIncidents(incidents: any[]): string {
   }, {})
 
   // Count by status
-  const statusCounts = incidents.reduce((acc, incident) => {
+  const statusCounts = (incidents as any[]).reduce((acc: any, incident: any) => {
     const status = incident.status || 'Unknown'
     acc[status] = (acc[status] || 0) + 1
     return acc
   }, {})
 
   // Count by priority
-  const priorityCounts = incidents.reduce((acc, incident) => {
+  const priorityCounts = (incidents as any[]).reduce((acc: any, incident: any) => {
     const priority = incident.priority || 'Unknown'
     acc[priority] = (acc[priority] || 0) + 1
     return acc
@@ -504,18 +509,18 @@ function analyzeIncidents(incidents: any[]): string {
   // Get recent incidents (last 24 hours)
   const now = new Date()
   const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const recentIncidents = incidents.filter(incident => {
+  const recentIncidents = (incidents as any[]).filter((incident: any) => {
     const incidentTime = new Date(incident.timestamp || incident.created_at)
     return incidentTime > yesterday
   })
 
   // Get open incidents
-  const openIncidents = incidents.filter(incident => 
+  const openIncidents = (incidents as any[]).filter((incident: any) => 
     incident.status === 'open' || incident.status === 'in_progress'
   )
 
   // Get high priority incidents
-  const highPriorityIncidents = incidents.filter(incident => 
+  const highPriorityIncidents = (incidents as any[]).filter((incident: any) => 
     incident.priority === 'high' || incident.priority === 'critical'
   )
 

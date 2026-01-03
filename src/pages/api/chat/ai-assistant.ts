@@ -59,7 +59,7 @@ Always maintain a professional, calm, and authoritative tone suitable for emerge
 async function getEventContext(): Promise<EventContext | null> {
   try {
     console.log('🔍 Starting getEventContext...');
-    const supabase = getServiceClient();
+    const supabase = getServiceClient() as any;
     
     // Get current event - try multiple approaches
     console.log('🔍 Fetching current event...');
@@ -137,8 +137,10 @@ async function getEventContext(): Promise<EventContext | null> {
 
     console.log('📊 Raw incidents found:', incidents?.length || 0);
 
+    const incidentList = (incidents ?? []) as Array<{ incident_type?: string; is_closed?: boolean; status?: string }>
+
     // Count incidents (excluding Attendance and Sit Rep like the Dashboard)
-    const countableIncidents = incidents?.filter(i => !['Attendance', 'Sit Rep'].includes(i.incident_type)) || [];
+    const countableIncidents = incidentList.filter(i => !['Attendance', 'Sit Rep'].includes(i.incident_type || ''));
     const totalIncidents = countableIncidents.length;
     // Fix: Use is_closed field as the primary indicator, fallback to status
     const openIncidents = countableIncidents.filter(i => !i.is_closed && i.status !== 'closed').length || 0;

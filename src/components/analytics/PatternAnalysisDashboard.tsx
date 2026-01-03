@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ExclamationTriangleIcon, 
@@ -28,7 +28,7 @@ export default function PatternAnalysisDashboard({
   const [error, setError] = useState<string | null>(null)
   const [selectedPattern, setSelectedPattern] = useState<IncidentPattern | null>(null)
 
-  const fetchPatternAnalysis = async () => {
+  const fetchPatternAnalysis = useCallback(async () => {
     setLoading(true)
     setError(null)
     
@@ -50,11 +50,11 @@ export default function PatternAnalysisDashboard({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
 
   useEffect(() => {
     fetchPatternAnalysis()
-  }, [eventId])
+  }, [eventId, fetchPatternAnalysis])
 
   const getPatternIcon = (type: string) => {
     switch (type) {

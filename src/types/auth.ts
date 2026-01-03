@@ -21,7 +21,7 @@ export interface AuthContextType {
   user: any | null
   role: UserRole | null
   loading: boolean
-  signOut: () => Promise<void>
+  signOut: (options?: { reason?: string; redirectTo?: string }) => Promise<void>
   invalidateRoleCache: () => void
   systemSettings: SystemSettings | null
   userPreferences: UserPreferences | null

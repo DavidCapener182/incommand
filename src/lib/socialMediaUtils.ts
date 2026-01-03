@@ -44,7 +44,7 @@ const SENTIMENT_SYSTEM_PROMPT = `You are a sentiment analysis expert. Analyze ea
 Respond with only a JSON array of numbers, one for each post. Example: [1, 0, -1, 1]`;
 
 // Initialize Supabase client
-const supabase = getServiceClient();
+const supabase = getServiceClient() as any;
 
 // Helper to parse/normalize sentiment arrays into fixed-length scores
 export function parseSentimentArray(candidate: string, expectedLength: number): SentimentScore[] {

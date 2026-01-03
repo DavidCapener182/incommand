@@ -109,15 +109,33 @@ export async function sa_billingOverview() {
       return { invoices: [], subscriptions: [], transactions: [], stats: { totalRevenue: 0, monthlyRecurringRevenue: 0, activeSubscriptions: 0, pendingInvoices: 0 } };
     }
     
-    // Fetch companies to calculate billing stats
+    // Fetch companies with subscription plans to calculate billing stats
     const { data: companies } = await supabase
       .from<Database['public']['Tables']['companies']['Row'], Database['public']['Tables']['companies']['Update']>('companies')
-      .select('id, name, created_at');
+      .select('id, name, subscription_plan, created_at');
     
-    // Calculate billing stats from companies
+    // Fetch plan pricing from database
+    const { data: plans } = await (supabase as any)
+      .from('subscription_plans')
+      .select('code, price_monthly')
+      .eq('is_active', true)
+      .eq('deprecated', false)
+      .catch(() => ({ data: [] }))
+    
+    const planPrices = new Map((plans?.data || []).map((p: any) => [p.code, p.price_monthly || 0]))
+    
+    // Calculate billing stats from companies using actual plan pricing
     const activeCompanies = companies ?? [];
-    const totalRevenue = activeCompanies.length * 29 * 1000; // Basic estimate
-    const monthlyRecurringRevenue = activeCompanies.length * 29 * 1000;
+    let monthlyRecurringRevenue = 0
+    
+    activeCompanies.forEach((company: any) => {
+      const planCode = company.subscription_plan || 'starter'
+      const price = planPrices.get(planCode) || 0
+      monthlyRecurringRevenue += price
+    })
+    
+    // Estimate total revenue (assuming average subscription age of 6 months)
+    const totalRevenue = monthlyRecurringRevenue * 6
     
     // Try to fetch billing data (these tables may not exist)
     const [invoices, subscriptions, transactions] = await Promise.allSettled([

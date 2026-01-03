@@ -1,239 +1,143 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { WeatherData, getCurrentWeather } from '@/services/weatherService';
 import { 
-  CloudIcon, 
-  SunIcon, 
-  BoltIcon, 
-  CloudArrowDownIcon, 
-  ExclamationTriangleIcon,
-  EyeIcon
-} from '@heroicons/react/24/outline';
-import { Card, CardContent } from '@/components/ui/card';
-
-interface HourlyForecast {
-  time: string;
-  temp: number;
-  description: string;
-  icon: string;
-}
+  Cloud, 
+  Sun, 
+  CloudRain, 
+  CloudLightning, 
+  CloudSnow, 
+  Wind, 
+  Droplets, 
+  MapPin,
+  MoreHorizontal
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Props {
   lat: number;
   lon: number;
   locationName: string;
-  eventDate: string;
-  startTime: string;
-  curfewTime: string;
 }
 
-export default function WeatherCard({ lat, lon, locationName, eventDate, startTime, curfewTime }: Props) {
+// --- Helper Components ---
+const CardFrame = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  // Fixed height 130px, p-4 (16px) -> leaves 98px for content
+  <div className={cn("flex flex-col rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-md h-[130px] relative overflow-hidden p-4", className)}>
+    {children}
+  </div>
+)
+
+const CardHeader = ({ icon: Icon, title, action, lightMode = false }: { icon: any; title: string; action?: () => void; lightMode?: boolean }) => (
+  <div className="flex items-center justify-between mb-1 shrink-0 relative z-10 h-5">
+    <div className="flex items-center gap-1.5">
+      <div className={cn("flex h-5 w-5 items-center justify-center rounded-md backdrop-blur-md", lightMode ? "bg-black/10 text-slate-700" : "bg-white/20 text-white")}>
+        <Icon className="h-3 w-3" />
+      </div>
+      <span className={cn("text-[10px] font-bold uppercase tracking-wider", lightMode ? "text-slate-700" : "text-white/90 shadow-black/10 drop-shadow-sm")}>{title}</span>
+    </div>
+    {action && (
+      <button onClick={action} className={cn("transition-colors", lightMode ? "text-slate-400 hover:text-slate-600" : "text-white/60 hover:text-white")}>
+        <MoreHorizontal className="h-3.5 w-3.5" />
+      </button>
+    )}
+  </div>
+)
+
+export default function WeatherCard({ lat, lon, locationName }: Props) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hourly, setHourly] = useState<HourlyForecast[]>([]);
-  const [retryCount, setRetryCount] = useState(0);
 
-  const fetchWeather = async () => {
+  const fetchWeather = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!weather) setLoading(true);
       setError(null);
-      
-      // Check if coordinates are valid
-      if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
-        throw new Error('Invalid coordinates');
-      }
-
+      if (!lat || !lon || isNaN(lat) || isNaN(lon)) throw new Error('Invalid coords');
       const weatherData = await getCurrentWeather(lat, lon);
       setWeather(weatherData);
     } catch (err) {
-      console.error('Error fetching weather:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load weather data');
-      setRetryCount(prev => prev + 1);
+      setError('Failed');
     } finally {
       setLoading(false);
     }
-  };
-
-  // Fetch hourly forecast for the event day
-  const fetchHourly = async () => {
-    try {
-      const params = new URLSearchParams({
-        lat: lat.toString(),
-        lon: lon.toString(),
-        event_date: eventDate,
-        start_time: startTime,
-        curfew_time: curfewTime
-      });
-      const response = await fetch(`/api/hourly-forecast?${params.toString()}`);
-      if (!response.ok) {
-        console.warn('Hourly forecast not available');
-        return;
-      }
-      const data = await response.json();
-      setHourly(data);
-    } catch (err) {
-      console.error('Error fetching hourly forecast:', err);
-    }
-  };
+  }, [lat, lon, weather]);
 
   useEffect(() => {
-    if (lat && lon) {
-      fetchWeather();
-      fetchHourly();
-    }
-    
-    // Refresh weather data every 30 minutes to prevent rate limiting
-    const refreshInterval = setInterval(() => {
-      if (lat && lon) {
-        fetchWeather();
-        fetchHourly();
-      }
-    }, 30 * 60 * 1000);
-    
+    fetchWeather();
+    const refreshInterval = setInterval(fetchWeather, 30 * 60 * 1000);
     return () => clearInterval(refreshInterval);
-  }, [lat, lon, eventDate, startTime, curfewTime]);
+  }, [fetchWeather]);
 
-  const WeatherIcon = () => {
-    if (!weather) return <CloudIcon className="h-8 w-8 text-gray-400" />;
-    
-    const desc = weather.description.toLowerCase();
-    
-    if (desc.includes('rain') || desc.includes('drizzle') || desc.includes('shower')) {
-      return <CloudArrowDownIcon className="h-8 w-8 text-blue-500" />;
-    }
-    if (desc.includes('thunder') || desc.includes('lightning')) {
-      return <BoltIcon className="h-8 w-8 text-yellow-500" />;
-    }
-    if (desc.includes('snow') || desc.includes('sleet')) {
-      return <CloudArrowDownIcon className="h-8 w-8 text-blue-300" />;
-    }
-    if (desc.includes('clear')) {
-      return <SunIcon className="h-8 w-8 text-yellow-400" />;
-    }
-    if (desc.includes('few clouds') || desc.includes('scattered clouds')) {
-      return <SunIcon className="h-8 w-8 text-yellow-400" />;
-    }
-    if (desc.includes('broken clouds') || desc.includes('overcast clouds')) {
-      return <CloudIcon className="h-8 w-8 text-gray-500" />;
-    }
-    if (desc.includes('mist') || desc.includes('smoke') || desc.includes('haze') || desc.includes('fog')) {
-      return <EyeIcon className="h-8 w-8 text-gray-600" />;
-    }
-    
-    // Default icon
-    return <CloudIcon className="h-8 w-8 text-gray-400" />;
+  // --- Visual Logic ---
+  const getWeatherVisuals = (desc: string = '') => {
+    const d = desc.toLowerCase();
+    if (d.includes('rain') || d.includes('drizzle')) return { bg: 'bg-gradient-to-br from-slate-700 via-blue-900 to-slate-900', icon: CloudRain, text: 'text-white', overlay: 'bg-blue-500/10' };
+    if (d.includes('thunder') || d.includes('lightning')) return { bg: 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-800', icon: CloudLightning, text: 'text-white', overlay: 'bg-purple-500/10' };
+    if (d.includes('snow')) return { bg: 'bg-gradient-to-br from-slate-100 via-blue-50 to-white', icon: CloudSnow, text: 'text-slate-700', lightMode: true, overlay: 'bg-white/40' };
+    if (d.includes('clear') || d.includes('sunny')) return { bg: 'bg-gradient-to-br from-blue-400 via-blue-300 to-blue-100', icon: Sun, text: 'text-white', overlay: 'bg-yellow-500/10' };
+    return { bg: 'bg-gradient-to-br from-slate-400 to-slate-600', icon: Cloud, text: 'text-white', overlay: 'bg-white/5' };
   };
 
-  const getWindDescription = (speed: number) => {
-    if (speed < 5) return 'Light breeze';
-    if (speed < 10) return 'Moderate wind';
-    if (speed < 20) return 'Strong wind';
-    return 'High winds';
-  };
-
-  const getWindIcon = (speed: number) => {
-    const size = speed < 10 ? 'h-4 w-4' : speed < 20 ? 'h-5 w-5' : 'h-6 w-6';
-    const color = speed < 10 ? 'text-gray-400' : speed < 20 ? 'text-gray-500' : 'text-gray-600';
-    return <CloudArrowDownIcon className={`${size} ${color}`} />;
-  };
-
-  // Loading state
-  if (loading) {
-    return (
-      <Card className="h-[130px] card-skeleton">
-        <CardContent className="p-4 h-full flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center justify-center">
-            <div className="h-8 w-8 bg-gray-200 dark:bg-gray-600 rounded-full mb-2"></div>
-            <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-16 mb-1"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-24"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Error state with retry
-  if (error) {
-    return (
-      <Card className="h-[130px] card-depth shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-        <CardContent className="p-4 h-full flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center justify-center text-center">
-            <ExclamationTriangleIcon className="h-8 w-8 text-red-400 mb-2" />
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Weather</h3>
-            <p className="text-xs text-red-500 mb-2">{error}</p>
-            {retryCount < 3 && (
-              <button
-                onClick={fetchWeather}
-                className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded transition-colors"
-              >
-                Retry
-              </button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // No weather data
-  if (!weather) {
-    return (
-      <Card className="h-[130px] card-depth shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-        <CardContent className="p-4 h-full flex flex-col items-center justify-center">
-          <div className="flex flex-col items-center justify-center text-center">
-            <CloudIcon className="h-8 w-8 text-gray-400 mb-2" />
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Weather</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">No data available</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const visuals = getWeatherVisuals(weather?.description);
+  const Icon = visuals.icon;
 
   return (
-    <Card className="h-[130px] card-depth shadow-sm dark:shadow-md hover:shadow-md transition-all duration-150">
-      <CardContent className="p-4 h-full flex flex-col items-center justify-center">
-        <div className="w-full h-full flex flex-col items-center justify-center">
-        {/* Location name */}
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 text-center font-medium truncate w-full">
-          {locationName || `${lat.toFixed(2)}, ${lon.toFixed(2)}`}
-        </div>
-        
-        {/* Main weather display */}
-        <div className="flex items-center justify-center mb-2">
-          <div className="mr-3">
-            <WeatherIcon />
+    <CardFrame className={cn("border-0", visuals.bg)}>
+      <div className={cn("absolute inset-0 pointer-events-none", visuals.overlay)} />
+
+      <CardHeader icon={Cloud} title="Weather" action={fetchWeather} lightMode={visuals.lightMode} />
+
+      {loading && !weather ? (
+        <div className={cn("flex-1 flex flex-col items-center justify-center text-[10px] animate-pulse", visuals.text)}>Loading...</div>
+      ) : error ? (
+        <div className="flex-1 flex items-center justify-center p-2 text-center"><p className="text-[10px] text-red-200">Unavailable</p></div>
+      ) : weather ? (
+        <div className="flex flex-col justify-between h-full min-h-0 relative z-10 pt-0.5">
+          
+          {/* Main Stats Row */}
+          <div className="flex items-start justify-between">
+            <div>
+               <div className={cn("flex items-center gap-1 text-[9px] font-medium uppercase tracking-wide mb-0 opacity-80", visuals.text)}>
+                 <MapPin className="h-2.5 w-2.5" />
+                 <span className="truncate max-w-[110px]">{locationName}</span>
+               </div>
+               <div className="flex items-baseline gap-2">
+                 <span className={cn("text-2xl font-bold tracking-tighter leading-none", visuals.text)}>
+                   {Math.round(weather.temperature)}°
+                 </span>
+                 <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-sm capitalize truncate max-w-[80px] bg-white/20 backdrop-blur-sm", visuals.text)}>
+                   {weather.description}
+                 </span>
+               </div>
+            </div>
+            <div className={cn("h-8 w-8 rounded-full flex items-center justify-center backdrop-blur-md bg-white/10 shadow-sm mt-1", visuals.text)}>
+              <Icon className="h-5 w-5" />
+            </div>
           </div>
-          <div className="text-center">
-            <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {Math.round(weather.temperature)}°C
-            </span>
+
+          {/* Footer Details (Flush bottom) */}
+          <div className="flex items-center gap-3 mt-auto border-t border-white/10 pt-2">
+             <div className="flex items-center gap-1.5">
+                <Wind className={cn("h-3 w-3 opacity-70", visuals.text)} />
+                <div className="flex items-baseline gap-1">
+                   <span className={cn("text-[9px] uppercase opacity-60", visuals.text)}>Wind</span>
+                   <span className={cn("text-[10px] font-bold", visuals.text)}>{Math.round(weather.windSpeed)} mph</span>
+                </div>
+             </div>
+             <div className="h-3 w-px bg-white/20" />
+             <div className="flex items-center gap-1.5">
+                <Droplets className={cn("h-3 w-3 opacity-70", visuals.text)} />
+                <div className="flex items-baseline gap-1">
+                   <span className={cn("text-[9px] uppercase opacity-60", visuals.text)}>Hum</span>
+                   <span className={cn("text-[10px] font-bold", visuals.text)}>{weather.humidity}%</span>
+                </div>
+             </div>
           </div>
+
         </div>
-        
-        {/* Weather description */}
-        <span className="text-xs text-gray-600 dark:text-gray-300 capitalize mb-2 text-center">
-          {weather.description}
-        </span>
-        
-        {/* Additional weather info */}
-        <div className="flex items-center justify-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center">
-            {getWindIcon(weather.windSpeed)}
-            <span className="ml-1">{Math.round(weather.windSpeed)}m/s</span>
-          </div>
-          <div className="flex items-center">
-            <EyeIcon className="h-4 w-4 mr-1" />
-            <span>{weather.humidity}%</span>
-          </div>
-        </div>
-        </div>
-      </CardContent>
-    </Card>
+      ) : null}
+    </CardFrame>
   );
 }
-
-// Export supported event types for conditional rendering
-export const supportedEventTypes = ['concert', 'football', 'festival', 'parade']; 

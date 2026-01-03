@@ -8,6 +8,8 @@ import { v4 as uuidv4, validate as validateUUID } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from './ui/button';
+import { FeatureGate } from './FeatureGate';
+import { useUserPlan } from '@/hooks/useUserPlan';
 
 // Initial groupings and roles as per user specification
 const initialGroups = [
@@ -85,39 +87,7 @@ const StaffList = () => {
     active: true,
   });
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchUserCompany();
-  }, []);
-
-  useEffect(() => {
-    if (userCompanyId) {
-      fetchStaff();
-    }
-  }, [userCompanyId]);
-
-  async function fetchUserCompany() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-
-      if (profile?.company_id) {
-        setUserCompanyId(profile.company_id);
-      }
-    } catch (error) {
-      console.error("Error fetching user company:", error);
-    }
-  }
-
-  async function fetchStaff() {
+  const fetchStaff = useCallback(async () => {
     if (!userCompanyId) return;
     
     setLoading(true);
@@ -136,7 +106,40 @@ const StaffList = () => {
     } finally {
       setLoading(false);
     }
+  }, [userCompanyId]);
+
+  useEffect(() => {
+    fetchUserCompany();
+  }, []);
+
+  useEffect(() => {
+    if (userCompanyId) {
+      fetchStaff();
+    }
+  }, [userCompanyId, fetchStaff]);
+
+  async function fetchUserCompany() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile, error } = await (supabase as any)
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      const profileData = profile as any;
+      if (profileData?.company_id) {
+        setUserCompanyId(profileData.company_id);
+      }
+    } catch (error) {
+      console.error("Error fetching user company:", error);
+    }
   }
+
 
   function openAddModal() {
     setCurrentStaff({
@@ -167,7 +170,7 @@ const StaffList = () => {
     try {
       if (currentStaff.id) {
         // Update existing staff
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("staff")
           .update({
             full_name: currentStaff.full_name,
@@ -182,7 +185,7 @@ const StaffList = () => {
         if (error) throw error;
       } else {
         // Create new staff
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("staff")
           .insert({
             full_name: currentStaff.full_name,
@@ -489,6 +492,7 @@ export default function StaffCommandCentre() {
 
   // Real-time staff location tracking
   const { user } = useAuth();
+  const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
   const [staffLocations, setStaffLocations] = useState<Record<string, any>>({});
   const [locationChannel, setLocationChannel] = useState<any>(null);
   const [isLocationConnected, setIsLocationConnected] = useState(false);
@@ -501,19 +505,20 @@ export default function StaffCommandCentre() {
       setEventLoading(true);
       setEventError(null);
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from("events")
           .select("id, event_name")
           .eq("is_current", true)
           .single();
         if (error) throw error;
-        if (!data) {
+        const eventData = data as any;
+        if (!eventData) {
           setEventError("No current event found. Please set a current event in Settings.");
           setEventId(null);
           setEventName("");
         } else {
-          setEventId(data.id);
-          setEventName(data.event_name || "");
+          setEventId(eventData.id);
+          setEventName(eventData.event_name || "");
         }
       } catch (err: any) {
         setEventError("Error loading event: " + (err.message || err.toString()));
@@ -532,12 +537,12 @@ export default function StaffCommandCentre() {
     const loadRolesAndAssignments = async () => {
       setSaveStatus("Loading saved callsigns...");
       // Load roles
-      const { data: roles, error: rolesError } = await supabase
+      const { data: roles, error: rolesError } = await (supabase as any)
         .from("callsign_positions")
         .select("id, area, short_code, callsign, position")
         .eq("event_id", eventId);
       // Load assignments
-      const { data: assignmentsData, error: assignmentsError } = await supabase
+      const { data: assignmentsData, error: assignmentsError } = await (supabase as any)
         .from("callsign_assignments")
         .select("callsign_role_id, assigned_name")
         .eq("event_id", eventId);
@@ -545,11 +550,12 @@ export default function StaffCommandCentre() {
         setSaveStatus("Error loading saved data");
         return;
       }
-      if (roles && roles.length > 0) {
+      const rolesArray = (roles || []) as any[];
+      if (rolesArray.length > 0) {
         // Group roles by area
         const grouped: typeof groups = [];
         const areaMap: Record<string, any[]> = {};
-        roles.forEach((r) => {
+        rolesArray.forEach((r: any) => {
           if (r.area) {
             if (!areaMap[r.area]) areaMap[r.area] = [];
             areaMap[r.area].push({
@@ -567,10 +573,11 @@ export default function StaffCommandCentre() {
       } else {
         setGroups(initialGroups);
       }
-      if (assignmentsData && assignmentsData.length > 0) {
+      const assignmentsArray = (assignmentsData || []) as any[];
+      if (assignmentsArray.length > 0) {
         // Map assignments by callsign_role_id
         const assignMap: Record<string, string> = {};
-        assignmentsData.forEach((a) => {
+        assignmentsArray.forEach((a: any) => {
           if (a.callsign_role_id && a.assigned_name) {
             assignMap[a.callsign_role_id] = a.assigned_name;
           }
@@ -588,13 +595,14 @@ export default function StaffCommandCentre() {
   useEffect(() => {
     if (!eventId) return;
     const fetchPreviousNames = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("callsign_assignments")
         .select("assigned_name")
         .eq("event_id", eventId)
         .not("assigned_name", "is", null);
-      if (!error && data) {
-        const names = Array.from(new Set(data.map((r) => r.assigned_name).filter(name => name !== null)));
+      const dataArray = (data || []) as any[];
+      if (!error && dataArray.length > 0) {
+        const names = Array.from(new Set(dataArray.map((r: any) => r.assigned_name).filter((name: any) => name !== null)));
         setAllPreviousNames(names);
         // Group by first letter for better organization
         const grouped: Record<string, string[]> = {};
@@ -612,12 +620,13 @@ export default function StaffCommandCentre() {
   // Load all previous names across all events for global autocomplete
   useEffect(() => {
     const fetchAllNames = async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("callsign_assignments")
         .select("assigned_name")
         .not("assigned_name", "is", null);
-      if (!error && data) {
-        const names = Array.from(new Set(data.map((r) => r.assigned_name).filter(name => name !== null)));
+      const dataArray = (data || []) as any[];
+      if (!error && dataArray.length > 0) {
+        const names = Array.from(new Set(dataArray.map((r: any) => r.assigned_name).filter((name: any) => name !== null)));
         setAllPreviousNames(names);
       }
     };
@@ -794,7 +803,7 @@ export default function StaffCommandCentre() {
         position: p.position,
       })));
 
-        const { error: rolesError } = await supabase.from("callsign_positions").insert(rolesToInsert);
+        const { error: rolesError } = await (supabase as any).from("callsign_positions").insert(rolesToInsert);
       if (rolesError) throw rolesError;
 
       // Insert assignments
@@ -805,7 +814,7 @@ export default function StaffCommandCentre() {
       }));
 
       if (assignmentsToInsert.length > 0) {
-        const { error: assignmentsError } = await supabase.from("callsign_assignments").insert(assignmentsToInsert);
+        const { error: assignmentsError } = await (supabase as any).from("callsign_assignments").insert(assignmentsToInsert);
         if (assignmentsError) throw assignmentsError;
       }
 
@@ -993,7 +1002,14 @@ export default function StaffCommandCentre() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <FeatureGate 
+      feature="command-centre" 
+      plan={userPlan} 
+      showUpgradeCard={true}
+      upgradeCardVariant="banner"
+      upgradeCardDescription="Get a map-based operational overview for multiple venues, real-time staff tracking, and advanced command capabilities."
+    >
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -1031,5 +1047,6 @@ export default function StaffCommandCentre() {
         {renderView()}
       </div>
     </div>
+    </FeatureGate>
   );
 }

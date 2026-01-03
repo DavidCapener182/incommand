@@ -46,7 +46,7 @@ export default function IncidentDependencySelector({
     setError(null);
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('incident_logs')
         .select(`
           id,
@@ -66,9 +66,10 @@ export default function IncidentDependencySelector({
       }
 
       // Filter out current incident if editing
+      const dataArray = (data || []) as any[];
       const filteredData = currentIncidentId 
-        ? data?.filter(incident => incident.id !== (currentIncidentId as any)) || []
-        : data || [];
+        ? dataArray.filter((incident: any) => incident.id !== (currentIncidentId as any))
+        : dataArray;
 
       setIncidents(filteredData as any);
       setFilteredIncidents(filteredData as any);
@@ -111,33 +112,6 @@ export default function IncidentDependencySelector({
   useEffect(() => {
     fetchIncidents();
   }, [fetchIncidents]);
-
-  // Pre-calculate circular dependencies when incidents change
-  useEffect(() => {
-    const calculateCircularDependencies = async () => {
-      if (!currentIncidentId || incidents.length === 0) return;
-
-      const newCache: Record<string, boolean> = {};
-      const newChainCache: Record<string, Set<string>> = {};
-      
-      for (const incident of incidents) {
-        try {
-          const { hasCircularDependency, dependencyChain } = await checkCircularDependency(incident.id);
-          newCache[incident.id] = hasCircularDependency;
-          newChainCache[incident.id] = dependencyChain;
-        } catch (error) {
-          console.error('Error calculating circular dependency for incident:', incident.id, error);
-          newCache[incident.id] = false;
-          newChainCache[incident.id] = new Set();
-        }
-      }
-      
-      setCircularDependencyCache(newCache);
-      setDependencyChainCache(newChainCache);
-    };
-
-    calculateCircularDependencies();
-  }, [incidents, currentIncidentId]);
 
   // Handle dependency selection
   const handleDependencyToggle = useCallback(async (incidentId: string) => {
@@ -251,6 +225,33 @@ export default function IncidentDependencySelector({
     
     return { hasCircularDependency: false, dependencyChain };
   }, [getSelectedIncident, currentIncidentId, dependencyChainCache]);
+
+  // Pre-calculate circular dependencies when incidents change
+  useEffect(() => {
+    const calculateCircularDependencies = async () => {
+      if (!currentIncidentId || incidents.length === 0) return;
+
+      const newCache: Record<string, boolean> = {};
+      const newChainCache: Record<string, Set<string>> = {};
+      
+      for (const incident of incidents) {
+        try {
+          const { hasCircularDependency, dependencyChain } = await checkCircularDependency(incident.id);
+          newCache[incident.id] = hasCircularDependency;
+          newChainCache[incident.id] = dependencyChain;
+        } catch (error) {
+          console.error('Error calculating circular dependency for incident:', incident.id, error);
+          newCache[incident.id] = false;
+          newChainCache[incident.id] = new Set();
+        }
+      }
+      
+      setCircularDependencyCache(newCache);
+      setDependencyChainCache(newChainCache);
+    };
+
+    calculateCircularDependencies();
+  }, [incidents, currentIncidentId, checkCircularDependency]);
 
   // Get incident type options
   const getIncidentTypes = useCallback(() => {

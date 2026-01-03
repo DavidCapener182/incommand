@@ -26,7 +26,8 @@ module.exports = {
   			'slide-down': 'slide-down 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   			'fade-in': 'fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'bounce-slow': 'bounce 3s infinite'
   		},
   		keyframes: {
   			'pulse-border': {
@@ -95,6 +96,9 @@ module.exports = {
   		minWidth: {
   			touch: '44px',
   			'touch-large': '48px'
+  		},
+  		perspective: {
+  			'1000': '1000px'
   		},
 		boxShadow: {
 			'0': 'none',

@@ -39,8 +39,8 @@ export async function PATCH(
     if (parsed.data.subscriptionStatus) payload.subscription_status = parsed.data.subscriptionStatus
     if (parsed.data.isActive !== undefined) payload.is_active = parsed.data.isActive
 
-    const { data, error } = await context.serviceClient
-      .from('organizations' as any)
+    const { data, error } = await (context.serviceClient as any)
+      .from('organizations')
       .update(payload)
       .eq('id', organizationId)
       .select('*')
@@ -73,8 +73,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Organization ID is required' }, { status: 400 })
     }
 
-    const { error } = await context.serviceClient
-      .from('organizations' as any)
+    const { error } = await (context.serviceClient as any)
+      .from('organizations')
       .update({ is_active: false, subscription_status: 'cancelled' })
       .eq('id', organizationId)
 

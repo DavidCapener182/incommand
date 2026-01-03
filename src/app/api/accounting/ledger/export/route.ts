@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth, requireOrganizationAccess } from '@/lib/middleware/auth'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 function buildCsv(rows: any[]) {
   if (rows.length === 0) {
     return 'entry_id,organization_id,date,type,account_code,description,amount,currency\n'

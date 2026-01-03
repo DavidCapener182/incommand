@@ -108,7 +108,7 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
       }
 
       // Fetch incidents data
-      const { data: incidents, error: incidentsError } = await supabase
+      const { data: incidents, error: incidentsError } = await (supabase as any)
         .from('incident_logs')
         .select('*')
         .eq('event_id', eventId)
@@ -117,15 +117,16 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
       if (incidentsError) throw incidentsError
 
       // Calculate metrics
-      const totalIncidents = incidents?.length || 0
-      const openIncidents = incidents?.filter(i => !i.is_closed).length || 0
-      const closedIncidents = incidents?.filter(i => i.is_closed).length || 0
-      const highPriorityIncidents = incidents?.filter(i => 
+      const incidentsArray = (incidents || []) as any[];
+      const totalIncidents = incidentsArray.length
+      const openIncidents = incidentsArray.filter((i: any) => !i.is_closed).length
+      const closedIncidents = incidentsArray.filter((i: any) => i.is_closed).length
+      const highPriorityIncidents = incidentsArray.filter((i: any) => 
         i.priority === 'high' || i.priority === 'critical'
-      ).length || 0
+      ).length
 
       // Calculate quality metrics
-      const qualityScores = incidents?.map(i => {
+      const qualityScores = incidentsArray.map((i: any) => {
         let score = 50 // Base score
         
         // Contemporaneous entries get higher scores
@@ -144,30 +145,30 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
         ? qualityScores.reduce((sum, score) => sum + score, 0) / qualityScores.length 
         : 0
 
-      const completenessRate = incidents?.filter(i => 
+      const completenessRate = incidentsArray.filter((i: any) => 
         i.occurrence && i.action_taken && i.incident_type
       ).length / Math.max(1, totalIncidents) * 100 || 0
 
-      const factualLanguageRate = incidents?.filter(i => 
+      const factualLanguageRate = incidentsArray.filter((i: any) => 
         !i.occurrence?.toLowerCase().includes('very') &&
         !i.occurrence?.toLowerCase().includes('extremely') &&
         !i.occurrence?.toLowerCase().includes('amazing')
       ).length / Math.max(1, totalIncidents) * 100 || 0
 
       // Calculate compliance metrics
-      const contemporaneousRate = incidents?.filter(i => 
+      const contemporaneousRate = incidentsArray.filter((i: any) => 
         i.entry_type === 'contemporaneous'
       ).length / Math.max(1, totalIncidents) * 100 || 0
 
-      const amendmentRate = incidents?.filter(i => 
+      const amendmentRate = incidentsArray.filter((i: any) => 
         i.is_amended
       ).length / Math.max(1, totalIncidents) * 100 || 0
 
       const complianceScore = (contemporaneousRate * 0.4 + (100 - amendmentRate) * 0.3 + factualLanguageRate * 0.3)
 
       // Calculate performance metrics
-      const responseTimes = (incidents ?? [])
-        .map(i => {
+      const responseTimes = incidentsArray
+        .map((i: any) => {
           if (i.responded_at && i.timestamp) {
             const created = new Date(i.timestamp).getTime()
             const responded = new Date(i.responded_at).getTime()
@@ -181,8 +182,8 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
         ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length 
         : 0
 
-      const resolutionTimes = (incidents ?? [])
-        .map(i => {
+      const resolutionTimes = incidentsArray
+        .map((i: any) => {
           if (i.resolved_at && i.timestamp) {
             const created = new Date(i.timestamp).getTime()
             const resolved = new Date(i.resolved_at).getTime()
@@ -197,7 +198,7 @@ export function useRealtimeAnalytics(options: RealtimeSubscriptionOptions = {}) 
         : 0
 
       // Calculate staff utilization (simplified)
-      const uniqueStaff = new Set(incidents?.map(i => i.logged_by_callsign)).size
+      const uniqueStaff = new Set(incidentsArray.map((i: any) => i.logged_by_callsign)).size
       const staffUtilization = Math.min(100, (totalIncidents / Math.max(1, uniqueStaff)) * 10)
 
       return {

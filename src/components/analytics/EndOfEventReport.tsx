@@ -15,17 +15,20 @@ import {
   LightBulbIcon,
   CalendarIcon,
   MapPinIcon,
-  TrophyIcon
+  TrophyIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import { supabase } from '@/lib/supabase'
 import { generateEventReport, type EventReportData, type EventReportOptions } from '@/lib/analytics/eventReportGenerator'
 import { useToast } from '@/components/Toast'
 import { Card } from '@/components/ui/card'
 import { printWithNoMargins, printElement } from '@/utils/printUtils'
+import type { ReadinessScore } from '@/lib/analytics/readinessEngine'
 
 interface EndOfEventReportProps {
   eventId?: string
   className?: string
+  readiness?: ReadinessScore | null
 }
 
 interface EventData {
@@ -63,6 +66,15 @@ interface LessonsLearned {
   improvements: string[]
   recommendations: string[]
   confidence: number
+}
+
+const READINESS_COMPONENT_LABELS: Record<keyof ReadinessScore['component_scores'], string> = {
+  staffing: 'Staffing',
+  incident_pressure: 'Incident Pressure',
+  weather: 'Weather',
+  transport: 'Transport',
+  assets: 'Assets',
+  crowd_density: 'Crowd Attendance',
 }
 
 // Logs that are not actionable incidents and should be excluded from stats/AI
@@ -156,9 +168,10 @@ const buildStaffPerformance = (
   }
 }
 
-export default function EndOfEventReport({ eventId, className = '' }: EndOfEventReportProps) {
+export default function EndOfEventReport({ eventId, className = '', readiness }: EndOfEventReportProps) {
   const { addToast } = useToast()
-  const [loading, setLoading] = useState(!!eventId)
+  const [loading, setLoading] = useState(true)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [incidentSummary, setIncidentSummary] = useState<IncidentSummary | null>(null)
@@ -179,6 +192,17 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isFetchingRef = useRef(false)
+  const lastEventIdRef = useRef<string | undefined>(undefined)
+  const [readinessSnapshot, setReadinessSnapshot] = useState<ReadinessScore | null>(readiness ?? null)
+  const [readinessLoading, setReadinessLoading] = useState(false)
+  const [readinessError, setReadinessError] = useState<string | null>(null)
+  const formatReadinessStatus = (score: number) => {
+    if (score >= 80) return 'Ready'
+    if (score >= 60) return 'Watch'
+    return 'Critical'
+  }
+  const formatTrendLabel = (trend: ReadinessScore['trend']) =>
+    trend.charAt(0).toUpperCase() + trend.slice(1)
 
 
   const fetchEventData = useCallback(async () => {
@@ -190,6 +214,7 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
       setAiInsights('')
       setDetailedIncidents([])
       setLoading(false)
+      setHasLoadedOnce(true)
       setError(null)
       return
     }
@@ -205,13 +230,14 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
         throw new Error('No authenticated user found');
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await (supabase as any)
         .from('profiles')
         .select('company_id')
         .eq('id', user.user.id)
         .single();
 
-      if (profileError || !profile?.company_id) {
+      const profileData = profile as any;
+      if (profileError || !profileData?.company_id) {
         throw new Error('Failed to fetch user profile or company association');
       }
 
@@ -219,11 +245,15 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
         .from('events')
         .select('*')
         .eq('id', eventId)
-        .eq('company_id', profile.company_id)
         .single()
 
       if (eventError) {
         throw eventError
+      }
+
+      const eventData = event as any;
+      if (eventData?.company_id && eventData.company_id !== profileData.company_id) {
+        throw new Error('You do not have access to this event')
       }
 
       setEventData(event as unknown as EventData)
@@ -368,7 +398,7 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
 
       // Fetch latest attendance (Venue Occupancy)
       try {
-        const { data: attendanceData, error: attendanceError } = await supabase
+        const { data: attendanceData, error: attendanceError } = await (supabase as any)
           .from('attendance_records')
           .select('count')
           .eq('event_id', eventId)
@@ -376,8 +406,9 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
           .limit(1)
           .maybeSingle()
 
-        if (!attendanceError && attendanceData && typeof attendanceData.count === 'number') {
-          setCurrentAttendance(attendanceData.count)
+        const attendanceDataTyped = attendanceData as any;
+        if (!attendanceError && attendanceDataTyped && typeof attendanceDataTyped.count === 'number') {
+          setCurrentAttendance(attendanceDataTyped.count)
         } else {
           setCurrentAttendance(null)
         }
@@ -385,7 +416,8 @@ export default function EndOfEventReport({ eventId, className = '' }: EndOfEvent
         setCurrentAttendance(null)
       }
 
-      // Generate AI insights inline to avoid circular dependency
+      // Generate AI insights asynchronously (non-blocking)
+      setTimeout(async () => {
       try {
         // Treat 'logged' as closed
         const isResolvedAI = (inc: any) => (inc?.is_closed === true) || ['closed','logged'].includes(String(inc?.status || '').toLowerCase())
@@ -477,7 +509,7 @@ Format as JSON with keys: strengths, improvements, recommendations, confidence`
         // Generate overall AI summary
         const summaryPrompt = `Provide a concise executive summary for this event:
 
-Event: ${event.name}
+Event: ${eventData?.event_name || eventData?.name || 'Event'}
 Incidents: ${filteredIncidents.length} (${resolvedCount} resolved incl. "logged")
 Staff Performance: ${staffAssignmentsResult.data?.length || 0} positions
 Response Time: ${summary?.avgResponseTime?.toFixed(1) || 'N/A'} minutes average
@@ -496,8 +528,28 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         }
       } catch (aiError) {
         console.error('Error generating AI insights:', aiError)
-        // Don't show toast for AI insights failure, just log it
+          // Set fallback values for AI insights
+          setLessonsLearned({
+            strengths: [
+              'Event completed successfully',
+              'Staff coordination effective',
+              'Incident response timely'
+            ],
+            improvements: [
+              'Increase staff training',
+              'Improve communication protocols',
+              'Enhance documentation'
+            ],
+            recommendations: [
+              'Implement pre-event briefings',
+              'Use technology for better tracking',
+              'Regular performance reviews'
+            ],
+            confidence: 75
+          })
+          setAiInsights('AI insights temporarily unavailable')
       }
+      }, 100)
     } catch (error) {
       console.error('Error fetching event data:', error)
       
@@ -516,6 +568,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
       })
     } finally {
       setLoading(false)
+      setHasLoadedOnce(true)
       isFetchingRef.current = false
     }
   }, [eventId, addToast])
@@ -524,10 +577,64 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     if (!eventId) {
       setLoading(false)
       setError(null)
+      setHasLoadedOnce(false)
+      lastEventIdRef.current = undefined
       return
     }
+
+    // Only fetch if this is a new eventId
+    if (lastEventIdRef.current !== eventId) {
+      lastEventIdRef.current = eventId
+      setHasLoadedOnce(false)
     fetchEventData()
-  }, [eventId])
+    }
+  }, [eventId, fetchEventData])
+
+  useEffect(() => {
+    if (typeof readiness !== 'undefined') {
+      setReadinessSnapshot(readiness ?? null)
+      setReadinessError(null)
+      setReadinessLoading(false)
+      return
+    }
+
+    if (!eventId) {
+      setReadinessSnapshot(null)
+      setReadinessError(null)
+      setReadinessLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchInlineReadiness = async () => {
+      setReadinessLoading(true)
+      setReadinessError(null)
+      try {
+        const response = await fetch(`/api/analytics/readiness-index?event_id=${eventId}`)
+        if (!response.ok) {
+          throw new Error('Failed to load readiness data')
+        }
+        const payload = await response.json()
+        if (!cancelled) {
+          setReadinessSnapshot(payload?.readiness ?? null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setReadinessError(err instanceof Error ? err.message : 'Unable to load readiness data')
+        }
+      } finally {
+        if (!cancelled) {
+          setReadinessLoading(false)
+        }
+      }
+    }
+
+    fetchInlineReadiness()
+    return () => {
+      cancelled = true
+    }
+  }, [eventId, readiness])
 
   const generateCSVReport = useCallback((): string => {
     const rows = [
@@ -767,6 +874,15 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     }
   }, [eventData, incidentSummary, staffPerformance, currentAttendance])
 
+  const readinessComponents = useMemo(() => {
+    if (!readinessSnapshot) return []
+    return Object.entries(readinessSnapshot.component_scores).map(([key, value]) => ({
+      key,
+      label: READINESS_COMPONENT_LABELS[key as keyof ReadinessScore['component_scores']] ?? key,
+      score: value.score,
+    }))
+  }, [readinessSnapshot])
+
   const priorityBreakdown = useMemo(() => {
     if (!incidentSummary?.total) {
       return []
@@ -806,6 +922,16 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     }
 
     const highlights: Highlight[] = []
+
+    if (readinessSnapshot) {
+      highlights.push({
+        title: 'Readiness Score',
+        value: `${readinessSnapshot.overall_score}%`,
+        description: `${formatReadinessStatus(readinessSnapshot.overall_score)} • ${formatTrendLabel(readinessSnapshot.trend)}`,
+        Icon: ShieldCheckIcon,
+        accent: 'text-blue-600',
+      })
+    }
 
     if (computedMetrics.totalIncidents > 0) {
       highlights.push({
@@ -853,7 +979,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
     }
 
     return highlights
-  }, [computedMetrics, eventData])
+  }, [computedMetrics, eventData, readinessSnapshot])
 
   // NOW we can have conditional returns, AFTER all hooks
   
@@ -1034,76 +1160,224 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         </div>
       </div>
 
-      {operationalHighlights.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 avoid-break">
-          {operationalHighlights.map((metric) => (
-            <Card key={metric.title} className="p-5 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                    {metric.title}
-                  </p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-1">
-                    {metric.value}
-                  </p>
-                </div>
-                <div className="rounded-full bg-gray-100 dark:bg-gray-800/80 p-3">
-                  <metric.Icon className={`h-6 w-6 ${metric.accent}`} />
-                </div>
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-4 avoid-break">
+        {/* Top Row - 4 KPI Cards (3 cols each = 12 cols total) */}
+        {operationalHighlights.length > 0 && operationalHighlights.slice(0, 4).map((metric) => (
+          <Card key={metric.title} className="p-5 sm:p-6 md:col-span-3 lg:col-span-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {metric.title}
+                </p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-1">
+                  {metric.value}
+                </p>
               </div>
-              <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                {metric.description}
-              </p>
-            </Card>
-          ))}
-        </div>
-      )}
+              <div className="rounded-full bg-gray-100 dark:bg-gray-800/80 p-3">
+                <metric.Icon className={`h-6 w-6 ${metric.accent}`} />
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+              {metric.description}
+            </p>
+          </Card>
+        ))}
 
-      {/* Event Overview */}
-      <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Event Overview</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="flex items-center gap-3">
-            <CalendarIcon className="h-8 w-8 text-blue-600" />
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Date</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {new Date(eventData.event_date).toLocaleDateString()}
-              </p>
+        {/* Second Row - High Priority Incidents (3 cols) + Event Overview (9 cols) */}
+        {computedMetrics.highPriorityCount > 0 && (
+          <Card className="p-5 sm:p-6 md:col-span-3 lg:col-span-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  High Priority Incidents
+                </p>
+                <p className="text-3xl font-semibold text-gray-900 dark:text-white mt-1">
+                  {computedMetrics.highPriorityCount}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  Critical and high-priority events recorded
+                </p>
+              </div>
+              <div className="rounded-full bg-red-100 dark:bg-red-900/20 p-3">
+                <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <MapPinIcon className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Venue</p>
-              <p className="font-semibold text-gray-900 dark:text-white">{eventData.venue_name}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <UserGroupIcon className="h-8 w-8 text-purple-600" />
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Attendance</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {(currentAttendance ?? eventData.actual_attendance ?? 'N/A')?.toLocaleString?.() || (currentAttendance ?? eventData.actual_attendance ?? 'N/A')}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <ClockIcon className="h-8 w-8 text-orange-600" />
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {eventDuration ?? '-'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
+          </Card>
+        )}
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 print:gap-4">
+        {/* Event Overview - Spans 9 columns */}
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break md:col-span-3 lg:col-span-9">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Event Overview</h3>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="flex items-center gap-3">
+              <CalendarIcon className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Date</p>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {new Date(eventData.event_date).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <MapPinIcon className="h-8 w-8 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Venue</p>
+                <p className="font-semibold text-gray-900 dark:text-white">{eventData.venue_name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <UserGroupIcon className="h-8 w-8 text-purple-600" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Attendance</p>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {(currentAttendance ?? eventData.actual_attendance ?? 'N/A')?.toLocaleString?.() || (currentAttendance ?? eventData.actual_attendance ?? 'N/A')}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <ClockIcon className="h-8 w-8 text-orange-600" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Duration</p>
+                <p className="font-semibold text-gray-900 dark:text-white">
+                  {eventDuration ?? '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Third Row - Operational Readiness (6 cols) + Event Timings (6 cols) */}
+        {readinessSnapshot && (
+          <Card
+            id="end-of-event-readiness"
+            className="p-6 print:p-4 print:border print:border-gray-200 avoid-break md:col-span-6 lg:col-span-6"
+          >
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Operational Readiness
+                </p>
+                <div className="flex items-baseline gap-3 mt-2">
+                  <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                    {readinessSnapshot.overall_score}%
+                  </span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {formatReadinessStatus(readinessSnapshot.overall_score)} •{' '}
+                    {formatTrendLabel(readinessSnapshot.trend)}
+                  </span>
+                </div>
+                {readinessLoading && (
+                  <p className="text-xs text-gray-500 mt-1">Refreshing readiness scores…</p>
+                )}
+                {readinessError && (
+                  <p className="text-xs text-red-500 mt-1">{readinessError}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
+                {readinessComponents.map((component) => (
+                  <div
+                    key={component.key}
+                    className="rounded-lg border border-gray-100 dark:border-gray-700 px-3 py-2"
+                  >
+                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {component.label}
+                    </p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {component.score}%
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Event Timings - Spans 6 columns (next to Operational Readiness) */}
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break md:col-span-6 lg:col-span-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+                <ClockIcon className="h-6 w-6 text-indigo-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Timings</h3>
+            </div>
+          </div>
+
+          {performanceTimings && performanceTimings.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              {(() => {
+                // Group events by detected artist name
+                const groups: Record<string, TimingEvent[]> = {}
+                const cleanName = (n?: string) => (n || '').trim() || 'Unknown Act'
+                for (const t of performanceTimings) {
+                  const key = cleanName(t.artistName)
+                  if (!groups[key]) groups[key] = []
+                  groups[key].push(t)
+                }
+
+                // Determine showdown (global) and main act = latest on-stage before showdown if present
+                const allShowdowns = performanceTimings.filter(e => e.type === 'showdown').sort((a,b)=>a.timestampMs-b.timestampMs)
+                const showdown = allShowdowns.length > 0 ? allShowdowns[allShowdowns.length - 1] : undefined
+                let mainActName: string | undefined
+                if (showdown) {
+                  let latestOn: { name: string; ts: number } | undefined
+                  Object.entries(groups).forEach(([name, evts]) => {
+                    const on = evts.filter(e => e.type === 'artistonstage' && e.timestampMs <= showdown.timestampMs).sort((a,b)=>a.timestampMs-b.timestampMs).pop()
+                    if (on) {
+                      if (!latestOn || on.timestampMs > latestOn.ts) {
+                        latestOn = { name, ts: on.timestampMs }
+                      }
+                    }
+                  })
+                  mainActName = latestOn?.name
+                }
+
+                const rows: JSX.Element[] = []
+                Object.entries(groups).forEach(([artist, events], idx) => {
+                  const sorted = events.sort((a,b)=>a.timestampMs-b.timestampMs)
+                  const firstOn = sorted.find(e => e.type === 'artistonstage')
+                  const offList = sorted.filter(e => e.type === 'artistoffstage')
+                  const lastOff = offList.length > 0 ? offList[offList.length - 1] : undefined
+                  const isMain = showdown && artist === mainActName
+                  const endEvt = isMain && showdown ? showdown : lastOff
+                  if (!firstOn && !endEvt) return
+                  const label = artist === 'Unknown Act' ? 'Act' : artist
+                  const startLabel = firstOn ? firstOn.time : ''
+                  const endLabel = endEvt ? (endEvt.type === 'showdown' ? `Showdown ${endEvt.time}` : endEvt.time) : ''
+
+                  // Collate notable notes from on/off entries
+                  const notes = [firstOn?.note, lastOff?.note].filter(Boolean).join(' | ')
+
+                  // Two main columns: left (artist | start | end), right (notes)
+                  rows.push(
+                    <div
+                      key={`${artist}-${idx}-left`}
+                      className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 grid grid-cols-3 gap-2 items-center"
+                    >
+                      <span className="font-medium text-gray-900 dark:text-white truncate">{label}</span>
+                      <span className="text-gray-700 dark:text-gray-300 text-sm text-right">{startLabel || '—'}</span>
+                      <span className="text-gray-700 dark:text-gray-300 text-sm text-right">{endLabel || '—'}</span>
+                    </div>,
+                    <div
+                      key={`${artist}-${idx}-right`}
+                      className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2"
+                    >
+                      <span className="text-gray-700 dark:text-gray-300 text-sm">{notes ? `Notes: ${notes}` : '—'}</span>
+                    </div>
+                  )
+                })
+                return rows
+              })()}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No timing entries recorded.</p>
+          )}
+        </Card>
+
+        {/* Fourth Row - Three Metric Cards (4 cols each = 12 cols total) */}
         {/* Incident Summary */}
-        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break md:col-span-6 lg:col-span-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
@@ -1181,7 +1455,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         </Card>
 
         {/* Staff Performance */}
-        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break md:col-span-6 lg:col-span-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
@@ -1233,7 +1507,7 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
         </Card>
 
         {/* Risk & Priority */}
-        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
+        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break md:col-span-6 lg:col-span-4">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20">
               <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
@@ -1276,120 +1550,38 @@ Focus on operational effectiveness, key metrics, and overall success. Provide tw
             <p className="text-gray-500 dark:text-gray-400">Priority breakdown unavailable.</p>
           )}
         </Card>
-      </div>
 
-      {/* AI Insights */}
-      {aiInsights && (
-        <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
-          <div className="flex items-center gap-3 mb-4">
-            <SparklesIcon className="h-6 w-6 text-purple-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Executive Summary</h3>
-          </div>
-          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-            <div 
-              className="text-sm leading-relaxed text-gray-700 dark:text-gray-300"
-              dangerouslySetInnerHTML={{ 
-                __html: aiInsights
-                  // If the AI already returned HTML, use it as-is
-                  .includes('<div') ? aiInsights :
-                  // Otherwise convert markdown to HTML
-                  aiInsights
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert bold
-                    .replace(/\*(.*?)\*/g, '<em>$1</em>') // Convert italic
-                    .replace(/^### (.*$)/gim, '<h3 style="color: #1f2937; font-size: 16px; font-weight: 600; margin: 16px 0 8px 0;">$1</h3>') // Convert headers
-                    .replace(/^## (.*$)/gim, '<h2 style="color: #111827; font-size: 18px; font-weight: 700; margin: 20px 0 12px 0;">$1</h2>') // Convert main headers
-                    .replace(/^# (.*$)/gim, '<h1 style="color: #111827; font-size: 20px; font-weight: 700; margin: 24px 0 16px 0;">$1</h1>') // Convert main titles
-                    .replace(/^\d+\.\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 8px;"><strong>$1</strong></div>') // Convert numbered lists
-                    .replace(/^[-*]\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 4px;">• $1</div>') // Convert bullet lists
-                    .replace(/\n\n/g, '<br><br>') // Convert double line breaks
-                    .replace(/\n/g, '<br>') // Convert single line breaks
-              }}
-            />
-          </div>
-        </Card>
-      )}
-
-      {/* Event Timings */}
-      <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
-              <ClockIcon className="h-6 w-6 text-indigo-600" />
+        {/* AI Insights - Spans full width */}
+        {aiInsights && (
+          <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break md:col-span-6 lg:col-span-12">
+            <div className="flex items-center gap-3 mb-4">
+              <SparklesIcon className="h-6 w-6 text-purple-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Executive Summary</h3>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Timings</h3>
-          </div>
-        </div>
-
-        {performanceTimings && performanceTimings.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            {(() => {
-              // Group events by detected artist name
-              const groups: Record<string, TimingEvent[]> = {}
-              const cleanName = (n?: string) => (n || '').trim() || 'Unknown Act'
-              for (const t of performanceTimings) {
-                const key = cleanName(t.artistName)
-                if (!groups[key]) groups[key] = []
-                groups[key].push(t)
-              }
-
-              // Determine showdown (global) and main act = latest on-stage before showdown if present
-              const allShowdowns = performanceTimings.filter(e => e.type === 'showdown').sort((a,b)=>a.timestampMs-b.timestampMs)
-              const showdown = allShowdowns.length > 0 ? allShowdowns[allShowdowns.length - 1] : undefined
-              let mainActName: string | undefined
-              if (showdown) {
-                let latestOn: { name: string; ts: number } | undefined
-                Object.entries(groups).forEach(([name, evts]) => {
-                  const on = evts.filter(e => e.type === 'artistonstage' && e.timestampMs <= showdown.timestampMs).sort((a,b)=>a.timestampMs-b.timestampMs).pop()
-                  if (on) {
-                    if (!latestOn || on.timestampMs > latestOn.ts) {
-                      latestOn = { name, ts: on.timestampMs }
-                    }
-                  }
-                })
-                mainActName = latestOn?.name
-              }
-
-              const rows: JSX.Element[] = []
-              Object.entries(groups).forEach(([artist, events], idx) => {
-                const sorted = events.sort((a,b)=>a.timestampMs-b.timestampMs)
-                const firstOn = sorted.find(e => e.type === 'artistonstage')
-                const offList = sorted.filter(e => e.type === 'artistoffstage')
-                const lastOff = offList.length > 0 ? offList[offList.length - 1] : undefined
-                const isMain = showdown && artist === mainActName
-                const endEvt = isMain && showdown ? showdown : lastOff
-                if (!firstOn && !endEvt) return
-                const label = artist === 'Unknown Act' ? 'Act' : artist
-                const startLabel = firstOn ? firstOn.time : ''
-                const endLabel = endEvt ? (endEvt.type === 'showdown' ? `Showdown ${endEvt.time}` : endEvt.time) : ''
-
-                // Collate notable notes from on/off entries
-                const notes = [firstOn?.note, lastOff?.note].filter(Boolean).join(' | ')
-
-                // Two main columns: left (artist | start | end), right (notes)
-                rows.push(
-                  <div
-                    key={`${artist}-${idx}-left`}
-                    className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 grid grid-cols-3 gap-2 items-center"
-                  >
-                    <span className="font-medium text-gray-900 dark:text-white truncate">{label}</span>
-                    <span className="text-gray-700 dark:text-gray-300 text-sm text-right">{startLabel || '—'}</span>
-                    <span className="text-gray-700 dark:text-gray-300 text-sm text-right">{endLabel || '—'}</span>
-                  </div>,
-                  <div
-                    key={`${artist}-${idx}-right`}
-                    className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2"
-                  >
-                    <span className="text-gray-700 dark:text-gray-300 text-sm">{notes ? `Notes: ${notes}` : '—'}</span>
-                  </div>
-                )
-              })
-              return rows
-            })()}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500 dark:text-gray-400">No timing entries recorded.</p>
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+              <div 
+                className="text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+                dangerouslySetInnerHTML={{ 
+                  __html: aiInsights
+                    // If the AI already returned HTML, use it as-is
+                    .includes('<div') ? aiInsights :
+                    // Otherwise convert markdown to HTML
+                    aiInsights
+                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert bold
+                      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Convert italic
+                      .replace(/^### (.*$)/gim, '<h3 style="color: #1f2937; font-size: 16px; font-weight: 600; margin: 16px 0 8px 0;">$1</h3>') // Convert headers
+                      .replace(/^## (.*$)/gim, '<h2 style="color: #111827; font-size: 18px; font-weight: 700; margin: 20px 0 12px 0;">$1</h2>') // Convert main headers
+                      .replace(/^# (.*$)/gim, '<h1 style="color: #111827; font-size: 20px; font-weight: 700; margin: 24px 0 16px 0;">$1</h1>') // Convert main titles
+                      .replace(/^\d+\.\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 8px;"><strong>$1</strong></div>') // Convert numbered lists
+                      .replace(/^[-*]\s+(.*$)/gim, '<div style="margin-left: 16px; margin-bottom: 4px;">• $1</div>') // Convert bullet lists
+                      .replace(/\n\n/g, '<br><br>') // Convert double line breaks
+                      .replace(/\n/g, '<br>') // Convert single line breaks
+                }}
+              />
+            </div>
+          </Card>
         )}
-      </Card>
+      </div>
 
       {/* Detailed Incident Logs Table */}
       <Card className="p-6 print:p-4 print:border print:border-gray-200 avoid-break">

@@ -115,6 +115,7 @@ export interface StandConfig {
   capacity: number;
   order: number;
   current?: number;
+  snapshots?: Record<number, number | null>;
 }
 
 export interface StandsSetup {

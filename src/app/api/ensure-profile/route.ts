@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create minimal profile
-    const { data: newProfile, error } = await supabase
+    const { data: newProfile, error } = await (supabase as any)
       .from('profiles')
       .insert({
         id: userId,

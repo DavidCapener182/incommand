@@ -1,10 +1,10 @@
 'use client'
 
 import React from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import EscalationTimer from './EscalationTimer';
-import { useEscalationToast } from '../contexts/EscalationToastContext';
+import { useOptionalEscalationToast } from '../contexts/EscalationToastContext';
 
 interface EscalationToastIncident {
   id: number;
@@ -25,35 +25,41 @@ export default function GlobalEscalationToast() {
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const collapseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const incidentId = incident?.id;
+  const hasIncident = Boolean(incident);
   
-  // Use escalation toast context to notify other components (with safe fallback)
-  let setEscalationToastVisible = (_visible: boolean) => {};
-  let setEscalationToastExpanded = (_expanded: boolean) => {};
-  
-  try {
-    const escalationContext = useEscalationToast();
-    setEscalationToastVisible = escalationContext.setEscalationToastVisible;
-    setEscalationToastExpanded = escalationContext.setEscalationToastExpanded;
-  } catch (error) {
-    // Context not available, use no-op functions
-    console.debug('EscalationToast context not available in GlobalEscalationToast');
-  }
+  const escalationContext = useOptionalEscalationToast();
 
-  const fetchCurrentEvent = async () => {
+  const setEscalationToastVisible = useCallback(
+    (visible: boolean) => {
+      escalationContext?.setEscalationToastVisible(visible);
+    },
+    [escalationContext]
+  );
+
+  const setEscalationToastExpanded = useCallback(
+    (expanded: boolean) => {
+      escalationContext?.setEscalationToastExpanded(expanded);
+    },
+    [escalationContext]
+  );
+
+  const fetchCurrentEvent = useCallback(async () => {
     try {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('events')
         .select('id')
         .eq('is_current', true)
         .single();
-      setCurrentEventId(data?.id ?? null);
+      const eventData = data as any;
+      setCurrentEventId(eventData?.id ?? null);
     } catch (error) {
       console.error('Error fetching current event:', error);
       setCurrentEventId(null);
     }
-  };
+  }, []);
 
-  const fetchNextEscalatingIncident = async (eventId?: string | null) => {
+  const fetchNextEscalatingIncident = useCallback(async (eventId?: string | null) => {
     setLoading(true);
     try {
       const now = new Date().toISOString();
@@ -110,11 +116,11 @@ export default function GlobalEscalationToast() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [hiddenIds]);
 
   useEffect(() => {
     fetchCurrentEvent();
-  }, []);
+  }, [fetchCurrentEvent]);
 
   useEffect(() => {
     // Initial fetch (try with event, fall back to global)
@@ -129,24 +135,24 @@ export default function GlobalEscalationToast() {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current as any);
     };
-  }, [currentEventId]);
+  }, [currentEventId, fetchNextEscalatingIncident]);
 
   // Auto-collapse after ~10s when a new incident is shown
   useEffect(() => {
     if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current as any);
     setCollapsed(false);
-    if (incident) {
+    if (incidentId) {
       collapseTimerRef.current = setTimeout(() => setCollapsed(true), 10000);
     }
     return () => {
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current as any);
     };
-  }, [incident?.id]);
+  }, [incidentId]);
 
   // Update context when incident visibility changes
   useEffect(() => {
-    setEscalationToastVisible(!!incident);
-  }, [incident, setEscalationToastVisible]);
+    setEscalationToastVisible(hasIncident);
+  }, [hasIncident, setEscalationToastVisible]);
 
   // Update context when collapsed state changes
   useEffect(() => {
@@ -156,10 +162,10 @@ export default function GlobalEscalationToast() {
   const onMoveToInProgress = async () => {
     if (!incident) return;
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('incident_logs')
         .update({ status: 'in-progress' })
-        .eq('id', incident.id);
+        .eq('id', (incident as any).id);
       if (error) throw error;
       // Refresh selection
       if (currentEventId) fetchNextEscalatingIncident(currentEventId);
@@ -174,24 +180,25 @@ export default function GlobalEscalationToast() {
     if (!note || !note.trim()) return;
     try {
       // Append note to both occurrence and action_taken so it shows clearly on the log
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('incident_logs')
         .select('occurrence, action_taken')
-        .eq('id', incident.id)
+        .eq('id', (incident as any).id)
         .single();
       if (error) throw error;
-      const prevOccurrence = (data?.occurrence as string) || '';
-      const prevActions = (data?.action_taken as string) || '';
+      const dataTyped = data as any;
+      const prevOccurrence = (dataTyped?.occurrence as string) || '';
+      const prevActions = (dataTyped?.action_taken as string) || '';
 
       const normalizedNote = note.trim().replace(/\s+/g, ' ');
       const updatedOccurrence = `${prevOccurrence ? prevOccurrence.replace(/\.$/, '') + '. ' : ''}Update: ${normalizedNote}.`;
       const appendedAction = `Update: ${normalizedNote}.`;
       const updatedActions = prevActions ? `${prevActions.trim()} ${appendedAction}` : appendedAction;
 
-      const { error: updErr } = await supabase
+      const { error: updErr } = await (supabase as any)
         .from('incident_logs')
         .update({ occurrence: updatedOccurrence, action_taken: updatedActions })
-        .eq('id', incident.id);
+        .eq('id', (incident as any).id);
       if (updErr) throw updErr;
       // Local reflect
       setIncident({ ...incident, occurrence: updatedOccurrence });
@@ -203,10 +210,10 @@ export default function GlobalEscalationToast() {
   const onCloseLog = async () => {
     if (!incident) return;
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('incident_logs')
         .update({ is_closed: true, status: 'closed' })
-        .eq('id', incident.id);
+        .eq('id', (incident as any).id);
       if (error) throw error;
       // Refresh selection
       if (currentEventId) fetchNextEscalatingIncident(currentEventId);
@@ -286,5 +293,3 @@ export default function GlobalEscalationToast() {
     </div>
   );
 }
-
-

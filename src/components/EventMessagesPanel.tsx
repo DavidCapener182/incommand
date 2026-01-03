@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { FaRobot, FaUsers, FaShieldAlt, FaExclamationCircle, FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
@@ -113,17 +113,6 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     cancelRecording
   } = useVoiceRecording();
 
-  // Handle voice recording completion
-  useEffect(() => {
-    if (recordingState === 'idle' && recordingDuration > 0) {
-      // Voice recording completed, send the message
-      handleVoiceMessage({
-        url: '', // This will be set by the useVoiceRecording hook
-        duration: Math.round(recordingDuration / 1000)
-      });
-    }
-  }, [recordingState, recordingDuration]);
-
   // Set or fetch current event based on provided props
   useEffect(() => {
     let isMounted = true;
@@ -184,7 +173,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
   }, []);
 
   // Fetch messages from Supabase for selected group
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (selectedGroup === 'ai') return;
     const { data, error } = await supabase
       .from('event_chat_messages')
@@ -204,11 +193,11 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
         })),
       }));
     }
-  };
+  }, [selectedGroup]);
 
   useEffect(() => {
     fetchMessages();
-  }, [selectedGroup]);
+  }, [fetchMessages]);
 
   // Fetch missing profiles for senders in current messages
   useEffect(() => {
@@ -244,7 +233,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     if (!inputValue.trim() || selectedGroup === 'ai') return;
     // Replace 'You' with actual user id if available
     const userId = 'You';
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('event_chat_messages')
       .insert([
         {
@@ -280,7 +269,7 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     if (e.key === 'Enter') handleSend();
   };
 
-  const handleVoiceMessage = async (voiceData: { url: string; duration: number }) => {
+  const handleVoiceMessage = useCallback(async (voiceData: { url: string; duration: number }) => {
     if (!currentUserId || !selectedGroup) return;
 
     try {
@@ -307,7 +296,18 @@ const EventMessagesPanel: React.FC<EventMessagesPanelProps> = ({
     } catch (error) {
       console.error('Error sending voice message:', error);
     }
-  };
+  }, [currentUserId, selectedGroup, fetchMessages]);
+
+  // Handle voice recording completion
+  useEffect(() => {
+    if (recordingState === 'idle' && recordingDuration > 0) {
+      // Voice recording completed, send the message
+      handleVoiceMessage({
+        url: '', // This will be set by the useVoiceRecording hook
+        duration: Math.round(recordingDuration / 1000)
+      });
+    }
+  }, [recordingState, recordingDuration, handleVoiceMessage]);
 
   // Find selected group meta
   const selectedGroupMeta =

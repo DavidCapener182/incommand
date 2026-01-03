@@ -1,7 +1,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Cog6ToothIcon, CalendarDaysIcon, ChartBarIcon, BellIcon, QuestionMarkCircleIcon, UserCircleIcon, BookOpenIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, CalendarDaysIcon, ChartBarIcon, BellIcon, QuestionMarkCircleIcon, UserCircleIcon, BookOpenIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { Buffer } from 'buffer';
 
 if (typeof window !== 'undefined') {
@@ -13,6 +13,7 @@ const nav = [
   { name: 'General', href: '/settings', icon: Cog6ToothIcon },
   { name: 'Events', href: '/settings/events', icon: CalendarDaysIcon },
   { name: 'Event Invites', href: '/settings/event-invites', icon: UserCircleIcon },
+  { name: 'SOPs', href: '/settings/sops', icon: DocumentTextIcon },
   { name: 'AI Usage', href: '/settings/ai-usage', icon: ChartBarIcon },
   { name: 'Notification Settings', href: '/settings/notifications', icon: BellIcon },
   { name: 'User Guides', href: '/settings/guides', icon: BookOpenIcon },
@@ -35,6 +36,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       'General': 'Manage your account preferences and profile information',
       'Events': 'View and manage your events and logs',
       'Event Invites': 'Create and manage event access invites',
+      'SOPs': 'Manage Standard Operating Procedures templates and event SOPs',
       'AI Usage': 'Track your AI usage and subscription limits',
       'Notification Settings': 'Configure how you receive notifications',
       'User Guides': 'Learn how to use inCommand effectively',

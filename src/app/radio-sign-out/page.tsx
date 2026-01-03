@@ -49,7 +49,7 @@ export default function RadioSignOutPage() {
       console.log('Fetching signouts for event:', eventId);
       
       // Direct database query instead of API
-      const { data: signOutsData, error: signOutsError } = await supabase
+      const { data: signOutsData, error: signOutsError } = await (supabase as any)
         .from('radio_signouts')
         .select('*')
         .eq('event_id', eventId)
@@ -63,17 +63,19 @@ export default function RadioSignOutPage() {
       console.log('Fetched signouts:', signOutsData);
       
       // Fetch profile data for each signout
-      if (signOutsData && signOutsData.length > 0) {
-        const userIds = [...new Set(signOutsData.map(s => s.user_id))];
-        const { data: profilesData } = await supabase
+      const signOutsArray = (signOutsData || []) as any[];
+      if (signOutsArray.length > 0) {
+        const userIds = [...new Set(signOutsArray.map(s => s.user_id))];
+        const { data: profilesData } = await (supabase as any)
           .from('profiles')
           .select('id, full_name, email')
           .in('id', userIds);
         
         // Merge profile data with signouts
-        const signOutsWithProfiles = signOutsData.map(signOut => ({
+        const profilesArray = (profilesData || []) as any[];
+        const signOutsWithProfiles = signOutsArray.map((signOut: any) => ({
           ...signOut,
-          profile: profilesData?.find(p => p.id === signOut.user_id)
+          profile: profilesArray.find((p: any) => p.id === signOut.user_id)
         }));
         
         setSignOuts(signOutsWithProfiles);
@@ -92,15 +94,16 @@ export default function RadioSignOutPage() {
     const loadCurrentEvent = async () => {
       try {
         console.log('Loading current event...');
-        const { data: event } = await supabase
+        const { data: event } = await (supabase as any)
           .from('events')
           .select('id')
           .eq('is_current', true)
           .single();
         
         console.log('Current event:', event);
-        if (event?.id) {
-          setEventId(event.id);
+        const eventData = event as any;
+        if (eventData?.id) {
+          setEventId(eventData.id);
         }
       } catch (err) {
         console.error('Failed to load current event:', err);
@@ -130,7 +133,7 @@ export default function RadioSignOutPage() {
       console.log('Confirming sign in for:', selectedSignOut.id);
       
       // Direct database update instead of API
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('radio_signouts')
         .update({
           signed_in_at: new Date().toISOString(),

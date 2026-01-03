@@ -36,7 +36,8 @@ export const useWebSocket = ({
     handlersRef.current.add(handler);
     
     // Subscribe to the channel with all current handlers
-    const handlers = Array.from(handlersRef.current);
+    const handlersSet = handlersRef.current;
+    const handlers = Array.from(handlersSet);
     websocketService.subscribe(channelName, handlers);
   }, [channelName]);
 
@@ -76,14 +77,15 @@ export const useWebSocket = ({
   // Initialize connection
   useEffect(() => {
     if (!user) return;
+    const handlersSet = handlersRef.current;
 
     // Add default message handler if provided
     if (onMessage) {
-      handlersRef.current.add(onMessage);
+      handlersSet.add(onMessage);
     }
 
     // Subscribe to the channel
-    const handlers = Array.from(handlersRef.current);
+    const handlers = Array.from(handlersSet);
     websocketService.subscribe(channelName, handlers);
 
     // Set up connection monitoring
@@ -108,11 +110,11 @@ export const useWebSocket = ({
       
       // Remove default message handler
       if (onMessage) {
-        handlersRef.current.delete(onMessage);
+        handlersSet.delete(onMessage);
       }
       
       // Unsubscribe if no handlers remain
-      if (handlersRef.current.size === 0) {
+      if (handlersSet.size === 0) {
         websocketService.unsubscribe(channelName);
       }
     };

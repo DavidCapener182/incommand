@@ -55,13 +55,14 @@ export function useLogRevisions(eventId: string | null, onRevisionCreated?: (not
           const revision = payload.new as any
 
           // Get the incident log to check if it belongs to this event
-          const { data: incidentLog } = await supabase
+          const { data: incidentLog } = await (supabase as any)
             .from('incident_logs')
             .select('event_id, log_number')
             .eq('id', revision.incident_log_id)
             .single()
 
-          if (incidentLog && incidentLog.event_id === eventId) {
+          const incidentLogData = incidentLog as any;
+          if (incidentLogData && incidentLogData.event_id === eventId) {
             const notification: RevisionNotification = {
               incidentLogId: revision.incident_log_id,
               revisionNumber: revision.revision_number,
@@ -88,7 +89,7 @@ export function useLogRevisions(eventId: string | null, onRevisionCreated?: (not
             logger.debug('Revision notification processed', {
               component: 'useLogRevisions',
               action: 'revisionNotification',
-              logNumber: incidentLog.log_number,
+              logNumber: incidentLogData.log_number,
               revision: notification
             })
           }

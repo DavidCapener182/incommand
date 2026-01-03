@@ -33,20 +33,21 @@ export function useEventMembership() {
         setError(null);
 
         // Get current event
-        const { data: currentEvent, error: eventError } = await supabase
+        const { data: currentEvent, error: eventError } = await (supabase as any)
           .from('events')
           .select('id')
           .eq('is_current', true)
           .single();
 
-        if (eventError || !currentEvent) {
+        const eventData = currentEvent as any;
+        if (eventError || !eventData) {
           setMembership(null);
           setLoading(false);
           return;
         }
 
         // Get user's membership for current event
-        const { data: membershipData, error: membershipError } = await supabase
+        const { data: membershipData, error: membershipError } = await (supabase as any)
           .from('event_members')
           .select(`
             id,
@@ -59,7 +60,7 @@ export function useEventMembership() {
             full_name,
             email
           `)
-          .eq('event_id', currentEvent.id)
+          .eq('event_id', eventData.id)
           .eq('user_id', user.id)
           .eq('status', 'active')
           .single();

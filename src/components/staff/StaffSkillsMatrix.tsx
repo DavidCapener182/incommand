@@ -48,7 +48,7 @@ export default function StaffSkillsMatrix({
 }: StaffSkillsMatrixProps) {
   const { user } = useAuth()
   const [staff, setStaff] = useState<StaffMember[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
   const [showAddSkillModal, setShowAddSkillModal] = useState(false)
@@ -159,40 +159,76 @@ export default function StaffSkillsMatrix({
     return availableByCategory
   }
 
-  const fetchStaffSkills = async () => {
+  const fetchStaffSkills = React.useCallback(async () => {
     setLoading(true)
     setError(null)
     
     try {
-      // Try the main API first
-      let response = await fetch('/api/v1/staff/skills-matrix', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      })
+      console.log('Starting skills matrix fetch...')
       
-      let data
-      if (!response.ok) {
-        // If main API fails, try the simple fallback
-        console.log('Main API failed, trying simple fallback...')
-        response = await fetch('/api/v1/staff/skills-matrix/simple', {
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      
+      try {
+        // Try the main API first
+        let response = await fetch('/api/v1/staff/skills-matrix', {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal
         })
+        
+        clearTimeout(timeoutId)
+        
+        let data
+        if (!response.ok) {
+          // If main API fails, try the simple fallback
+          console.log('Main API failed, trying simple fallback...')
+          const fallbackController = new AbortController()
+          const fallbackTimeout = setTimeout(() => fallbackController.abort(), 30000)
+          
+          try {
+            response = await fetch('/api/v1/staff/skills-matrix/simple', {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+              signal: fallbackController.signal
+            })
+            clearTimeout(fallbackTimeout)
+          } catch (fallbackErr) {
+            clearTimeout(fallbackTimeout)
+            throw fallbackErr
+          }
+        }
+        
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unknown error')
+          console.error('Skills matrix API error response:', errorText)
+          throw new Error(`Failed to fetch staff skills: ${response.status} ${response.statusText}`)
+        }
+        
+        data = await response.json()
+        console.log('Skills matrix data received:', data)
+        setStaff(data.staff || data || [])
+      } catch (fetchErr) {
+        clearTimeout(timeoutId)
+        if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+          throw new Error('Request timed out after 30 seconds')
+        }
+        throw fetchErr
       }
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch staff skills')
-      }
-      
-      data = await response.json()
-      setStaff(data.staff || [])
     } catch (err) {
       console.error('Error fetching staff skills:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch staff skills')
+      const errorMessage = err instanceof Error 
+        ? (err.message.includes('Load failed') 
+            ? 'Network error: Unable to connect to server. Please check if the server is running.' 
+            : err.message)
+        : 'Failed to fetch staff skills'
+      setError(errorMessage)
+      setStaff([]) // Set empty array on error so we don't stay in loading state
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   const handleAddSkills = async () => {
     if (!selectedStaff || selectedSkills.length === 0) {
@@ -289,8 +325,31 @@ export default function StaffSkillsMatrix({
   }
 
   useEffect(() => {
-    fetchStaffSkills()
-  }, [])
+    // Ensure we're in the browser
+    if (typeof window === 'undefined') {
+      return
+    }
+    
+    console.log('StaffSkillsMatrix: useEffect triggered, fetching skills...')
+    let isMounted = true
+    
+    // Small delay to ensure page is fully loaded
+    const timeoutId = setTimeout(() => {
+      fetchStaffSkills().catch(err => {
+        console.error('StaffSkillsMatrix: fetchStaffSkills promise rejection:', err)
+        if (isMounted) {
+          setLoading(false)
+          setError('Failed to load skills matrix')
+          setStaff([])
+        }
+      })
+    }, 100)
+    
+    return () => {
+      isMounted = false
+      clearTimeout(timeoutId)
+    }
+  }, [fetchStaffSkills])
 
   const getSkillStatus = (skill: StaffSkill) => {
     if (!skill.expiry_date) return 'valid'

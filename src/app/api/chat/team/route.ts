@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has access to this company and event
-    const { data: userAccess, error: accessError } = await supabase
+    const { data: userAccess, error: accessError } = await (supabase as any)
       .from('profiles')
       .select('company_id')
       .eq('id', userId)
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (userAccess.company_id !== companyId) {
+    if ((userAccess as any).company_id !== companyId) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert message (align fields to chat_messages schema)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('chat_messages')
       .insert({
         channel_id: `${eventId}_${companyId}_${channelName}`,

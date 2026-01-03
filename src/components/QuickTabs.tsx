@@ -115,16 +115,17 @@ export default function QuickTabs({
 
     try {
       // Generate log number
-      const { data: existingLogs } = await supabase
+      const { data: existingLogs } = await (supabase as any)
         .from('incident_logs')
         .select('log_number')
         .eq('event_id', eventId)
         .order('timestamp', { ascending: false })
         .limit(1)
 
+      const existingLogsArray = (existingLogs || []) as any[];
       let nextLogNumber = 1
-      if (existingLogs && existingLogs.length > 0) {
-        const lastNumber = parseInt(existingLogs[0].log_number.split('-').pop() || '0')
+      if (existingLogsArray.length > 0) {
+        const lastNumber = parseInt((existingLogsArray[0] as any).log_number.split('-').pop() || '0')
         nextLogNumber = lastNumber + 1
       }
 
@@ -141,7 +142,7 @@ export default function QuickTabs({
       }
 
       // Insert the incident
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('incident_logs')
         .insert({
           event_id: eventId,

@@ -44,7 +44,7 @@ export async function POST(
 
     // Use service client to bypass RLS and end the event
     const serviceSupabase = getServiceSupabaseClient();
-    const { error: updateError } = await serviceSupabase
+    const { error: updateError } = await (serviceSupabase as any)
       .from('events')
       .update({ 
         is_current: false,
@@ -63,7 +63,7 @@ export async function POST(
     }
 
     // Log the event ending
-    await serviceSupabase.from('audit_log').insert({
+    await (serviceSupabase as any).from('audit_log').insert({
       table_name: 'events',
       record_id: eventId,
       action: 'end_event',

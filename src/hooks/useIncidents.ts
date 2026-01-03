@@ -26,19 +26,25 @@ interface UseIncidentsReturn {
   refreshIncidents: () => Promise<void>;
 }
 
-export const useIncidents = (eventId: string): UseIncidentsReturn => {
+export const useIncidents = (eventId: string | null): UseIncidentsReturn => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { addToast } = useToast();
 
   const fetchIncidents = useCallback(async () => {
+    if (!eventId) {
+      setIncidents([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('incidents')
+      const { data, error: fetchError } = await (supabase as any)
+        .from('incident_logs')
         .select('*')
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
@@ -47,20 +53,21 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
         throw fetchError;
       }
 
+      const dataArray = (data || []) as any[];
       setIncidents(
-        (data || []).map(incident => ({
-          id: incident.id.toString(),
+        dataArray.map((incident: any) => ({
+          id: String(incident.id ?? ''),
           event_id: incident.event_id || '',
           type: incident.incident_type || '',
-          description: incident.description || '',
+          description: incident.occurrence || '',
           status: incident.status || 'open',
-          is_closed: incident.is_closed || false,
-          callsigns: [incident.callsign_from, incident.callsign_to].filter(callsign => callsign !== null),
+          is_closed: Boolean(incident.is_closed),
+          callsigns: [incident.callsign_from, incident.callsign_to].filter(Boolean) as string[],
           created_at: incident.created_at || '',
           updated_at: incident.updated_at || '',
-          created_by: incident.created_by || '',
-          priority: incident.priority,
-          location: (incident as any).location || null
+          created_by: incident.logged_by_user_id || '',
+          priority: incident.priority || 'medium',
+          location: String(incident.location ?? '')
         }))
       );
     } catch (err) {
@@ -73,7 +80,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, [addToast, eventId]);
 
   const updateIncident = useCallback(async (id: string, updates: Partial<Incident>) => {
     try {
@@ -84,7 +91,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
         )
       );
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from('incidents')
         .update(updates)
         .eq('id', id);
@@ -108,7 +115,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
       });
       throw err;
     }
-  }, [fetchIncidents]);
+  }, [addToast, fetchIncidents]);
 
   const deleteIncident = useCallback(async (id: string) => {
     try {
@@ -139,7 +146,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
       });
       throw err;
     }
-  }, [fetchIncidents]);
+  }, [addToast, fetchIncidents]);
 
   const refreshIncidents = useCallback(async () => {
     await fetchIncidents();
@@ -148,34 +155,69 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
   useEffect(() => {
     fetchIncidents();
 
+    if (!eventId) {
+      return;
+    }
+
     // Set up real-time subscription
     const channel = supabase
-      .channel(`incidents-${eventId}`)
+      .channel(`incident_logs-${eventId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'incidents',
+          table: 'incident_logs',
           filter: `event_id=eq.${eventId}`
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setIncidents(prev => [payload.new as Incident, ...prev]);
+            const newIncident = payload.new as any;
+            const mappedIncident: Incident = {
+              id: String(newIncident.id ?? ''),
+              event_id: newIncident.event_id || '',
+              type: newIncident.incident_type || '',
+              description: newIncident.occurrence || '',
+              status: newIncident.status || 'open',
+              is_closed: Boolean(newIncident.is_closed),
+              callsigns: [newIncident.callsign_from, newIncident.callsign_to].filter(Boolean) as string[],
+              created_at: newIncident.created_at || '',
+              updated_at: newIncident.updated_at || '',
+              created_by: newIncident.logged_by_user_id || '',
+              priority: newIncident.priority || 'medium',
+              location: String(newIncident.location ?? '')
+            };
+            setIncidents(prev => [mappedIncident, ...prev]);
             addToast({
               type: 'success',
               title: 'New Incident',
               message: 'New incident created'
             });
           } else if (payload.eventType === 'UPDATE') {
+            const updatedIncident = payload.new as any;
+            const mappedIncident: Incident = {
+              id: String(updatedIncident.id ?? ''),
+              event_id: updatedIncident.event_id || '',
+              type: updatedIncident.incident_type || '',
+              description: updatedIncident.occurrence || '',
+              status: updatedIncident.status || 'open',
+              is_closed: Boolean(updatedIncident.is_closed),
+              callsigns: [updatedIncident.callsign_from, updatedIncident.callsign_to].filter(Boolean) as string[],
+              created_at: updatedIncident.created_at || '',
+              updated_at: updatedIncident.updated_at || '',
+              created_by: updatedIncident.logged_by_user_id || '',
+              priority: updatedIncident.priority || 'medium',
+              location: String(updatedIncident.location ?? '')
+            };
             setIncidents(prev => 
               prev.map(incident => 
-                incident.id === payload.new.id ? payload.new as Incident : incident
+                incident.id === mappedIncident.id ? mappedIncident : incident
               )
             );
           } else if (payload.eventType === 'DELETE') {
+            const deletedId = String((payload.old as any).id ?? '');
             setIncidents(prev => 
-              prev.filter(incident => incident.id !== payload.old.id)
+              prev.filter(incident => incident.id !== deletedId)
             );
           }
         }
@@ -185,7 +227,7 @@ export const useIncidents = (eventId: string): UseIncidentsReturn => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [eventId, fetchIncidents]);
+  }, [addToast, eventId, fetchIncidents]);
 
   return {
     incidents,

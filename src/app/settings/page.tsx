@@ -1,6 +1,6 @@
 // @ts-nocheck
 "use client";
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect, useTransition, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { CardContainer } from '@/components/ui/CardContainer';
@@ -36,6 +36,7 @@ export default function GeneralSettingsPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const hasFetchedRef = useRef(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -45,21 +46,32 @@ export default function GeneralSettingsPage() {
   });
 
   useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return;
+    }
+
+    // If no user after auth loads, show error
+    if (!user) {
+      setError('You must be signed in to view your profile');
+      setLoading(false);
+      return;
+    }
+
+    // Don't refetch if we already have profile data for this user
+    if (profile && profile.id === user.id) {
+      return;
+    }
+
+    // Don't fetch if we're already fetching for this user
+    if (hasFetchedRef.current) {
+      return;
+    }
+
     const supabaseClient = supabase as any;
 
     const fetchProfile = async () => {
-      // Wait for auth to finish loading
-      if (authLoading) {
-        return;
-      }
-
-      // If no user after auth loads, show error
-      if (!user) {
-        setError('You must be signed in to view your profile');
-        setLoading(false);
-        return;
-      }
-
+      hasFetchedRef.current = true;
       setLoading(true);
       setError(null);
       
@@ -139,7 +151,13 @@ export default function GeneralSettingsPage() {
     };
 
     fetchProfile();
-  }, [user, authLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, authLoading]);
+
+  // Reset fetch ref when user ID changes
+  useEffect(() => {
+    hasFetchedRef.current = false;
+  }, [user?.id]);
 
   // Track changes
   useEffect(() => {

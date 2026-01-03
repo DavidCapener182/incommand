@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       return resolvedOrg
     }
 
-    let query = context.serviceClient
-      .from('organizations' as any)
+    let query = (context.serviceClient as any)
+      .from('organizations')
       .select('id, name, slug, tier, subscription_status, subscription_starts_at, subscription_ends_at')
 
     if (typeof resolvedOrg === 'string') {
@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
     const organizationIds = (organizations ?? []).map((org: any) => org.id)
     let usageByOrg: Record<string, any> = {}
     if (organizationIds.length > 0) {
-      const { data: usageRows } = await context.serviceClient
-        .from('subscription_usage' as any)
+      const { data: usageRows } = await (context.serviceClient as any)
+        .from('subscription_usage')
         .select('*')
         .in('organization_id', organizationIds)
         .order('period_start', { ascending: false })
@@ -96,8 +96,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'No updates provided' }, { status: 400 })
     }
 
-    const { data, error } = await context.serviceClient
-      .from('organizations' as any)
+    const { data, error } = await (context.serviceClient as any)
+      .from('organizations')
       .update(updates)
       .eq('id', resolvedOrg)
       .select('*')

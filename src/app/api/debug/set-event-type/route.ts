@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the current event's event_type
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('events')
       .update({ event_type: eventType })
       .eq('is_current', true)

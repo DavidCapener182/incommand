@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       return resolvedOrg
     }
 
-    const { data, error } = await context.serviceClient
+    const { data, error } = await (context.serviceClient as any)
       .from('support_tickets')
       .insert({
         organization_id: resolvedOrg,

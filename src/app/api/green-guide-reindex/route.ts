@@ -53,7 +53,7 @@ export async function POST() {
 
     // Upsert minimal row without deleting existing data (safer default)
     const payload = chunks.map((c, idx) => ({ content: c, page: 1, heading: idx === 0 ? 'Overview' : null, embedding: embeddings[idx] as any }))
-    const { error } = await supabase.from('green_guide_chunks').upsert(payload)
+    const { error } = await (supabase as any).from('green_guide_chunks').upsert(payload)
     if (error) throw new Error(error.message)
 
     return NextResponse.json({ ok: true, chunks: payload.length, note: 'For full indexing run scripts/ingest-green-guide.ts' })

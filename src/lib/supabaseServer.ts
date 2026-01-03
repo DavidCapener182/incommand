@@ -21,19 +21,27 @@ function ensureEnv(key: string): string {
  * Create a secure RLS-enabled Supabase client for server-side operations
  * This client respects Row Level Security policies and user context
  */
-export function createRlsServerClient(headers: Headers): TypedSupabaseClient {
+export function createRlsServerClient(headers: Headers | HeadersInit): TypedSupabaseClient {
   const supabaseUrl = env.SUPABASE_URL
   const anonKey = env.SUPABASE_ANON_KEY
 
+  // Convert HeadersInit to Headers if needed
+  const headersObj = headers instanceof Headers ? headers : new Headers(headers)
+  
+  // Get cookies from headers (Supabase stores session in cookies)
+  const cookieHeader = headersObj.get('cookie') || ''
+  
   return createClient<Database>(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
       headers: {
         // Forward authorization header from request to maintain user context
-        Authorization: headers.get('authorization') || '',
+        Authorization: headersObj.get('authorization') || '',
+        // Forward cookies for session retrieval (critical for getSession())
+        Cookie: cookieHeader,
         // Forward other relevant headers for RLS
-        'x-forwarded-for': headers.get('x-forwarded-for') || '',
-        'user-agent': headers.get('user-agent') || '',
+        'x-forwarded-for': headersObj.get('x-forwarded-for') || '',
+        'user-agent': headersObj.get('user-agent') || '',
       },
     },
   })

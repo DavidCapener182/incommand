@@ -203,8 +203,8 @@ export async function POST(request: NextRequest) {
             assigned_by: context.user.id,
           }))
 
-          const { error } = await context.serviceClient
-            .from('user_roles' as any)
+          const { error } = await (context.serviceClient as any)
+            .from('user_roles')
             .upsert(payload, { onConflict: 'user_id,role_id,company_id' })
 
           if (error) {
@@ -222,8 +222,8 @@ export async function POST(request: NextRequest) {
 
           results.push({ type: operation.type, status: 'success' })
         } else if (operation.type === 'remove_member') {
-          const { error: updateError } = await context.serviceClient
-            .from('company_members' as any)
+          const { error: updateError } = await (context.serviceClient as any)
+            .from('company_members')
             .update({ is_active: false })
             .eq('company_id', resolvedOrg)
             .eq('user_id', operation.userId)
@@ -252,8 +252,8 @@ export async function POST(request: NextRequest) {
           await ensureMembership(context.serviceClient, resolvedOrg, operation.userId)
           const adminRoleId = await getOrCreateOrganizationRole(context.serviceClient, resolvedOrg, 'organization_admin')
 
-          const { error: delegateError } = await context.serviceClient
-            .from('user_roles' as any)
+          const { error: delegateError } = await (context.serviceClient as any)
+            .from('user_roles')
             .upsert(
               {
                 user_id: operation.userId,
@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
               assigned_by: context.user.id,
             }))
 
-            await context.serviceClient.from('user_roles' as any).upsert(payload, {
+            await (context.serviceClient as any).from('user_roles').upsert(payload, {
               onConflict: 'user_id,role_id,company_id',
             })
           }

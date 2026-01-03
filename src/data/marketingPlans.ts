@@ -1,56 +1,33 @@
+import { getAllPlans, type Plan } from '@/config/PricingConfig'
+
 export type MarketingPlan = {
 	name: string
 	priceMonthly: number
-	currency: 'GBP'
+	currency: Plan['pricing']['currency']
 	features: string[]
 	code: string
 }
 
-export const defaultMarketingPlans: MarketingPlan[] = [
-	{
-		name: 'Starter',
-		priceMonthly: 25,
-		currency: 'GBP',
-		code: 'starter',
-		features: [
-			'Up to 50 incidents per month',
-			'5 staff members',
-			'Basic analytics',
-			'Email support',
-			'Mobile app access',
-			'Event dashboard',
-		],
-	},
-	{
-		name: 'Professional',
-		priceMonthly: 75,
-		currency: 'GBP',
-		code: 'professional',
-		features: [
-			'Unlimited incidents',
-			'20 staff members',
-			'AI-powered insights',
-			'Advanced analytics',
-			'Priority support',
-			'Custom branding',
-			'API access',
-		],
-	},
-	{
-		name: 'Enterprise',
-		priceMonthly: 200,
-		currency: 'GBP',
-		code: 'enterprise',
-		features: [
-			'Everything in Professional',
-			'Unlimited staff members',
-			'Dedicated account manager',
-			'Custom integrations',
-			'SLA guarantee (99.9%)',
-			'Advanced security suite',
-			'White-label options',
-		],
-	},
-]
+/**
+ * Convert Plan to MarketingPlan format for backward compatibility
+ */
+function planToMarketingPlan(plan: Plan): MarketingPlan {
+	const price = typeof plan.pricing.monthly === 'number' ? plan.pricing.monthly : 0
+	return {
+		name: plan.displayName,
+		priceMonthly: price,
+		currency: plan.pricing.currency,
+		code: plan.code,
+		features: plan.features.features,
+	}
+}
+
+/**
+ * Default marketing plans derived from PricingConfig
+ * Maintains backward compatibility while using centralized config
+ */
+export const defaultMarketingPlans: MarketingPlan[] = getAllPlans()
+	.filter(plan => plan.code !== 'enterprise' || plan.pricing.monthly !== 'custom')
+	.map(planToMarketingPlan)
 
 

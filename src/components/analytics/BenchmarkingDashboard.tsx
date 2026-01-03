@@ -1,20 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { 
-  ChartBarIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  UserGroupIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
-  MinusIcon,
-  TrophyIcon,
-  ExclamationTriangleIcon,
-  LightBulbIcon
-} from '@heroicons/react/24/outline'
-import { getPerformanceColor, getPerformanceLabel } from '@/lib/analytics/benchmarking'
 import { Card } from '@/components/ui/card'
-import type { EventBenchmarkingResult, BenchmarkingMetrics } from '@/lib/analytics/benchmarking'
+import type { EventBenchmarkingResult } from '@/lib/analytics/benchmarking'
+import BenchmarkingHeader from './benchmarking/BenchmarkingHeader'
+import BenchmarkingWarningBanner from './benchmarking/BenchmarkingWarningBanner'
+import BenchmarkingPerformanceSummary from './benchmarking/BenchmarkingPerformanceSummary'
+import BenchmarkingMetricsComparison from './benchmarking/BenchmarkingMetricsComparison'
+import BenchmarkingStrengths from './benchmarking/BenchmarkingStrengths'
+import BenchmarkingImprovements from './benchmarking/BenchmarkingImprovements'
+import BenchmarkingRecommendations from './benchmarking/BenchmarkingRecommendations'
+import BenchmarkingLoadingState from './benchmarking/BenchmarkingLoadingState'
+import { BenchmarkingEmptyState } from './benchmarking/BenchmarkingEmptyStates'
 
 interface BenchmarkingDashboardProps {
   eventId: string
@@ -25,6 +20,14 @@ interface BenchmarkingData {
   result: EventBenchmarkingResult
   loading: boolean
   error: string | null
+  debug?: {
+    eventsUsed: Array<{ id: string; name: string; date: string; company_id: string; incident_count: number }>
+    currentEventId: string
+    currentEventName: string
+    comparisonAvailable: boolean
+    eventTypeUsed?: string
+    eventTypeSource?: string
+  }
 }
 
 const buildFallbackBenchmarkingResult = (): EventBenchmarkingResult => ({
@@ -117,23 +120,42 @@ export default function BenchmarkingDashboard({
       })
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        if (errorData.message) {
+          throw new Error(errorData.message)
+        }
         throw new Error(`Failed to fetch benchmarking data (${response.status})`)
       }
 
       const payload = await response.json()
+      
+      // Check if we have an error message about insufficient data - but still show cards
+      if (!payload.success && payload.message) {
+        // Still show the cards, just with a warning
+        setData({
+          result: buildFallbackBenchmarkingResult(),
+          loading: false,
+          error: payload.message,
+          debug: payload.debug
+        })
+        return
+      }
+      
       const benchmarkingResult = (payload?.benchmarking ?? null) as EventBenchmarkingResult | null
 
       if (benchmarkingResult?.currentEvent) {
         setData({
           result: benchmarkingResult,
           loading: false,
-          error: null
+          error: payload.debug && !payload.debug.comparisonAvailable ? `No other ${benchmarkingResult.currentEvent.venueType} events found for comparison` : null,
+          debug: payload.debug
         })
       } else {
         setData({
           result: buildFallbackBenchmarkingResult(),
           loading: false,
-          error: 'Benchmarking service returned no data; showing simulated comparison.'
+          error: 'Benchmarking service returned no data; showing simulated comparison.',
+          debug: payload.debug
         })
       }
     } catch (err) {
@@ -151,288 +173,69 @@ export default function BenchmarkingDashboard({
     fetchBenchmarkingData()
   }, [fetchBenchmarkingData])
 
-  const getMetricIcon = (metric: string) => {
-    switch (metric) {
-      case 'incidentsPerHour':
-        return <ChartBarIcon className="h-5 w-5" />
-      case 'averageResponseTime':
-        return <ClockIcon className="h-5 w-5" />
-      case 'resolutionRate':
-        return <CheckCircleIcon className="h-5 w-5" />
-      case 'staffEfficiency':
-        return <UserGroupIcon className="h-5 w-5" />
-      default:
-        return <ChartBarIcon className="h-5 w-5" />
-    }
-  }
-
-  const getMetricLabel = (metric: string) => {
-    switch (metric) {
-      case 'incidentsPerHour':
-        return 'Incidents per Hour'
-      case 'averageResponseTime':
-        return 'Response Time'
-      case 'resolutionRate':
-        return 'Resolution Rate'
-      case 'staffEfficiency':
-        return 'Staff Efficiency'
-      default:
-        return metric
-    }
-  }
-
-  const getMetricValue = (metric: string, value: number) => {
-    switch (metric) {
-      case 'incidentsPerHour':
-        return `${value.toFixed(2)}`
-      case 'averageResponseTime':
-        return `${value.toFixed(1)}m`
-      case 'resolutionRate':
-      case 'staffEfficiency':
-        return `${value.toFixed(1)}%`
-      default:
-        return value.toString()
-    }
-  }
-
-  const getTrendIcon = (current: number, benchmark: number) => {
-    if (current > benchmark) {
-      return <ArrowTrendingUpIcon className="h-4 w-4 text-red-500" />
-    } else if (current < benchmark) {
-      return <ArrowTrendingDownIcon className="h-4 w-4 text-green-500" />
-    } else {
-      return <MinusIcon className="h-4 w-4 text-gray-500" />
-    }
-  }
-
-  const getTrendColor = (current: number, benchmark: number) => {
-    if (current > benchmark) {
-      return 'text-red-600'
-    } else if (current < benchmark) {
-      return 'text-green-600'
-    } else {
-      return 'text-gray-600'
-    }
-  }
-
   if (data.loading) {
-    return (
-      <Card className={`p-4 sm:p-6 ${className}`}>
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </Card>
-    )
+    return <BenchmarkingLoadingState className={className} />
   }
 
+  // Only show empty state if no event selected - otherwise show cards even without comparison data
   if (data.error && data.error.toLowerCase().includes('no event selected')) {
-    return (
-      <Card className={`p-6 text-center ${className}`}>
-        <ExclamationTriangleIcon className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          Select an Event to Benchmark
-        </h3>
-        <p className="text-gray-600 dark:text-gray-400">
-          Choose an event in the analytics dashboard to compare its performance against similar venues.
-        </p>
-      </Card>
-    )
+    return <BenchmarkingEmptyState error={data.error} className={className} />
   }
 
+  // If no result at all, show empty state
   if (!data.result || !data.result.currentEvent) {
-    return (
-      <Card className={`p-6 text-center ${className}`}>
-        <div className="text-gray-500 dark:text-gray-400">
-          No benchmarking data available right now.
-        </div>
-        <button
-          onClick={fetchBenchmarkingData}
-          className="mt-4 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-        >
-          Try Again
-        </button>
-      </Card>
-    )
+    return <BenchmarkingEmptyState onRetry={fetchBenchmarkingData} className={className} />
   }
 
   const { result } = data
-  const { currentEvent, benchmark } = result
 
   return (
     <Card className={`overflow-hidden ${className}`}>
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Venue Benchmarking
-            </h3>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              Performance vs {benchmark.totalEvents} similar {currentEvent.venueType} events
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-center">
-              <div className={`text-2xl font-bold ${getPerformanceColor(result.percentileRanking)}`}>
-                {result.percentileRanking}th
+      <BenchmarkingHeader result={result} />
+      <BenchmarkingWarningBanner error={data.error} />
+      
+      {/* Debug Info - show which events are being compared */}
+      {data.debug && (
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+          <details className="text-xs">
+            <summary className="cursor-pointer text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium">
+              🔍 Debug: Events being compared ({data.debug.eventsUsed.length} event{data.debug.eventsUsed.length !== 1 ? 's' : ''})
+            </summary>
+            <div className="mt-2 space-y-1 text-slate-600 dark:text-slate-400">
+              <div className="font-semibold">Current Event:</div>
+              <div className="ml-4">
+                {data.debug.currentEventName} (ID: {data.debug.currentEventId})
+                {data.debug.eventTypeUsed && (
+                  <span className="ml-2 text-xs text-slate-500">
+                    - Type: {data.debug.eventTypeUsed} (from {data.debug.eventTypeSource})
+                  </span>
+                )}
               </div>
-              <div className="text-xs text-gray-500">Percentile</div>
-            </div>
-            <div className="text-right">
-              <div className={`text-sm font-semibold ${getPerformanceColor(result.percentileRanking)}`}>
-                {getPerformanceLabel(result.percentileRanking)}
-              </div>
-              <div className="text-xs text-gray-500">Performance</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Warning banner if fallback */}
-      {data.error && (
-        <div className="flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 bg-amber-50/80 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-          <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">Benchmarking service unavailable</p>
-            <p className="text-amber-700 dark:text-amber-200/80">{data.error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Performance Summary */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-start gap-2">
-          <TrophyIcon className="h-5 w-5 text-yellow-500 mt-1" />
-          <div>
-            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Performance Summary</h4>
-            <p className="text-xs text-gray-700 dark:text-gray-300">{result.comparison}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Metrics Comparison */}
-      <div className="p-4">
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-          Metrics Comparison
-        </h4>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-          {Object.entries(currentEvent.metrics).map(([metric, value]) => {
-            if (typeof value !== 'number' || metric === 'crowdDensityScore') return null
-            
-            // Map metric names to percentile ranking keys
-            const percentileKey = metric === 'averageResponseTime' ? 'responseTime' : metric as keyof typeof benchmark.percentileRankings
-            const benchmarkValue = benchmark.averageMetrics[metric as keyof BenchmarkingMetrics] as number
-            const percentile = benchmark.percentileRankings[percentileKey] || 50
-            
-            return (
-              <motion.div
-                key={metric}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getMetricIcon(metric)}
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {getMetricLabel(metric)}
-                    </span>
-                  </div>
-                  <div className={`text-sm font-medium ${getPerformanceColor(percentile)}`}>
-                    {percentile}th percentile
-                  </div>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Current</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">
-                      {getMetricValue(metric, value)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Benchmark</span>
-                    <span className="text-gray-700 dark:text-gray-300">
-                      {getMetricValue(metric, benchmarkValue)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Trend</span>
-                    <div className={`flex items-center gap-1 ${getTrendColor(value, benchmarkValue)}`}>
-                      {getTrendIcon(value, benchmarkValue)}
-                      <span className="text-sm">
-                        {value > benchmarkValue ? 'Above' : value < benchmarkValue ? 'Below' : 'Equal'}
-                      </span>
+              {data.debug.eventsUsed.length > 0 ? (
+                <>
+                  <div className="font-semibold mt-2">Comparison Events:</div>
+                  {data.debug.eventsUsed.map((e, idx) => (
+                    <div key={e.id} className="ml-4">
+                      {idx + 1}. {e.name} ({new Date(e.date).toLocaleDateString()}) - {e.incident_count} incidents (Company: {e.company_id.slice(0, 8)}...)
                     </div>
-                  </div>
-                </div>
-              </motion.div>
-            )
-          })}
+                  ))}
+                </>
+              ) : (
+                <div className="ml-4 text-amber-600 dark:text-amber-400">No comparison events found</div>
+              )}
+            </div>
+          </details>
         </div>
+      )}
+      
+      <BenchmarkingPerformanceSummary result={result} />
+      <BenchmarkingMetricsComparison result={result} />
+      {/* Three cards in one row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
+        <BenchmarkingStrengths result={result} />
+        <BenchmarkingImprovements result={result} />
+        <BenchmarkingRecommendations result={result} />
       </div>
-
-      {/* Strengths */}
-      {result.strengths && result.strengths.length > 0 && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/20">
-          <h4 className="text-sm font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
-            <TrophyIcon className="h-4 w-4" />
-            Performance Strengths
-          </h4>
-          <ul className="space-y-1">
-            {result.strengths.map((strength, index) => (
-              <li key={index} className="flex items-start gap-2 text-xs text-green-700 dark:text-green-300">
-                <span className="text-green-600 dark:text-green-400 mt-1">•</span>
-                {strength}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Areas for Improvement */}
-      {result.improvements && result.improvements.length > 0 && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
-          <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2 flex items-center gap-2">
-            <ExclamationTriangleIcon className="h-4 w-4" />
-            Areas for Improvement
-          </h4>
-          <ul className="space-y-1">
-            {result.improvements.map((improvement, index) => (
-              <li key={index} className="flex items-start gap-2 text-xs text-yellow-700 dark:text-yellow-300">
-                <span className="text-yellow-600 dark:text-yellow-400 mt-1">•</span>
-                {improvement}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Recommendations */}
-      {result.recommendations && result.recommendations.length > 0 && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
-          <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2">
-            <LightBulbIcon className="h-4 w-4" />
-            Recommendations
-          </h4>
-          <ul className="space-y-1">
-            {result.recommendations.map((recommendation, index) => (
-              <li key={index} className="flex items-start gap-2 text-xs text-blue-700 dark:text-blue-300">
-                <span className="text-blue-600 dark:text-blue-400 mt-1">•</span>
-                {recommendation}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </Card>
   )
 }

@@ -103,7 +103,57 @@ export function filterIncidents<T extends AnyIncident>(incidents: T[], filters: 
   return incidents.filter((incident) => {
     // Multi-select filters: if arrays are empty, treat as no filter for that field
     const typeOk = types.length === 0 || types.includes(incident.incident_type);
-    const statusOk = statuses.length === 0 || statuses.includes(incident.status || (incident.is_closed ? 'closed' : 'open'));
+    
+    // Normalize incident status - handle empty/null statuses and 'logged' as 'open'
+    // Also handle various formats: 'in_progress', 'in progress', 'in-progress', 'In-Progress'
+    const normalizedIncidentStatus = String(incident.status ?? '').toLowerCase().replace(/[-\s_]/g, '_');
+    let effectiveStatus: string;
+    
+    if (incident.is_closed) {
+      effectiveStatus = 'closed';
+    } else if (normalizedIncidentStatus === '' || normalizedIncidentStatus === 'open' || normalizedIncidentStatus === 'logged') {
+      effectiveStatus = 'open';
+    } else if (normalizedIncidentStatus === 'in_progress' || normalizedIncidentStatus === 'inprogress') {
+      effectiveStatus = 'in_progress';
+    } else if (normalizedIncidentStatus === 'closed' || normalizedIncidentStatus === 'resolved') {
+      effectiveStatus = 'closed';
+    } else {
+      // Use the original status if it doesn't match known patterns
+      effectiveStatus = incident.status || 'open';
+    }
+    
+    // Check if status matches - compare both normalized and original values
+    const statusOk = statuses.length === 0 || 
+      statuses.some(filterStatus => {
+        // Normalize filter status by removing hyphens, spaces, and underscores, then lowercasing
+        const normalizedFilterStatus = String(filterStatus ?? '').toLowerCase().replace(/[-\s_]/g, '_');
+        const normalizedEffectiveStatus = effectiveStatus.toLowerCase().replace(/[-\s_]/g, '_');
+        
+        // Match normalized values (handles 'in_progress', 'in progress', 'in-progress', 'In-Progress')
+        if (normalizedFilterStatus === normalizedEffectiveStatus) return true;
+        
+        // Also check original incident status for exact matches (case-insensitive)
+        if (incident.status) {
+          const normalizedIncidentStatusOriginal = String(incident.status).toLowerCase().replace(/[-\s_]/g, '_');
+          if (normalizedFilterStatus === normalizedIncidentStatusOriginal) return true;
+        }
+        
+        // Handle 'logged' and empty string as 'open'
+        if ((normalizedFilterStatus === 'open' || normalizedFilterStatus === 'logged') && 
+            (effectiveStatus === 'open' || normalizedIncidentStatus === 'logged' || normalizedIncidentStatus === '')) {
+          return true;
+        }
+        
+        // Handle 'in_progress' variations
+        if (normalizedFilterStatus === 'in_progress' || normalizedFilterStatus === 'inprogress') {
+          if (normalizedEffectiveStatus === 'in_progress' || normalizedEffectiveStatus === 'inprogress') {
+            return true;
+          }
+        }
+        
+        return false;
+      });
+    
     const normalizedFilters = priorities
       .map((priority) => normalizePriority(priority as Priority))
       .filter(

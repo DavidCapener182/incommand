@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   InformationCircleIcon,
@@ -23,733 +25,576 @@ import {
   ClockIcon,
   ShieldCheckIcon,
   EyeIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
+  PlayCircleIcon,
+  LightBulbIcon,
+  SparklesIcon,
+  ChatBubbleBottomCenterTextIcon
 } from '@heroicons/react/24/outline';
 import { Button } from '@/components/ui/button';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { PageWrapper } from '@/components/layout/PageWrapper';
-import { StackedPanel } from '@/components/ui/StackedPanel';
-import { SectionContainer, SectionHeader } from '@/components/ui/SectionContainer';
-import { CardContainer } from '@/components/ui/CardContainer';
 
-const HelpPage = () => {
-  const getExpandedContent = (title: string) => {
-    const contentMap: { [key: string]: React.ReactNode } = {
-      'Incident': (
-        <div>
-          <p><strong>Definition:</strong> An event or occurrence that requires reporting or action, such as an ejection, medical issue, or security concern.</p>
-          <p><strong>Types:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Medical incidents (injuries, health emergencies)</li>
-            <li>Security incidents (theft, violence, disturbances)</li>
-            <li>Ejection incidents (rule violations, disruptive behavior)</li>
-            <li>Equipment failures or safety hazards</li>
-            <li>Weather-related incidents</li>
-          </ul>
-          <p><strong>Reporting Requirements:</strong> All incidents must be logged with accurate timestamps, detailed descriptions, and follow-up actions taken.</p>
-        </div>
-      ),
-      'Ejection': (
-        <div>
-          <p><strong>Definition:</strong> The act of removing a person from the venue due to rule violations or safety concerns.</p>
-          <p><strong>Process:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Document the reason for ejection</li>
-            <li>Record the person&apos;s details (if available)</li>
-            <li>Note any resistance or cooperation</li>
-            <li>Log security involvement if required</li>
-            <li>Follow up with venue management</li>
-          </ul>
-          <p><strong>Legal Considerations:</strong> Ensure all ejections are documented thoroughly as they may be subject to legal review.</p>
-        </div>
-      ),
-      'Venue Occupancy': (
-        <div>
-          <p><strong>Definition:</strong> The number of people currently present in the venue, tracked for safety and compliance.</p>
-          <p><strong>Monitoring Methods:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Manual headcounts at key locations</li>
-            <li>Ticket scanning data integration</li>
-            <li>Security checkpoint monitoring</li>
-            <li>Camera-based crowd analysis</li>
-          </ul>
-          <p><strong>Safety Thresholds:</strong> Track against maximum capacity limits and alert when approaching dangerous levels.</p>
-        </div>
-      ),
-      'Dashboard': (
-        <div>
-          <p><strong>Definition:</strong> The main interface where users can view analytics, reports, and current event status.</p>
-          <p><strong>Key Features:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Real-time incident monitoring</li>
-            <li>Weather conditions and forecasts</li>
-            <li>Venue occupancy tracking</li>
-            <li>Staff assignments and status</li>
-            <li>Quick access to reporting tools</li>
-          </ul>
-          <p><strong>Customization:</strong> Dashboard can be customized based on user role and preferences.</p>
-        </div>
-      ),
-      'Report': (
-        <div>
-          <p><strong>Definition:</strong> A summary or detailed account of incidents, analytics, or other relevant data.</p>
-          <p><strong>Report Types:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Incident reports (individual events)</li>
-            <li>Summary reports (event overviews)</li>
-            <li>Analytics reports (trends and patterns)</li>
-            <li>Compliance reports (regulatory requirements)</li>
-            <li>Custom reports (user-defined parameters)</li>
-          </ul>
-          <p><strong>Export Formats:</strong> PDF, Excel, CSV, and direct database integration available.</p>
-        </div>
-      ),
-      'Analytics': (
-        <div>
-          <p><strong>Definition:</strong> Statistical and visual representations of incidents, trends, and other key metrics.</p>
-          <p><strong>Analytics Features:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Incident trend analysis</li>
-            <li>Peak activity identification</li>
-            <li>Staff performance metrics</li>
-            <li>Venue utilization patterns</li>
-            <li>Predictive risk assessment</li>
-          </ul>
-          <p><strong>Visualization:</strong> Charts, graphs, and heat maps help identify patterns and areas for improvement.</p>
-        </div>
-      ),
-      'Supabase': (
-        <div>
-          <p><strong>Definition:</strong> The backend service used for authentication, database, and API management in this app.</p>
-          <p><strong>Key Features:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>User authentication and authorization</li>
-            <li>Real-time database updates</li>
-            <li>File storage and management</li>
-            <li>API endpoint management</li>
-            <li>Row Level Security (RLS) policies</li>
-          </ul>
-          <p><strong>Benefits:</strong> Provides scalable, secure backend infrastructure with real-time capabilities.</p>
-        </div>
-      ),
-      'Signature': (
-        <div>
-          <p><strong>Definition:</strong> A digital signature collected for verification or authorization purposes.</p>
-          <p><strong>Use Cases:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Incident acknowledgment by witnesses</li>
-            <li>Staff training completion verification</li>
-            <li>Equipment handover confirmations</li>
-            <li>Safety protocol acknowledgments</li>
-            <li>Legal document authentication</li>
-          </ul>
-          <p><strong>Security:</strong> Digital signatures are cryptographically secured and legally binding.</p>
-        </div>
-      ),
-      'Weather Card': (
-        <div>
-          <p><strong>Definition:</strong> A component displaying current weather information relevant to the event or venue.</p>
-          <p><strong>Information Displayed:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Current temperature and conditions</li>
-            <li>Hourly and daily forecasts</li>
-            <li>Weather alerts and warnings</li>
-            <li>UV index and air quality</li>
-            <li>Wind speed and direction</li>
-          </ul>
-          <p><strong>Impact Assessment:</strong> Weather data helps assess potential risks to outdoor events and crowd safety.</p>
-        </div>
-      ),
-      'Incident Table': (
-        <div>
-          <p><strong>Definition:</strong> A table listing all reported incidents with details and status.</p>
-          <p><strong>Table Features:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Sortable columns (time, type, status)</li>
-            <li>Filtering and search capabilities</li>
-            <li>Real-time updates</li>
-            <li>Bulk action support</li>
-            <li>Export functionality</li>
-          </ul>
-          <p><strong>Data Display:</strong> Shows incident number, type, time, location, status, and assigned staff.</p>
-        </div>
-      ),
-      'Incident Creation Modal': (
-        <div>
-          <p><strong>Definition:</strong> A popup form for reporting new incidents.</p>
-          <p><strong>Form Fields:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Incident type selection</li>
-            <li>Location and time details</li>
-            <li>Description and severity</li>
-            <li>Witness information</li>
-            <li>Immediate actions taken</li>
-          </ul>
-          <p><strong>AI Assistance:</strong> Smart suggestions and auto-completion help ensure accurate reporting.</p>
-        </div>
-      ),
-      'Event Creation Modal': (
-        <div>
-          <p><strong>Definition:</strong> A popup form for creating new events in the system.</p>
-          <p><strong>Required Information:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Event name and description</li>
-            <li>Date and time range</li>
-            <li>Venue details and capacity</li>
-            <li>Staff assignments</li>
-            <li>Safety protocols and procedures</li>
-          </ul>
-          <p><strong>Templates:</strong> Pre-configured templates available for common event types.</p>
-        </div>
-      ),
-      'Settings': (
-        <div>
-          <p><strong>Definition:</strong> Configuration options for customizing the application experience.</p>
-          <p><strong>Settings Categories:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>User preferences and notifications</li>
-            <li>System configuration options</li>
-            <li>Security and access controls</li>
-            <li>Integration settings</li>
-            <li>Backup and restore options</li>
-          </ul>
-          <p><strong>Role-Based Access:</strong> Settings visibility depends on user permissions and role.</p>
-        </div>
-      ),
-      'Authentication': (
-        <div>
-          <p><strong>Definition:</strong> The process of verifying user identity and granting system access.</p>
-          <p><strong>Authentication Methods:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Email and password login</li>
-            <li>Single Sign-On (SSO) integration</li>
-            <li>Multi-factor authentication (MFA)</li>
-            <li>Biometric authentication</li>
-            <li>Social login options</li>
-          </ul>
-          <p><strong>Security Features:</strong> Session management, password policies, and audit logging.</p>
-        </div>
-      ),
-      'API': (
-        <div>
-          <p><strong>Definition:</strong> Application Programming Interface - the system that allows different software components to communicate.</p>
-          <p><strong>API Features:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>RESTful endpoints for data access</li>
-            <li>Real-time WebSocket connections</li>
-            <li>Authentication and authorization</li>
-            <li>Rate limiting and throttling</li>
-            <li>Comprehensive documentation</li>
-          </ul>
-          <p><strong>Integration:</strong> Enables third-party systems to integrate with inCommand for enhanced functionality.</p>
-        </div>
-      ),
-      'Contemporaneous Logging': (
-        <div>
-          <p><strong>Definition:</strong> Logging incidents in real-time as they occur, providing the most accurate and legally defensible records.</p>
-          <p><strong>Benefits:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Maximum accuracy and detail retention</li>
-            <li>Legal defensibility in court proceedings</li>
-            <li>Immediate availability for follow-up actions</li>
-            <li>Reduced risk of memory errors or omissions</li>
-            <li>Enhanced credibility with stakeholders</li>
-          </ul>
-          <p><strong>Best Practice:</strong> Always log incidents as soon as possible after they occur, ideally within minutes.</p>
-        </div>
-      ),
-      'Retrospective Logging': (
-        <div>
-          <p><strong>Definition:</strong> Logging incidents after a delay, requiring justification for the timing difference.</p>
-          <p><strong>When Used:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Technical system failures preventing immediate logging</li>
-            <li>Emergency situations requiring immediate response</li>
-            <li>Staff unavailability during peak operations</li>
-            <li>Complex incidents requiring investigation first</li>
-            <li>Follow-up information gathering</li>
-          </ul>
-          <p><strong>Documentation Requirements:</strong> Must include clear justification for the delay and timestamp of when the incident actually occurred.</p>
-        </div>
-      ),
-      'Amendment': (
-        <div>
-          <p><strong>Definition:</strong> A non-destructive correction to an existing log entry, preserving the original while tracking changes.</p>
-          <p><strong>Amendment Process:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Original entry remains visible</li>
-            <li>Amendment clearly marked and timestamped</li>
-            <li>Author of amendment recorded</li>
-            <li>Reason for amendment documented</li>
-            <li>Full audit trail maintained</li>
-          </ul>
-          <p><strong>Legal Protection:</strong> Amendments preserve the integrity of the original record while allowing necessary corrections.</p>
-        </div>
-      ),
-      'Audit Trail': (
-        <div>
-          <p><strong>Definition:</strong> Complete record of all changes to log entries, including who made changes and when.</p>
-          <p><strong>Audit Trail Components:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>User identification and authentication</li>
-            <li>Timestamp of all modifications</li>
-            <li>Before and after values</li>
-            <li>Reason for changes</li>
-            <li>System-generated verification codes</li>
-          </ul>
-          <p><strong>Compliance:</strong> Essential for legal proceedings, regulatory compliance, and internal investigations.</p>
-        </div>
-      ),
-      'JESIP': (
-        <div>
-          <p><strong>Definition:</strong> Joint Emergency Services Interoperability Principles - UK standards for emergency service coordination.</p>
-          <p><strong>JESIP Principles:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Co-location of command teams</li>
-            <li>Shared situational awareness</li>
-            <li>Joint decision making</li>
-            <li>Shared communications</li>
-            <li>Unified command structure</li>
-          </ul>
-          <p><strong>Application:</strong> Ensures effective coordination between police, fire, ambulance, and other emergency services during major incidents.</p>
-        </div>
-      ),
-      'JDM': (
-        <div>
-          <p><strong>Definition:</strong> Joint Decision Making - collaborative decision-making process involving multiple stakeholders during emergency situations.</p>
-          <p><strong>JDM Process:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Identify all relevant stakeholders</li>
-            <li>Share critical information and intelligence</li>
-            <li>Assess risks and available options</li>
-            <li>Reach consensus on best course of action</li>
-            <li>Implement decisions with clear accountability</li>
-          </ul>
-          <p><strong>Benefits:</strong> Reduces single-point-of-failure risks, improves decision quality, and ensures all perspectives are considered.</p>
-        </div>
-      ),
-      'Structured Template': (
-        <div>
-          <p><strong>Definition:</strong> Standardized format for logging incidents that ensures consistency, completeness, and legal defensibility.</p>
-          <p><strong>Template Components:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Headline (≤15 words, factual summary)</li>
-            <li>Source (who/what reported the incident)</li>
-            <li>Time and location details</li>
-            <li>Description of what happened</li>
-            <li>Actions taken and outcomes</li>
-            <li>Follow-up requirements</li>
-          </ul>
-          <p><strong>Benefits:</strong> Ensures no critical information is missed, improves report quality, and maintains professional standards.</p>
-        </div>
-      ),
-      'Factual Language': (
-        <div>
-          <p><strong>Definition:</strong> Objective, precise language used in incident reporting that avoids opinion, speculation, or emotional language.</p>
-          <p><strong>Characteristics:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>Specific, measurable details</li>
-            <li>Objective observations only</li>
-            <li>Present tense for current events</li>
-            <li>Past tense for completed actions</li>
-            <li>Clear, unambiguous statements</li>
-          </ul>
-          <p><strong>Examples:</strong></p>
-          <ul className="list-disc list-inside ml-4 space-y-1">
-            <li>✅ &ldquo;Person collapsed at 14:30 near north gate&rdquo;</li>
-            <li>❌ &ldquo;Person seemed very ill and fell down&rdquo;</li>
-            <li>✅ &ldquo;Security team responded within 2 minutes&rdquo;</li>
-            <li>❌ &ldquo;Security team was really quick to help&rdquo;</li>
-          </ul>
-          <p><strong>Legal Importance:</strong> Factual language ensures reports are admissible in court and maintain professional credibility.</p>
-        </div>
-      )
-    };
-    
-    return contentMap[title] || <p>Additional information not available.</p>;
+// --- OPENAI AI COMPONENT ---
+
+const AIOpsAssistant = () => {
+  const [query, setQuery] = useState('');
+  const [response, setResponse] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAsk = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    setResponse('');
+
+    // Construct context from glossary items to ground the AI
+    const context = glossaryItems.map(i => `${i.title}: ${i.description}`).join('\n');
+    const systemPrompt = `
+      You are an expert Event Operations Manager and Trainer for a large venue.
+      You are helping a staff member who needs operational guidance or definition clarification.
+      
+      Use the following Platform Glossary as your knowledge base:
+      ${context}
+      
+      Key Guidelines:
+      1. If they describe an incident (e.g., "fight", "fire", "medical"), tell them exactly what to log in the "Headline", "Facts", and "Actions" fields based on the Structured Template.
+      2. Emphasize JESIP/JDM principles (Joint Decision Making, Shared Awareness) if relevant.
+      3. Keep answers concise, professional, and actionable. Use bullet points.
+      4. If the question is simple (e.g. "What is Ejection?"), just define it clearly.
+    `;
+
+    try {
+      // Use OpenAI API instead of Gemini
+      const res = await fetch('/api/openai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: query }
+          ],
+          model: 'gpt-4o-mini', // Using a cost-effective model
+          temperature: 0.7,
+          max_tokens: 500
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content || "Unable to generate advice. Please consult your supervisor.";
+      setResponse(text);
+    } catch (e) {
+      setResponse("Connection to Ops Command failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <PageWrapper>
-      <StackedPanel className="space-y-12">
-        <SectionContainer>
-        <div className="card-depth mb-10 p-6">
-          <div className="pb-6">
-            <div className="flex items-center gap-3">
-              <span className="inline-block h-6 w-1.5 rounded bg-gradient-to-b from-blue-600 to-indigo-600" />
-              <div className="flex-1">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">Help &amp; Glossary</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Quick answers, definitions, and how-to guidance</p>
+    <div className="bg-gradient-to-br from-indigo-900 to-[#23408e] rounded-3xl shadow-2xl p-1 overflow-hidden">
+      <div className="bg-white/10 backdrop-blur-lg rounded-[22px] p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-6 text-white">
+          <div className="p-2 bg-yellow-400/20 rounded-lg">
+            <SparklesIcon className="h-6 w-6 text-yellow-300" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold">Ops Command AI</h3>
+            <p className="text-blue-200 text-sm">Ask for operational guidance or clarifications</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="relative">
+            <textarea 
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="e.g., 'I have a report of a lost child at Gate 3. How should I log this?' or 'What does JESIP mean?'"
+              className="w-full h-24 rounded-xl border-0 bg-white/95 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-yellow-400 p-4 text-sm shadow-inner resize-none"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  handleAsk();
+                }
+              }}
+            />
+            <div className="absolute bottom-3 right-3">
+              <button 
+                onClick={handleAsk}
+                disabled={loading || !query.trim()}
+                className="flex items-center gap-2 bg-[#23408e] hover:bg-blue-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition-all active:scale-95"
+              >
+                {loading ? (
+                  <span className="animate-pulse">Analyzing...</span>
+                ) : (
+                  <>
+                    Analyze & Advise <SparklesIcon className="h-3 w-3" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {response && (
+            <div className="bg-white rounded-xl p-6 shadow-lg animate-in fade-in slide-in-from-bottom-2">
+              <div className="flex items-start gap-3">
+                <ChatBubbleBottomCenterTextIcon className="h-6 w-6 text-[#23408e] flex-shrink-0 mt-1" />
+                <div className="prose prose-sm prose-blue max-w-none">
+                  <p className="text-gray-800 whitespace-pre-line leading-relaxed font-medium">{response}</p>
+                </div>
               </div>
-              <Button asChild>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- MAIN PAGE COMPONENT ---
+
+const HelpPage = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+
+  // Helper for accordion toggle
+  const toggleAccordion = (id: string) => {
+    setOpenAccordion(openAccordion === id ? null : id);
+  };
+
+  const getExpandedContent = (title: string) => {
+    const contentMap: { [key: string]: React.ReactNode } = {
+      'Incident': (
+        <div className="space-y-3">
+          <div className="flex items-start gap-2">
+            <InformationCircleIcon className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+            <p><strong>Definition:</strong> An event or occurrence that requires reporting or action, such as an ejection, medical issue, or security concern.</p>
+          </div>
+          <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Common Types</p>
+            <div className="flex flex-wrap gap-2">
+              {['Medical', 'Security', 'Ejection', 'Equipment Failure', 'Weather'].map(t => (
+                <span key={t} className="px-2.5 py-1 bg-blue-50 border border-blue-100 rounded-md text-xs font-medium text-blue-700">{t}</span>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
+            <ExclamationTriangleIcon className="w-4 h-4" />
+            <span>Must be logged with strict timestamps and actions taken.</span>
+          </div>
+        </div>
+      ),
+      'Ejection': (
+        <div className="space-y-3">
+          <p><strong>Definition:</strong> The act of removing a person from the venue due to rule violations or safety concerns.</p>
+          <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+            <p className="text-xs font-bold text-red-800 uppercase tracking-wider mb-2">Critical Steps</p>
+            <ul className="space-y-2">
+              {[
+                'Document specific reason for ejection',
+                'Record person details (if available)',
+                'Note level of resistance/cooperation',
+                'Log IDs of all security staff involved'
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-red-700">
+                  <CheckCircleIcon className="w-4 h-4 flex-shrink-0 opacity-70" />
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ),
+      'Venue Occupancy': (
+        <div className="space-y-3">
+          <p><strong>Definition:</strong> Real-time tracking of people count for safety compliance.</p>
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+              <span className="font-bold text-blue-800 block mb-1">Methods</span>
+              Scanning, Clickers, Overhead Cameras
+            </div>
+            <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+              <span className="font-bold text-amber-800 block mb-1">Safety</span>
+              Automated threshold alerts at 80%, 90%, 100% capacity.
+            </div>
+          </div>
+        </div>
+      ),
+    };
+    
+    return contentMap[title] || (
+      <div className="text-sm text-gray-600">
+        <p>Detailed documentation and operational procedures regarding <strong>{title}</strong>.</p>
+        <p className="mt-2 text-xs text-gray-500">Please refer to the detailed operational manual for specific protocols.</p>
+      </div>
+    );
+  };
+
+  // Filter glossary based on search
+  const filteredGlossary = glossaryItems.filter(item => 
+    item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    item.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-[#15192c] font-sans pb-24">
+        
+      {/* Hero Header */}
+      <div className="bg-[#23408e] text-white pt-10 pb-20 px-6 sm:px-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 h-96 w-96 rounded-full bg-white/10 blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl animate-pulse delay-700" />
+          
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/30 border border-blue-400/30 text-xs font-semibold uppercase tracking-wider mb-4 backdrop-blur-sm">
+                <LightBulbIcon className="w-4 h-4 text-yellow-300" />
+                Knowledge Base
+              </div>
+              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-3">Help Center & Operational Glossary</h1>
+              <p className="text-blue-100 text-lg max-w-2xl">
+                Master the platform with definitions, standards, and operational guidance designed for high-pressure environments.
+              </p>
+            </div>
+            <Button variant="secondary" asChild size="lg" className="hidden md:flex shadow-xl">
                 <Link href="/help/tutorial">
-                  Open Tutorial
+                  Start Interactive Tutorial
                 </Link>
               </Button>
             </div>
           </div>
         </div>
-        <div className="card-depth mb-12 p-6">
-          <div className="mb-4">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-blue-100 flex items-center gap-2">
-              <InformationCircleIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
-              About This App
-            </h2>
-          </div>
-          <div>
-            <p className="text-lg leading-relaxed mb-4 text-gray-800 dark:text-gray-100">
-              InCommand Event Control is a comprehensive platform designed to help event staff and security teams manage incidents, monitor venue occupancy, and generate detailed reports and analytics. The app streamlines the process of incident reporting, data collection, and analysis, ensuring a safer and more organized event experience.
-            </p>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 mb-6">
-              <li className="flex items-start">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
-                <span className="text-lg text-gray-800 dark:text-gray-100">Report and track incidents in real time</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
-                <span className="text-lg text-gray-800 dark:text-gray-100">Monitor venue occupancy and safety metrics</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
-                <span className="text-lg text-gray-800 dark:text-gray-100">Generate and export detailed reports</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
-                <span className="text-lg text-gray-800 dark:text-gray-100">Access analytics for data-driven decision making</span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircleIcon className="h-5 w-5 text-green-500 dark:text-green-400 mr-3 mt-1 flex-shrink-0" />
-                <span className="text-lg text-gray-800 dark:text-gray-100">Secure authentication and user management</span>
-              </li>
-            </ul>
-            <div className="bg-blue-50 dark:bg-[#1a2a57] dark:text-blue-100 p-4 rounded-xl border border-blue-200 dark:border-[#2d437a]">
-              <p className="text-base leading-relaxed">
-                For further assistance, please contact your system administrator or refer to the documentation provided by your organization.
-              </p>
-            </div>
-          </div>
-        </div>
 
-        {/* Logging Standards Section */}
-        <div className="card-depth mb-12 p-6">
-          <div className="mb-4">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-blue-100 flex items-center gap-2">
-              <ClipboardDocumentListIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
-              Professional Logging Standards
-            </h2>
-          </div>
-          <div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 relative z-20 space-y-10">
           
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-[#1a2a57] dark:to-[#1e3a8a] p-6 rounded-xl border border-blue-200 dark:border-[#2d437a] mb-6">
-            <div className="flex items-start gap-3 mb-4">
-              <ShieldCheckIcon className="h-6 w-6 text-blue-600 dark:text-blue-300 flex-shrink-0 mt-1" />
-              <div>
-                <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-                  &ldquo;If it ain&apos;t written down, it didn&apos;t happen&rdquo;
-                </h3>
-                <p className="text-blue-700 dark:text-blue-100">
-                  All incident logs are legal documents that may be used in licensing reviews, investigations, or court proceedings. 
-                  Following these standards ensures your logs are professional, auditable, and legally defensible.
-                </p>
-              </div>
+        {/* AI Assistant Section */}
+        <AIOpsAssistant />
+
+        {/* Feature Cards Grid */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <InformationCircleIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Platform Capabilities</h2>
+            </div>
+            
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <FeatureCard 
+                icon={ExclamationTriangleIcon} 
+                title="Incident Tracking" 
+              desc="Report and track incidents in real time with detailed, timestamped logging."
+              color="text-amber-500"
+              bg="bg-amber-50"
+              delay="0"
+              />
+              <FeatureCard 
+                icon={UsersIcon} 
+                title="Occupancy & Safety" 
+              desc="Monitor venue capacity, flow rates, and safety density metrics live." 
+              color="text-blue-500"
+              bg="bg-blue-50"
+              delay="100"
+              />
+              <FeatureCard 
+                icon={DocumentTextIcon} 
+                title="Automated Reporting" 
+              desc="Generate JESIP-compliant post-event reports instantly." 
+              color="text-green-500"
+              bg="bg-green-50"
+              delay="200"
+              />
+              <FeatureCard 
+                icon={ChartBarIcon} 
+              title="Analytics Engine" 
+              desc="Data-driven insights for staffing deployment and decision making." 
+              color="text-purple-500"
+              bg="bg-purple-50"
+              delay="300"
+              />
+              <FeatureCard 
+                icon={CloudIcon} 
+              title="Cloud Synchronization" 
+              desc="Secure, real-time database updates across all devices via Supabase." 
+              color="text-sky-500"
+              bg="bg-sky-50"
+              delay="400"
+              />
+              <FeatureCard 
+                icon={LockClosedIcon} 
+                title="Secure Access" 
+              desc="Role-based authentication, audit logging, and data encryption." 
+              color="text-indigo-500"
+              bg="bg-indigo-50"
+              delay="500"
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Structured Template Guide */}
-            <div className="card-depth-subtle p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-100 flex items-center gap-2">
-                  <DocumentTextIcon className="h-5 w-5 text-green-600" />
-                  Structured Logging Template
-                </h3>
-              </div>
-              <div>
-              <div className="space-y-4">
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2">📝 Headline (≤15 words)</h4>
-                  <p className="text-sm text-green-700 dark:text-green-300 mb-2">Brief, factual summary</p>
-                  <p className="text-xs text-green-600 dark:text-green-400 italic">
-                    ✅ &ldquo;Medical incident at north gate - person collapsed&rdquo;<br/>
-                    ❌ &ldquo;Terrible medical emergency happened&rdquo;
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📍 Source</h4>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">Who or what reported this</p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 italic">
-                    ✅ &ldquo;R3, CCTV North Gate, Security Team&rdquo;<br/>
-                    ❌ &ldquo;Someone told me&rdquo;
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                  <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">👁️ Facts Observed</h4>
-                  <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">What was actually observed - no opinions</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 italic">
-                    ✅ &ldquo;15:03 - Person collapsed near gate. Crowd of ~20 people present&rdquo;<br/>
-                    ❌ &ldquo;It was chaotic and scary&rdquo;
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">⚡ Actions Taken</h4>
-                  <p className="text-sm text-purple-700 dark:text-purple-300 mb-2">What was done and by whom</p>
-                  <p className="text-xs text-purple-600 dark:text-purple-400 italic">
-                    ✅ &ldquo;R3 called medical at 15:04. Security established crowd control&rdquo;<br/>
-                    ❌ &ldquo;We handled it quickly&rdquo;
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-                  <h4 className="font-semibold text-indigo-800 dark:text-indigo-200 mb-2">🎯 Outcome</h4>
-                  <p className="text-sm text-indigo-700 dark:text-indigo-300 mb-2">Current status or final result</p>
-                  <p className="text-xs text-indigo-600 dark:text-indigo-400 italic">
-                    ✅ &ldquo;Person transported to medical tent. Incident ongoing&rdquo;<br/>
-                    ❌ &ldquo;Everything is fine now&rdquo;
-                  </p>
-                </div>
-              </div>
-              </div>
+        {/* Logging Standards - Enhanced Visuals */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+              <ClipboardDocumentListIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Logging Standards</h2>
             </div>
 
-            {/* Best Practices */}
-            <div className="card-depth-subtle p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-100 flex items-center gap-2">
-                  <CheckCircleIcon className="h-5 w-5 text-blue-600" />
-                  Best Practices
-                </h3>
-              </div>
-              <div>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <ClockIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-blue-100 mb-1">Real-time Logging</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Log incidents as they happen. Use &ldquo;Retrospective&rdquo; only when necessary with clear justification.
-                    </p>
-                  </div>
+          <div className="bg-white dark:bg-[#1a2a57] rounded-2xl shadow-lg border border-gray-200 dark:border-[#2d437a] overflow-hidden">
+            {/* Banner */}
+            <div className="bg-gradient-to-r from-gray-50 to-white dark:from-[#15192c] dark:to-[#1a2a57] p-6 border-b border-gray-100 dark:border-[#2d437a]">
+              <div className="flex items-start gap-5">
+                <div className="hidden sm:flex h-14 w-14 rounded-full bg-blue-100 dark:bg-blue-900/50 items-center justify-center flex-shrink-0">
+                  <ShieldCheckIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                 </div>
-                
-                <div className="flex items-start gap-3">
-                  <EyeIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-blue-100 mb-1">Factual Language Only</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Avoid opinions, emotions, or speculation. Stick to verifiable facts: who, what, where, when.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <PencilSquareIcon className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-blue-100 mb-1">Amendments, Not Edits</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Original logs are never deleted. Create amendments to correct errors, with clear reasons.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <ShieldCheckIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-blue-100 mb-1">Legal Standards</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Logs must be court-ready. Follow JESIP/JDM principles for professional incident management.
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 font-serif italic">
+                      &ldquo;If it ain&apos;t written down, it didn&apos;t happen.&rdquo;
+                    </h3>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed max-w-3xl">
+                      Incident logs are legal documents. They may be used in licensing reviews, investigations, or court. 
+                    Adhering to these standards ensures your logs are <strong>defensible</strong>, <strong>professional</strong>, and <strong>accurate</strong>.
                     </p>
                   </div>
                 </div>
               </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Language Guidelines */}
-          <div className="card-depth mb-6 p-6">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-blue-100 flex items-center gap-2">
-                <ExclamationTriangleIcon className="h-5 w-5 text-amber-600" />
-                Language Guidelines
-              </h3>
-            </div>
-            <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold text-green-700 dark:text-green-300 mb-3 flex items-center gap-2">
-                  ✅ Use These
-                </h4>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <CheckCircleIcon className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span>Specific times: &ldquo;15:03&rdquo;, &ldquo;3:15 PM&rdquo;</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircleIcon className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span>Exact locations: &ldquo;North gate&rdquo;, &ldquo;Stage left&rdquo;</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircleIcon className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span>Measurable quantities: &ldquo;20 people&rdquo;, &ldquo;3 meters&rdquo;</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircleIcon className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span>Direct observations: &ldquo;Person appeared unconscious&rdquo;</span>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-red-700 dark:text-red-300 mb-3 flex items-center gap-2">
-                  ❌ Avoid These
-                </h4>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <ExclamationTriangleIcon className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                    <span>Emotional language: &ldquo;chaotic&rdquo;, &ldquo;terrible&rdquo;, &ldquo;awful&rdquo;</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <ExclamationTriangleIcon className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                    <span>Opinions: &ldquo;thankfully&rdquo;, &ldquo;unfortunately&rdquo;, &ldquo;I think&rdquo;</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <ExclamationTriangleIcon className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                    <span>Vague terms: &ldquo;massive&rdquo;, &ldquo;huge&rdquo;, &ldquo;very big&rdquo;</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <ExclamationTriangleIcon className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                    <span>Speculation: &ldquo;probably&rdquo;, &ldquo;maybe&rdquo;, &ldquo;seems like&rdquo;</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-            </div>
-          </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100 dark:divide-[#2d437a]">
+                
+                {/* Left: The Template */}
+              <div className="p-6 md:p-8">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                  <DocumentTextIcon className="h-5 w-5 text-blue-500" /> 
+                  Structured Template
+                  </h3>
+                <div className="space-y-4">
+                  <TemplateField 
+                    label="Headline" 
+                    desc="≤15 words, factual summary" 
+                    example="Medical incident at North Gate - person collapsed" 
+                    delay="0"
+                  />
+                  <TemplateField 
+                    label="Source" 
+                    desc="Who/what reported it" 
+                    example="R3, CCTV, Security Team" 
+                    delay="100"
+                  />
+                  <TemplateField 
+                    label="Facts" 
+                    desc="Objective observations only" 
+                    example="15:03 - Person collapsed. Crowd of ~20 present." 
+                    delay="200"
+                  />
+                  <TemplateField 
+                    label="Actions" 
+                    desc="What was done & by whom" 
+                    example="R3 called medical. Area cordoned off." 
+                    delay="300"
+                  />
+                  <TemplateField 
+                    label="Outcome" 
+                    desc="Current status/result" 
+                    example="Transported to medical tent. Incident closed." 
+                    delay="400"
+                  />
+                  </div>
+                </div>
 
-          {/* Compliance Standards */}
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-[#451a03] dark:to-[#7c2d12] border border-amber-200 dark:border-[#92400e] p-6 rounded-xl">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-200 flex items-center gap-2">
-                <ShieldCheckIcon className="h-5 w-5 text-amber-600" />
-                JESIP & JDM Compliance
-              </h3>
-            </div>
-            <div>
-            <p className="text-amber-700 dark:text-amber-300 mb-4">
-              Our logging system aligns with Joint Emergency Services Interoperability Principles (JESIP) and 
-              Joint Doctrine Manual (JDM) standards for professional incident management.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="p-3 bg-white dark:bg-[#92400e] rounded-lg">
-                <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">📋 Audit Trail</h4>
-                <p className="text-amber-700 dark:text-amber-300">Complete chain of custody with timestamps and authorship</p>
-              </div>
-              <div className="p-3 bg-white dark:bg-[#92400e] rounded-lg">
-                <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">🔒 Immutability</h4>
-                <p className="text-amber-700 dark:text-amber-300">Original entries preserved, amendments tracked</p>
-              </div>
-              <div className="p-3 bg-white dark:bg-[#92400e] rounded-lg">
-                <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">⚖️ Legal Ready</h4>
-                <p className="text-amber-700 dark:text-amber-300">Court-ready documentation for 7-year retention</p>
-              </div>
-            </div>
-            </div>
-          </div>
-          </div>
-        </div>
-
-        <div className="card-depth p-6">
-          <div className="mb-4">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-blue-100 flex items-center gap-2">
-              <BookOpenIcon className="h-6 w-6 text-blue-600 dark:text-blue-300" />
-              Glossary of Terms
-            </h2>
-          </div>
-          <div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {glossaryItems.map(({ title, description, icon }, idx) => (
-                <div key={idx} className="card-depth-subtle p-4">
-                  <div className="mb-2">
-                    <div className="flex items-center gap-2">
-                      {getIconComponent(icon)}
-                      <h3 className="text-base sm:text-lg font-semibold text-blue-700 dark:text-blue-200">{title}</h3>
+                {/* Right: Language Guide */}
+              <div className="p-6 md:p-8 bg-gray-50/50 dark:bg-[#15192c]/50">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                  <PencilSquareIcon className="h-5 w-5 text-blue-500" /> 
+                  Language Guidelines
+                  </h3>
+                  
+                <div className="space-y-8">
+                  <div className="bg-white dark:bg-[#1a2a57] p-5 rounded-xl border border-green-100 dark:border-green-900/30 shadow-sm">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 text-xs font-bold mb-4 uppercase tracking-wider">
+                      <CheckCircleIcon className="h-4 w-4" /> Best Practice
+                      </span>
+                    <ul className="space-y-3">
+                      <GuidelineItem type="good" text="Specific times" example="15:03" />
+                      <GuidelineItem type="good" text="Exact locations" example="North Gate Turnstile 2" />
+                      <GuidelineItem type="good" text="Measurable facts" example="approx. 3 meters" />
+                      </ul>
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-blue-100 leading-relaxed text-sm line-clamp-3">{description}</p>
-                    <div className="mt-3">
-                      <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value={`item-${idx}`} className="border-none">
-                          <AccordionTrigger className="text-blue-600 hover:text-blue-700 p-0 h-auto text-sm font-medium hover:no-underline">
-                            Read more
-                          </AccordionTrigger>
-                          <AccordionContent className="pt-2">
-                            <div className="text-sm text-gray-600 dark:text-blue-100 space-y-2">
-                              {getExpandedContent(title)}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    </div>
+
+                  <div className="bg-white dark:bg-[#1a2a57] p-5 rounded-xl border border-red-100 dark:border-red-900/30 shadow-sm">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 text-xs font-bold mb-4 uppercase tracking-wider">
+                      <ExclamationTriangleIcon className="h-4 w-4" /> Avoid
+                      </span>
+                    <ul className="space-y-3">
+                      <GuidelineItem type="bad" text="Emotional words" example="Chaotic, Terrible" />
+                      <GuidelineItem type="bad" text="Opinions" example="I think, Unfortunately" />
+                      <GuidelineItem type="bad" text="Vague terms" example="Huge, A while ago" />
+                      </ul>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              </div>
             </div>
           </div>
-        </div>
-      </SectionContainer>
-    </StackedPanel>
-  </PageWrapper>
+
+        {/* Glossary Section */}
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+                <BookOpenIcon className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Glossary</h2>
+              </div>
+              
+            {/* Animated Search Bar */}
+            <div className="relative w-full md:w-80 group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                </div>
+                <input
+                  type="text"
+                placeholder="Search definitions..."
+                className="block w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-[#2d437a] rounded-xl bg-white dark:bg-[#1a2a57] text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm group-hover:shadow-md"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredGlossary.length > 0 ? (
+                filteredGlossary.map((item, idx) => (
+                <AccordionItem
+                  key={idx}
+                  title={item.title}
+                  icon={getIconComponent(item.icon)}
+                  isOpen={openAccordion === `item-${idx}`}
+                  onClick={() => toggleAccordion(`item-${idx}`)}
+                >
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">{item.description}</p>
+                              {getExpandedContent(item.title)}
+                  </div>
+                </AccordionItem>
+                ))
+              ) : (
+              <div className="col-span-full py-16 text-center bg-gray-50 dark:bg-[#1a2a57] rounded-2xl border-2 border-dashed border-gray-200 dark:border-[#2d437a]">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-[#233566] mb-4">
+                  <MagnifyingGlassIcon className="h-6 w-6 text-gray-400" />
+                </div>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">No matches found</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Try adjusting your search terms.</p>
+                <button 
+                    onClick={() => setSearchTerm('')}
+                  className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-500"
+                  >
+                    Clear search
+                </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+      </div>
+    </div>
   );
 };
 
-// Helper function to get icon component
+// --- SUB-COMPONENTS & HELPERS ---
+
+const FeatureCard = ({ icon: Icon, title, desc, color, bg, delay }: any) => (
+  <div 
+    className={`flex items-start p-5 rounded-2xl bg-white dark:bg-[#1a2a57] border border-gray-100 dark:border-[#2d437a] shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
+    style={{ animationDelay: `${delay}ms` }}
+  >
+    <div className={`flex-shrink-0 mr-4 p-3 rounded-xl ${bg} dark:bg-opacity-10`}>
+      <Icon className={`h-6 w-6 ${color}`} />
+    </div>
+    <div>
+      <h3 className="font-bold text-gray-900 dark:text-white text-base mb-1">{title}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
+    </div>
+  </div>
+);
+
+const TemplateField = ({ label, desc, example, delay }: any) => (
+  <div 
+    className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4 pb-4 border-b border-gray-100 dark:border-[#2d437a] last:border-0 last:pb-0"
+    style={{ animationDelay: `${delay}ms` }}
+  >
+    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide min-w-[80px] pt-0.5">{label}</span>
+    <div className="flex-1">
+      <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">{desc}</p>
+      <div className="inline-block px-2 py-1 bg-gray-100 dark:bg-[#15192c] rounded text-xs text-blue-600 dark:text-blue-400 font-mono">
+        &quot;{example}&quot;
+      </div>
+    </div>
+  </div>
+);
+
+const GuidelineItem = ({ type, text, example }: any) => (
+  <li className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300">
+    <span className={`mt-0.5 font-bold ${type === 'good' ? 'text-green-500' : 'text-red-500'}`}>
+      {type === 'good' ? '✓' : '✕'}
+    </span>
+    <div>
+      <span className="font-medium mr-1">{text}</span>
+      <span className="text-gray-400 dark:text-gray-500">(&quot;{example}&quot;)</span>
+    </div>
+  </li>
+);
+
+const AccordionItem = ({ title, children, isOpen, onClick, icon }: any) => (
+  <div className="border border-gray-200 dark:border-[#2d437a] rounded-xl bg-white dark:bg-[#1a2a57] overflow-hidden transition-all duration-200 hover:border-blue-300">
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-between p-4 text-left bg-white dark:bg-[#1a2a57] hover:bg-gray-50 dark:hover:bg-[#233566] transition-colors"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${isOpen ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'bg-gray-100 dark:bg-[#233566] text-gray-500 dark:text-gray-400'}`}>
+          {icon}
+        </div>
+        <span className="font-semibold text-gray-900 dark:text-white">{title}</span>
+      </div>
+      <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+    </button>
+    <div 
+      className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+    >
+      <div className="p-4 pt-0 border-t border-gray-100 dark:border-[#2d437a] bg-gray-50/50 dark:bg-[#15192c]/50">
+        <div className="pt-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+          {children}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const getIconComponent = (iconName: string) => {
-  const iconClass = "h-5 w-5 text-blue-700 dark:text-blue-300";
-  
+  const iconClass = "h-5 w-5";
   switch (iconName) {
-    case 'report_problem':
-      return <ExclamationTriangleIcon className={iconClass} />;
-    case 'logout':
-      return <ArrowRightOnRectangleIcon className={iconClass} />;
-    case 'people':
-      return <UsersIcon className={iconClass} />;
-    case 'dashboard':
-      return <HomeIcon className={iconClass} />;
-    case 'description':
-      return <DocumentTextIcon className={iconClass} />;
-    case 'analytics':
-      return <ChartBarIcon className={iconClass} />;
-    case 'cloud':
-      return <CloudIcon className={iconClass} />;
-    case 'edit':
-      return <PencilIcon className={iconClass} />;
-    case 'wb_sunny':
-      return <SunIcon className={iconClass} />;
-    case 'table_chart':
-      return <TableCellsIcon className={iconClass} />;
-    case 'add_alert':
-      return <PlusIcon className={iconClass} />;
-    case 'event':
-      return <CalendarDaysIcon className={iconClass} />;
-    case 'settings':
-      return <Cog6ToothIcon className={iconClass} />;
-    case 'lock':
-      return <LockClosedIcon className={iconClass} />;
-    case 'api':
-      return <CpuChipIcon className={iconClass} />;
-    case 'clock':
-      return <ClockIcon className={iconClass} />;
-    case 'pencil':
-      return <PencilSquareIcon className={iconClass} />;
-    case 'shield':
-      return <ShieldCheckIcon className={iconClass} />;
-    case 'eye':
-      return <EyeIcon className={iconClass} />;
-    default:
-      return <InformationCircleIcon className={iconClass} />;
+    case 'report_problem': return <ExclamationTriangleIcon className={iconClass} />;
+    case 'logout': return <ArrowRightOnRectangleIcon className={iconClass} />;
+    case 'people': return <UsersIcon className={iconClass} />;
+    case 'dashboard': return <HomeIcon className={iconClass} />;
+    case 'description': return <DocumentTextIcon className={iconClass} />;
+    case 'analytics': return <ChartBarIcon className={iconClass} />;
+    case 'cloud': return <CloudIcon className={iconClass} />;
+    case 'edit': return <PencilIcon className={iconClass} />;
+    case 'wb_sunny': return <SunIcon className={iconClass} />;
+    case 'table_chart': return <TableCellsIcon className={iconClass} />;
+    case 'add_alert': return <PlusIcon className={iconClass} />;
+    case 'event': return <CalendarDaysIcon className={iconClass} />;
+    case 'settings': return <Cog6ToothIcon className={iconClass} />;
+    case 'lock': return <LockClosedIcon className={iconClass} />;
+    case 'api': return <CpuChipIcon className={iconClass} />;
+    case 'clock': return <ClockIcon className={iconClass} />;
+    case 'pencil': return <PencilSquareIcon className={iconClass} />;
+    case 'shield': return <ShieldCheckIcon className={iconClass} />;
+    case 'eye': return <EyeIcon className={iconClass} />;
+    default: return <InformationCircleIcon className={iconClass} />;
   }
 };
 
@@ -779,4 +624,4 @@ const glossaryItems = [
   { title: 'Factual Language', icon: 'eye', description: 'Objective, verifiable statements without opinions, emotions, or speculation.' },
 ];
 
-export default HelpPage; 
+export default HelpPage;

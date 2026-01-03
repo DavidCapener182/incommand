@@ -1,10 +1,11 @@
-// src/components/KeyboardShortcutsHelp.tsx
 'use client'
 
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { XMarkIcon, CommandLineIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, CommandLineIcon, LightBulbIcon } from '@heroicons/react/24/outline'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
+import { cn } from '@/lib/utils'
 
 interface Shortcut {
   key: string
@@ -16,32 +17,42 @@ const shortcuts: Shortcut[] = [
   // Navigation
   { key: 'N', description: 'Create new incident', category: 'Navigation' },
   { key: '/', description: 'Focus search', category: 'Navigation' },
-  { key: 'Esc', description: 'Close modal/dialog', category: 'Navigation' },
-  { key: '?', description: 'Show keyboard shortcuts', category: 'Navigation' },
-  { key: 'G then H', description: 'Go to home/dashboard', category: 'Navigation' },
-  { key: 'G then I', description: 'Go to incidents', category: 'Navigation' },
+  { key: 'Esc', description: 'Close modal', category: 'Navigation' },
+  { key: '?', description: 'Show shortcuts', category: 'Navigation' },
+  { key: 'G + H', description: 'Go to dashboard', category: 'Navigation' },
+  { key: 'G + I', description: 'Go to incidents', category: 'Navigation' },
   
   // Incident Actions
-  { key: 'Ctrl/⌘ + S', description: 'Save current incident', category: 'Incident Actions' },
-  { key: 'Ctrl/⌘ + Enter', description: 'Submit/log incident', category: 'Incident Actions' },
-  { key: 'Ctrl/⌘ + D', description: 'Save as draft', category: 'Incident Actions' },
-  { key: 'Ctrl/⌘ + K', description: 'Quick actions', category: 'Incident Actions' },
+  { key: '⌘ + S', description: 'Save incident', category: 'Actions' },
+  { key: '⌘ + Enter', description: 'Submit log', category: 'Actions' },
+  { key: '⌘ + D', description: 'Save as draft', category: 'Actions' },
+  { key: '⌘ + K', description: 'Quick menu', category: 'Actions' },
   
   // Voice Input
-  { key: 'Ctrl/⌘ + Shift + M', description: 'Start/stop voice input', category: 'Voice Input' },
-  { key: 'Ctrl/⌘ + Shift + V', description: 'Toggle voice mode', category: 'Voice Input' },
+  { key: '⌘ + ⇧ + M', description: 'Start/stop voice', category: 'Voice' },
+  { key: '⌘ + ⇧ + V', description: 'Toggle mode', category: 'Voice' },
   
-  // Table Navigation
-  { key: '↑ / ↓', description: 'Navigate incidents', category: 'Table' },
-  { key: 'Enter', description: 'Open selected incident', category: 'Table' },
-  { key: 'Space', description: 'Select incident (multi-select)', category: 'Table' },
-  { key: 'Ctrl/⌘ + A', description: 'Select all incidents', category: 'Table' },
+  // Table
+  { key: '↑ / ↓', description: 'Navigate rows', category: 'Table' },
+  { key: 'Enter', description: 'Open selection', category: 'Table' },
+  { key: 'Space', description: 'Select row', category: 'Table' },
+  { key: '⌘ + A', description: 'Select all', category: 'Table' },
   
   // Filters
   { key: 'F', description: 'Toggle filters', category: 'Filters' },
-  { key: 'Ctrl/⌘ + F', description: 'Advanced search', category: 'Filters' },
-  { key: 'Alt + 1-4', description: 'Filter by priority', category: 'Filters' },
+  { key: '⌘ + F', description: 'Advanced search', category: 'Filters' },
+  { key: 'Alt + 1-4', description: 'Filter priority', category: 'Filters' },
 ]
+
+// Helper component for key visualization
+const KeyCap = ({ children }: { children: string }) => {
+  // Split combo keys if needed, though data structure handles string
+  return (
+    <kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 text-[10px] font-bold font-mono text-slate-600 bg-white border border-slate-200 border-b-2 rounded-[4px] shadow-sm">
+      {children}
+    </kbd>
+  )
+}
 
 interface KeyboardShortcutsHelpProps {
   isOpen: boolean
@@ -50,6 +61,11 @@ interface KeyboardShortcutsHelpProps {
 
 export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShortcutsHelpProps) {
   const focusTrapRef = useFocusTrap({ enabled: isOpen, restoreFocus: true })
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Group shortcuts by category
   const groupedShortcuts = shortcuts.reduce((acc, shortcut) => {
@@ -60,7 +76,7 @@ export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShort
     return acc
   }, {} as Record<string, Shortcut[]>)
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -70,83 +86,99 @@ export default function KeyboardShortcutsHelp({ isOpen, onClose }: KeyboardShort
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9998]"
             aria-hidden="true"
           />
 
           {/* Modal */}
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none"
             role="dialog"
             aria-modal="true"
             aria-labelledby="shortcuts-title"
           >
             <motion.div
               ref={focusTrapRef as React.RefObject<HTMLDivElement>}
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-[#1a2a57] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden"
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 pointer-events-auto"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                 <div className="flex items-center gap-3">
-                  <CommandLineIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  <h2
-                    id="shortcuts-title"
-                    className="text-xl font-bold text-gray-900 dark:text-white"
-                  >
-                    Keyboard Shortcuts
-                  </h2>
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+                    <CommandLineIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 id="shortcuts-title" className="text-lg font-bold text-slate-900 dark:text-white">
+                      Keyboard Shortcuts
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Supercharge your workflow</p>
+                  </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  aria-label="Close keyboard shortcuts help"
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label="Close"
                 >
-                  <XMarkIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                  <XMarkIcon className="h-5 w-5" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="p-6 overflow-y-auto max-h-[calc(85vh-5rem)] custom-scrollbar">
-                <div className="space-y-6">
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
                   {Object.entries(groupedShortcuts).map(([category, categoryShortcuts]) => (
-                    <div key={category}>
-                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                    <div key={category} className="space-y-3">
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">
                         {category}
                       </h3>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         {categoryShortcuts.map((shortcut) => (
                           <div
                             key={shortcut.key}
-                            className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
                           >
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white">
                               {shortcut.description}
                             </span>
-                            <kbd className="px-3 py-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm">
-                              {shortcut.key}
-                            </kbd>
+                            <div className="flex gap-1">
+                              {/* Handle combo keys visually */}
+                              {shortcut.key.split(/(\s\+\s|\s\s|\s\/\s)/).map((part, i) => {
+                                if (part.trim() === '+' || part.trim() === '/' || part.trim() === 'then') {
+                                  return <span key={i} className="text-[10px] text-slate-400 self-center px-0.5">{part}</span>
+                                }
+                                if (!part.trim()) return null
+                                return <KeyCap key={i}>{part}</KeyCap>
+                              })}
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   ))}
                 </div>
+              </div>
 
-                {/* Footer tip */}
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <p className="text-sm text-blue-800 dark:text-blue-300">
-                    <strong>Pro tip:</strong> Press <kbd className="px-2 py-0.5 text-xs bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-700 rounded">?</kbd> anytime to view these shortcuts
-                  </p>
+              {/* Footer Tip */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <LightBulbIcon className="h-4 w-4 text-amber-400" />
+                  <span>
+                    Pro tip: Press <KeyCap>?</KeyCap> anywhere in the dashboard to toggle this window
+                  </span>
                 </div>
               </div>
+
             </motion.div>
           </div>
         </>
       )}
     </AnimatePresence>
   )
-}
 
+  if (!mounted) return null
+
+  return createPortal(modalContent, document.body)
+}

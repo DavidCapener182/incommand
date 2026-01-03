@@ -44,3 +44,7 @@ export function useEscalationToast() {
   }
   return context
 }
+
+export function useOptionalEscalationToast() {
+  return useContext(EscalationToastContext)
+}

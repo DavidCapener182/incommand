@@ -208,24 +208,46 @@ function calculateStaffEfficiency(incidents: any[], staff: any[]): number {
 
 /**
  * Calculate percentile rankings
+ * For lower-is-better metrics (like response time), we invert the percentile
  */
 export function calculatePercentileRankings(
   currentMetrics: BenchmarkingMetrics,
   venueData: VenueTypeData
 ): { [key: string]: number } {
-  const metrics = ['incidentsPerHour', 'averageResponseTime', 'resolutionRate', 'staffEfficiency']
+  const metrics = [
+    { key: 'incidentsPerHour', lowerIsBetter: true },
+    { key: 'averageResponseTime', lowerIsBetter: true },
+    { key: 'resolutionRate', lowerIsBetter: false },
+    { key: 'staffEfficiency', lowerIsBetter: false }
+  ]
   const percentiles: { [key: string]: number } = {}
 
-  metrics.forEach(metric => {
-    const currentValue = currentMetrics[metric as keyof BenchmarkingMetrics] as number
-    const values = venueData.events.map(event => event.metrics[metric as keyof BenchmarkingMetrics] as number)
+  metrics.forEach(({ key, lowerIsBetter }) => {
+    const currentValue = currentMetrics[key as keyof BenchmarkingMetrics] as number
+    const values = venueData.events.map(event => event.metrics[key as keyof BenchmarkingMetrics] as number)
+    
+    if (values.length === 0) {
+      percentiles[key === 'averageResponseTime' ? 'responseTime' : key] = 50
+      return
+    }
     
     // Sort values to find percentile
     values.sort((a, b) => a - b)
-    const rank = values.filter(v => v <= currentValue).length
+    
+    // For lower-is-better metrics, count how many are worse (higher) than current
+    // For higher-is-better metrics, count how many are worse (lower) than current
+    let rank: number
+    if (lowerIsBetter) {
+      rank = values.filter(v => v >= currentValue).length
+    } else {
+      rank = values.filter(v => v <= currentValue).length
+    }
+    
     const percentile = (rank / values.length) * 100
     
-    percentiles[metric] = Math.round(percentile)
+    // Map averageResponseTime to responseTime for the return object
+    const returnKey = key === 'averageResponseTime' ? 'responseTime' : key
+    percentiles[returnKey] = Math.round(percentile)
   })
 
   return percentiles

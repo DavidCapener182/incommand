@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ClockIcon,
@@ -43,7 +43,7 @@ export default function StaffAvailabilityToggle({
   const [error, setError] = useState<string | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
 
-  const fetchStaffAvailability = async () => {
+  const fetchStaffAvailability = useCallback(async () => {
     setLoading(true)
     setError(null)
     
@@ -64,13 +64,13 @@ export default function StaffAvailabilityToggle({
     } finally {
       setLoading(false)
     }
-  }
+  }, [eventId])
 
   useEffect(() => {
     if (eventId) {
       fetchStaffAvailability()
     }
-  }, [eventId])
+  }, [eventId, fetchStaffAvailability])
 
   const toggleAvailability = async (profileId: string, currentStatus: boolean) => {
     setUpdating(profileId)

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, PanInfo } from 'framer-motion'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { useSwipeGestures } from '@/hooks/useSwipeGestures'
@@ -37,21 +37,27 @@ export default function MobileAnalyticsCarousel({
   const [direction, setDirection] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const handleNext = () => {
-    if (currentIndex < cards.length - 1) {
-      setDirection(1)
-      setCurrentIndex(prev => prev + 1)
-      triggerHaptic.light()
-    }
-  }
+  const handleNext = useCallback(() => {
+    setCurrentIndex(prev => {
+      if (prev < cards.length - 1) {
+        setDirection(1)
+        triggerHaptic.light()
+        return prev + 1
+      }
+      return prev
+    })
+  }, [cards.length])
 
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setDirection(-1)
-      setCurrentIndex(prev => prev - 1)
-      triggerHaptic.light()
-    }
-  }
+  const handlePrevious = useCallback(() => {
+    setCurrentIndex(prev => {
+      if (prev > 0) {
+        setDirection(-1)
+        triggerHaptic.light()
+        return prev - 1
+      }
+      return prev
+    })
+  }, [])
 
   const handleDotClick = (index: number) => {
     setDirection(index > currentIndex ? 1 : -1)
@@ -80,7 +86,7 @@ export default function MobileAnalyticsCarousel({
     }, autoSwipeInterval)
 
     return () => clearInterval(interval)
-  }, [autoSwipe, autoSwipeInterval, currentIndex, cards.length])
+  }, [autoSwipe, autoSwipeInterval, cards.length, currentIndex, handleNext])
 
   const slideVariants = {
     enter: (direction: number) => ({

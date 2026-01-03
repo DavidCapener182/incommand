@@ -7,6 +7,8 @@ import type {
   WorkOrder
 } from '@/types/maintenance'
 
+const supabaseClient = supabase as any
+
 interface CreateWorkOrderPayload {
   asset_id?: string | null
   schedule_id?: string | null
@@ -55,7 +57,7 @@ interface UpdateWorkOrderDetailsPayload {
 }
 
 export async function fetchAssets(): Promise<AssetRecord[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('assets')
     .select('*')
     .order('asset_tag', { ascending: true })
@@ -68,7 +70,7 @@ export async function fetchAssets(): Promise<AssetRecord[]> {
 }
 
 export async function fetchMaintenanceSchedules(): Promise<MaintenanceSchedule[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('maintenance_schedules')
     .select('*')
     .order('next_due_date', { ascending: true })
@@ -81,7 +83,7 @@ export async function fetchMaintenanceSchedules(): Promise<MaintenanceSchedule[]
 }
 
 export async function fetchWorkOrders(status?: string): Promise<WorkOrder[]> {
-  let query = supabase
+  let query = supabaseClient
     .from('work_orders')
     .select('*')
     .order('created_at', { ascending: false })
@@ -100,7 +102,7 @@ export async function fetchWorkOrders(status?: string): Promise<WorkOrder[]> {
 }
 
 export async function fetchMaintenanceEventHooks(): Promise<MaintenanceEventHook[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('maintenance_event_hooks')
     .select('*')
 
@@ -112,7 +114,7 @@ export async function fetchMaintenanceEventHooks(): Promise<MaintenanceEventHook
 }
 
 export async function createWorkOrder(payload: CreateWorkOrderPayload) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('work_orders')
     .insert([{ ...payload }])
     .select('*')
@@ -137,7 +139,7 @@ export async function updateWorkOrderStatus(workOrderId: string, status: string,
     }
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('work_orders')
     .update(fields)
     .eq('id', workOrderId)
@@ -148,7 +150,7 @@ export async function updateWorkOrderStatus(workOrderId: string, status: string,
 }
 
 export async function scheduleMaintenanceCompletion(scheduleId: string) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('maintenance_schedules')
     .update({
       last_completed_at: new Date().toISOString()
@@ -161,7 +163,7 @@ export async function scheduleMaintenanceCompletion(scheduleId: string) {
 }
 
 export async function createAsset(payload: CreateAssetPayload) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('assets')
     .insert([{ ...payload }])
     .select('*')
@@ -175,7 +177,7 @@ export async function createAsset(payload: CreateAssetPayload) {
 }
 
 export async function updateAsset(assetId: string, updates: UpdateAssetPayload) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('assets')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', assetId)
@@ -186,7 +188,7 @@ export async function updateAsset(assetId: string, updates: UpdateAssetPayload) 
 }
 
 export async function createMaintenanceSchedule(payload: CreateSchedulePayload) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('maintenance_schedules')
     .insert([{ ...payload }])
     .select('*')
@@ -200,7 +202,7 @@ export async function createMaintenanceSchedule(payload: CreateSchedulePayload) 
 }
 
 export async function toggleMaintenanceSchedule(scheduleId: string, enabled: boolean) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('maintenance_schedules')
     .update({ enabled, updated_at: new Date().toISOString() })
     .eq('id', scheduleId)
@@ -211,7 +213,7 @@ export async function toggleMaintenanceSchedule(scheduleId: string, enabled: boo
 }
 
 export async function updateWorkOrderDetails(workOrderId: string, updates: UpdateWorkOrderDetailsPayload) {
-  const { error } = await supabase
+  const { error } = await supabaseClient
     .from('work_orders')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', workOrderId)
@@ -222,7 +224,7 @@ export async function updateWorkOrderDetails(workOrderId: string, updates: Updat
 }
 
 export async function fetchMaintenanceVendors(): Promise<MaintenanceVendor[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('vendors')
     .select('id, business_name, status')
     .order('business_name', { ascending: true })
@@ -231,9 +233,11 @@ export async function fetchMaintenanceVendors(): Promise<MaintenanceVendor[]> {
     throw new Error(error.message)
   }
 
-  return (data || []).map((vendor) => ({
+  const vendorList = (data ?? []) as Array<{ id: string; business_name?: string | null; status?: string | null }>
+
+  return vendorList.map((vendor) => ({
     id: vendor.id,
-    business_name: vendor.business_name,
+    business_name: vendor.business_name ?? '',
     status: vendor.status ?? null
   }))
 }

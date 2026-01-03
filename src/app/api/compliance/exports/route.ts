@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth, requireOrganizationAccess } from '@/lib/middleware/auth'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 function jsonToCsv(rows: any[]) {
   if (rows.length === 0) {
     return 'id,resource_type,action,created_at\n'

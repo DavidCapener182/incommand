@@ -138,15 +138,26 @@ export default function IncidentTable({
   logger.debug('IncidentTable component rendered', { component: 'IncidentTable', action: 'render', componentId: componentId.current, onToastAvailable: !!onToast });
 
   // Safety check for filters prop
-  const safeFilters = filters || { types: [], statuses: [], priorities: [], query: '' };
+  const safeFilters = useMemo(
+    () => filters || { types: [], statuses: [], priorities: [], query: '' },
+    [filters]
+  );
 
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentEventId, setCurrentEventId] = useState<string | null>(null)
+  const [internalEventId, setInternalEventId] = useState<string | null>(null)
+
+  const effectiveEventId = useMemo(() => {
+    const incomingId =
+      typeof propCurrentEventId === 'string' && propCurrentEventId.trim().length > 0
+        ? propCurrentEventId
+        : null
+    return incomingId ?? internalEventId
+  }, [propCurrentEventId, internalEventId])
   
   // Real-time revision tracking
-  const { revisionCount } = useLogRevisions(currentEventId, (notification) => {
+  const { revisionCount } = useLogRevisions(effectiveEventId, (notification) => {
     // Show toast for new revisions
     if (onToast) {
       onToast({
@@ -165,6 +176,10 @@ export default function IncidentTable({
   const [callsignShortToName, setCallsignShortToName] = useState<Record<string, string>>({})
   const [expandedIncidentId, setExpandedIncidentId] = useState<number | null>(null)
   const { state: bpState, data: bpData, fetchBestPractice } = useBestPractice()
+  const fetchBestPracticeRef = useRef(fetchBestPractice)
+  useEffect(() => {
+    fetchBestPracticeRef.current = fetchBestPractice
+  }, [fetchBestPractice])
 
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -180,6 +195,17 @@ export default function IncidentTable({
   const [swipeOffset, setSwipeOffset] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
   const [showMatchFlowLogs, setShowMatchFlowLogs] = useState(true) // Show match flow logs by default
+  const tableColumnWidths = useMemo(
+    () => ({
+      log: 'w-20 sm:w-24 lg:w-28',
+      callsign: 'w-24 sm:w-28 lg:w-32',
+      type: 'w-28 sm:w-32 lg:w-36',
+      status: 'w-28 sm:w-32',
+      occurrence: 'min-w-[220px] sm:min-w-[260px] lg:min-w-[360px]',
+      action: 'min-w-[200px] sm:min-w-[240px] lg:min-w-[320px]',
+    }),
+    []
+  )
   
   // Performance monitoring
   const { startRenderMeasurement, endRenderMeasurement, trackError } = usePerformanceMonitor({
@@ -192,70 +218,68 @@ export default function IncidentTable({
   // Use refs to avoid stale closures in the subscription
   const manualStatusChangesRef = useRef<Set<number>>(new Set())
   const onToastRef = useRef(onToast)
+  const onDataLoadedRef = useRef(onDataLoaded)
+  const fetchIncidentsRef = useRef<(() => Promise<void>) | null>(null)
   
-  // Create a reusable fetchIncidents function
+  // Keep refs in sync with props/callbacks
+  useEffect(() => {
+    onToastRef.current = onToast
+  }, [onToast])
+  
+  useEffect(() => {
+    onDataLoadedRef.current = onDataLoaded
+  }, [onDataLoaded])
+
+  useEffect(() => {
+    manualStatusChangesRef.current = manualStatusChanges
+  }, [manualStatusChanges])
+  
+  // Create a reusable fetchIncidents function using refs to avoid dependency issues
   const fetchIncidents = useCallback(async () => {
-    if (!currentEventId) return;
+    const eventId = effectiveEventId
+    if (!eventId) return;
     
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from<Database['public']['Tables']['incident_logs']['Row'], Database['public']['Tables']['incident_logs']['Update']>('incident_logs')
         .select('*')
-        .eq('event_id', currentEventId)
-        .order('timestamp', { ascending: false });
+        .eq('event_id', eventId)
+        .order('log_number', { ascending: false });
 
       if (error) throw error;
-      setIncidents(
-        (data || []).map(incident => ({
-          ...incident,
-          status: incident.status || 'open',
-          entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
-          retrospective_justification: incident.retrospective_justification || undefined,
-          logged_by_user_id: incident.logged_by_user_id || undefined,
-          logged_by_callsign: incident.logged_by_callsign ?? undefined,
-          is_amended: incident.is_amended ?? undefined,
-          original_entry_id: incident.original_entry_id?.toString() || undefined,
-          // Ensure type and category fields are included (default to 'incident' if not set)
-          type: incident.type || 'incident',
-          category: incident.category || undefined,
-        }))
-      );
+      const mappedIncidents = (data || []).map(incident => ({
+        ...incident,
+        status: incident.status || 'open',
+        entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
+        retrospective_justification: incident.retrospective_justification || undefined,
+        logged_by_user_id: incident.logged_by_user_id || undefined,
+        logged_by_callsign: incident.logged_by_callsign ?? undefined,
+        is_amended: incident.is_amended ?? undefined,
+        original_entry_id: incident.original_entry_id?.toString() || undefined,
+        type: incident.type || 'incident',
+        category: incident.category || undefined,
+      }))
+      
+      setIncidents(mappedIncidents);
       setLastUpdated(new Date());
-      if (onDataLoaded) {
-        onDataLoaded(
-          (data || []).map(incident => ({
-            ...incident,
-            status: incident.status || 'open',
-            entry_type: incident.entry_type as 'contemporaneous' | 'retrospective' | undefined,
-            retrospective_justification: incident.retrospective_justification || undefined,
-            logged_by_user_id: incident.logged_by_user_id || undefined,
-            logged_by_callsign: incident.logged_by_callsign ?? undefined,
-            is_amended: incident.is_amended ?? undefined,
-            original_entry_id: incident.original_entry_id?.toString() || undefined,
-            // Ensure type and category fields are included (default to 'incident' if not set)
-            type: incident.type || 'incident',
-            category: incident.category || undefined,
-          }))
-        );
+      
+      if (onDataLoadedRef.current) {
+        onDataLoadedRef.current(mappedIncidents);
       }
     } catch (err) {
-      logger.error('Error fetching incidents', err, { component: 'IncidentTable', action: 'fetchIncidents', eventId: currentEventId || undefined });
+      logger.error('Error fetching incidents', err, { component: 'IncidentTable', action: 'fetchIncidents', eventId: eventId || undefined });
       setError('Failed to fetch incidents');
       trackError(err instanceof Error ? err : new Error('Failed to fetch incidents'), 'fetchIncidents');
     } finally {
       setLoading(false);
     }
-  }, [currentEventId, onDataLoaded, trackError]);
-  
-  // Keep refs in sync with state/props
+  }, [effectiveEventId, trackError])
+
+  // Set the ref after fetchIncidents is defined
   useEffect(() => {
-    manualStatusChangesRef.current = manualStatusChanges
-  }, [manualStatusChanges])
-  
-  useEffect(() => {
-    onToastRef.current = onToast
-  }, [onToast])
+    fetchIncidentsRef.current = fetchIncidents
+  }, [fetchIncidents])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -289,58 +313,75 @@ export default function IncidentTable({
     }
   }, [isMobile, onViewModeChange, viewMode])
 
-  // Cleanup function to handle unsubscribe
-  const cleanup = () => {
+  // Cleanup function - stable callback that doesn't need to be in dependencies
+  const performCleanup = useCallback((eventId: string | null) => {
     if (subscriptionRef.current) {
-      logger.debug('Cleaning up incident table subscription', { component: 'IncidentTable', action: 'cleanup', eventId: currentEventId || undefined });
+      logger.debug('Cleaning up incident table subscription', { component: 'IncidentTable', action: 'cleanup', eventId: eventId || undefined });
       subscriptionRef.current.unsubscribe();
       subscriptionRef.current = null;
     }
     // Remove from active subscriptions map and global toast callbacks
-    if (currentEventId) {
-      const subscriptionKey = `incident_logs_${currentEventId}`;
+    if (eventId) {
+      const subscriptionKey = `incident_logs_${eventId}`;
       activeSubscriptions.delete(subscriptionKey);
       globalToastCallbacks.delete(subscriptionKey);
       logger.debug('Removed subscription and toast callback from active maps', { component: 'IncidentTable', action: 'cleanup', subscriptionKey });
     }
-  };
+  }, [])
 
   useEffect(() => {
+    // If an effective event ID already exists (from parent or prior fetch), skip
+    if (effectiveEventId) {
+      return
+    }
+
+    // Ensure we only query once the user context is ready (prevents unauthenticated requests)
+    if (!currentUser?.id) {
+      logger.debug('Skipping checkCurrentEvent until user is available', { component: 'IncidentTable', action: 'checkCurrentEvent' })
+      return
+    }
+
     const checkCurrentEvent = async () => {
       logger.debug('Checking for current event', { component: 'IncidentTable', action: 'checkCurrentEvent' });
       try {
-        const { data: eventData } = await supabase
+        const { data: eventData, error } = await supabase
           .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
           .select('id')
           .eq('is_current', true)
-          .single();
+          .maybeSingle();
+
+        if (error) {
+          logger.error('Error checking current event', error, { component: 'IncidentTable', action: 'checkCurrentEvent' });
+          setInternalEventId(null);
+          return;
+        }
 
         const newEventId = eventData?.id || null;
-        logger.debug('Setting current event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId || undefined });
-        setCurrentEventId(newEventId);
+        logger.debug('Setting internal event ID', { component: 'IncidentTable', action: 'checkCurrentEvent', eventId: newEventId || undefined });
+        setInternalEventId(newEventId);
       } catch (err) {
         logger.error('Error checking current event', err, { component: 'IncidentTable', action: 'checkCurrentEvent' });
-        setCurrentEventId(null);
+        setInternalEventId(null);
       }
     };
 
     checkCurrentEvent();
-  }, []);
+  }, [effectiveEventId, currentUser?.id]);
 
   useEffect(() => {
-    logger.debug('Subscription useEffect triggered', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId, eventIdType: typeof currentEventId });
-    if (!currentEventId || typeof currentEventId !== 'string' || currentEventId.trim() === '') {
-      logger.debug('No current event ID - skipping subscription', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+    logger.debug('Subscription useEffect triggered', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId, eventIdType: typeof effectiveEventId });
+    if (!effectiveEventId || typeof effectiveEventId !== 'string' || effectiveEventId.trim() === '') {
+      logger.debug('No current event ID - skipping subscription', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
       return;
     }
-    logger.debug('Current event ID valid - proceeding with subscription setup', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+    logger.debug('Current event ID valid - proceeding with subscription setup', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
 
     // Check if there's already an active subscription for this event
-    const subscriptionKey = `incident_logs_${currentEventId}`;
+    const subscriptionKey = `incident_logs_${effectiveEventId}`;
     logger.debug('Checking subscription', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current, subscriptionKey });
     
     if (activeSubscriptions.has(subscriptionKey)) {
-      logger.debug('Subscription already exists for event - skipping duplicate', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId, componentId: componentId.current });
+      logger.debug('Subscription already exists for event - skipping duplicate', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId, componentId: componentId.current });
       // IMPORTANT: Don't overwrite existing toast callback to prevent duplicates
       logger.debug('Keeping existing toast callback to prevent duplicates', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current });
       return;
@@ -352,27 +393,27 @@ export default function IncidentTable({
 
     // Mark this subscription as active and register toast callback
     activeSubscriptions.set(subscriptionKey, true);
-    if (onToast) {
-      globalToastCallbacks.set(subscriptionKey, onToast);
+    if (onToastRef.current) {
+      globalToastCallbacks.set(subscriptionKey, onToastRef.current);
       logger.debug('Registered toast callback for new subscription', { component: 'IncidentTable', action: 'subscriptionEffect', componentId: componentId.current });
     }
     logger.debug('Created new subscription for', { component: 'IncidentTable', action: 'subscriptionEffect', subscriptionKey });
 
     // Set up new subscription with a stable channel name
-    logger.debug('Setting up Supabase subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
-    logger.debug('Subscription filter', { component: 'IncidentTable', action: 'subscriptionEffect', filter: `event_id=eq.${currentEventId}` });
+    logger.debug('Setting up Supabase subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
+    logger.debug('Subscription filter', { component: 'IncidentTable', action: 'subscriptionEffect', filter: `event_id=eq.${effectiveEventId}` });
     
     // Basic connectivity verification
-    logger.debug('Setting up real-time subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+    logger.debug('Setting up real-time subscription for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
     
     subscriptionRef.current = supabase
-      .channel(`incident_logs_${currentEventId}`)
+      .channel(`incident_logs_${effectiveEventId}`)
       .on('postgres_changes', 
         {
           event: '*',
           schema: 'public',
           table: 'incident_logs',
-          filter: `event_id=eq.${currentEventId}`
+          filter: `event_id=eq.${effectiveEventId}`
         },
         (payload) => {
           logger.debug('Real-time event received', { component: 'IncidentTable', action: 'subscriptionEffect', eventType: payload.eventType, incidentLogNumber: (payload.new as any)?.log_number || (payload.old as any)?.log_number });
@@ -382,13 +423,37 @@ export default function IncidentTable({
           setIncidents(prev => {
           let newIncidents: Incident[] = [];
           if (payload.eventType === 'INSERT') {
-              // Ensure type and category fields are included for new incidents
-              const newIncident = {
-                ...(payload.new as Incident),
-                type: (payload.new as any).type || 'incident',
-                category: (payload.new as any).category || undefined,
+              // Map all fields to match fetchIncidents structure
+              const newIncidentData = payload.new as any;
+              const newIncident: Incident = {
+                ...newIncidentData,
+                status: newIncidentData.status || 'open',
+                entry_type: newIncidentData.entry_type as 'contemporaneous' | 'retrospective' | undefined,
+                retrospective_justification: newIncidentData.retrospective_justification || undefined,
+                logged_by_user_id: newIncidentData.logged_by_user_id || undefined,
+                logged_by_callsign: newIncidentData.logged_by_callsign ?? undefined,
+                is_amended: newIncidentData.is_amended ?? undefined,
+                original_entry_id: newIncidentData.original_entry_id?.toString() || undefined,
+                type: newIncidentData.type || 'incident',
+                category: newIncidentData.category || undefined,
               };
-              newIncidents = [newIncident, ...prev];
+              
+              // Check if this incident already exists (prevent duplicates)
+              const exists = prev.some(inc => inc.id === newIncident.id);
+              if (!exists) {
+                newIncidents = [newIncident, ...prev];
+              } else {
+                // If it exists, update it instead of adding duplicate
+                newIncidents = prev.map(inc => inc.id === newIncident.id ? newIncident : inc);
+              }
+              
+              // Trigger a refetch to ensure we have the latest data (debounced)
+              // This handles cases where real-time events might arrive out of order or be missed
+              if (fetchIncidentsRef.current) {
+                setTimeout(() => {
+                  fetchIncidentsRef.current?.();
+                }, 500);
+              }
               
               // Show toast for new incident using global callback
               const globalToastCallback = globalToastCallbacks.get(subscriptionKey);
@@ -435,7 +500,7 @@ export default function IncidentTable({
                 });
 
                 // Trigger Best-Practice flow (non-blocking)
-                if (featureFlags.best_practice_enabled && incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep') {
+                if (featureFlags.best_practice_enabled && incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep' && fetchBestPracticeRef.current) {
                   // show spinner toast
                   globalToastCallback({
                     type: 'info',
@@ -444,7 +509,7 @@ export default function IncidentTable({
                     duration: 3000
                   })
                   // async call
-                  fetchBestPractice({
+                  fetchBestPracticeRef.current({
                     incidentId: String(incident.id),
                     incidentType: incident.incident_type,
                     occurrence: incident.occurrence,
@@ -538,9 +603,9 @@ export default function IncidentTable({
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          logger.debug('Real-time subscription active for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+          logger.debug('Real-time subscription active for event', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
         } else if (status === 'CHANNEL_ERROR') {
-          logger.error('Real-time subscription error', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId });
+          logger.error('Real-time subscription error', { component: 'IncidentTable', action: 'subscriptionEffect', currentEventId: effectiveEventId });
         }
       });
 
@@ -554,40 +619,37 @@ export default function IncidentTable({
         }
     }, 5000);
 
+    // Fetch incidents when event ID is available
     fetchIncidents();
 
     return () => {
-      cleanup();
-      // Also clean up on unmount
-      if (currentEventId) {
-        const subscriptionKey = `incident_logs_${currentEventId}`;
-        activeSubscriptions.delete(subscriptionKey);
-        globalToastCallbacks.delete(subscriptionKey);
-      }
+      // Cleanup using stable callback with current eventId
+      performCleanup(effectiveEventId);
     };
-  }, [currentEventId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveEventId]); // Only depend on effectiveEventId - fetchIncidents is stable relative to it
 
   // Separate useEffect for onDataLoaded callback to avoid stale closures
   useEffect(() => {
-    if (onDataLoaded && incidents.length > 0) {
-      onDataLoaded(incidents);
+    if (onDataLoadedRef.current && incidents.length > 0) {
+      onDataLoadedRef.current(incidents);
     }
-  }, [incidents, onDataLoaded]);
+  }, [incidents]);
 
   // Fetch callsign assignments for tooltips
   useEffect(() => {
-    if (!currentEventId) return;
+    if (!effectiveEventId) return;
     const fetchAssignments = async () => {
       // Get all roles
       const { data: roles } = await supabase
         .from<any, any>('callsign_positions')
         .select('id, short_code, callsign')
-        .eq('event_id', currentEventId);
+        .eq('event_id', effectiveEventId);
       // Get all assignments
       const { data: assignments } = await supabase
         .from<any, any>('callsign_assignments')
         .select('callsign_role_id, assigned_name')
-        .eq('event_id', currentEventId);
+        .eq('event_id', effectiveEventId);
       // Build mapping
       const idToShort: Record<string, string> = {};
       const idToCallsign: Record<string, string> = {};
@@ -609,7 +671,7 @@ export default function IncidentTable({
       setCallsignShortToName(shortToName);
     };
     fetchAssignments();
-  }, [currentEventId]);
+  }, [effectiveEventId]);
 
   const toggleIncidentStatus = async (incident: Incident, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -776,19 +838,63 @@ export default function IncidentTable({
 
   // Filter incidents based on the filter prop and search query
   // Separate match flow logs from regular incidents for filtering
-  const regularIncidents = incidents.filter(incident => incident.type !== 'match_log')
-  const matchFlowLogs = incidents.filter(incident => incident.type === 'match_log')
+  const regularIncidents = incidents.filter(incident => (incident.type || 'incident') !== 'match_log')
+  const matchFlowLogs = incidents.filter(incident => (incident.type || 'incident') === 'match_log')
+  
+  // Debug: Log incident counts and specific log numbers
+  useEffect(() => {
+    if (incidents.length > 0) {
+      const logNumbers = incidents.map(i => i.log_number).sort((a, b) => 
+        b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' })
+      )
+      const has082 = incidents.some(i => i.log_number.includes('082'))
+      const has083 = incidents.some(i => i.log_number.includes('083'))
+      const has084 = incidents.some(i => i.log_number.includes('084'))
+      logger.debug('Incident counts', { 
+        total: incidents.length, 
+        regular: regularIncidents.length, 
+        matchFlow: matchFlowLogs.length,
+        topLogs: logNumbers.slice(0, 5),
+        has082, has083, has084,
+        filters: safeFilters
+      })
+    }
+  }, [incidents.length, regularIncidents.length, matchFlowLogs.length, safeFilters])
   
   // Filter regular incidents
   const filteredRegularIncidents: Incident[] = filterIncidents<Incident>(regularIncidents, { ...safeFilters, query: searchQuery })
   
   // Filter match flow logs (if enabled)
-  const filteredMatchFlowLogs: Incident[] = showMatchFlowLogs 
-    ? filterIncidents<Incident>(matchFlowLogs, { ...safeFilters, query: searchQuery })
-    : []
+  const filteredMatchFlowLogs: Incident[] = useMemo(() => {
+    if (!showMatchFlowLogs) {
+      return []
+    }
+    return filterIncidents<Incident>(matchFlowLogs, { ...safeFilters, query: searchQuery })
+  }, [matchFlowLogs, safeFilters, searchQuery, showMatchFlowLogs])
+  
+  // Debug: Log filtered counts
+  useEffect(() => {
+    if (filteredRegularIncidents.length > 0 || filteredMatchFlowLogs.length > 0) {
+      const filteredLogNumbers = [...filteredRegularIncidents, ...filteredMatchFlowLogs]
+        .map(i => i.log_number)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }))
+      const has082Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('082'))
+      const has083Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('083'))
+      const has084Filtered = [...filteredRegularIncidents, ...filteredMatchFlowLogs].some(i => i.log_number.includes('084'))
+      logger.debug('Filtered incident counts', { 
+        filteredRegular: filteredRegularIncidents.length,
+        filteredMatchFlow: filteredMatchFlowLogs.length,
+        topFilteredLogs: filteredLogNumbers.slice(0, 5),
+        has082Filtered, has083Filtered, has084Filtered
+      })
+    }
+  }, [filteredRegularIncidents.length, filteredMatchFlowLogs.length])
   
   // Combine filtered incidents (match flow logs appear after regular incidents)
-  const filteredIncidents: Incident[] = [...filteredRegularIncidents, ...filteredMatchFlowLogs]
+  const filteredIncidents: Incident[] = useMemo(
+    () => [...filteredRegularIncidents, ...filteredMatchFlowLogs],
+    [filteredMatchFlowLogs, filteredRegularIncidents]
+  )
 
   // Helper function to check if incident is high priority and open
   const isHighPriorityAndOpen = (incident: Incident) => {
@@ -815,18 +921,25 @@ export default function IncidentTable({
     return isHighPriority && isOpenStatus
   }
 
-  // Sort incidents: Pin open high priority incidents to the top, then chronological order
+  // Sort incidents: Strictly by log number descending (highest to lowest)
+  // Handle both "LOG-XXX" and "event-XXX" formats by extracting the numeric part
   const sortedIncidents = [...filteredIncidents].sort((a, b) => {
-    const aIsHighPriorityOpen = isHighPriorityAndOpen(a);
-    const bIsHighPriorityOpen = isHighPriorityAndOpen(b);
-
-    // If both are high priority and open, or both are not, sort by timestamp (newest first)
-    if (aIsHighPriorityOpen === bIsHighPriorityOpen) {
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    // Extract numeric part from log_number (handles both "LOG-082" and "event-082" formats)
+    const extractNumber = (logNum: string): number => {
+      const match = logNum.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    
+    const numA = extractNumber(a.log_number);
+    const numB = extractNumber(b.log_number);
+    
+    // If both have valid numbers, sort numerically
+    if (numA > 0 && numB > 0) {
+      return numB - numA; // Descending order
     }
-
-    // High priority open incidents go to the top
-    return aIsHighPriorityOpen ? -1 : 1;
+    
+    // Fallback to string comparison if numbers can't be extracted
+    return b.log_number.localeCompare(a.log_number, undefined, { numeric: true, sensitivity: 'base' });
   });
 
   // Determine if we should use virtualized table (for large datasets)
@@ -835,8 +948,8 @@ export default function IncidentTable({
   }, [sortedIncidents.length])
 
   const chronologicalIncidents = useMemo(() => {
-    return [...filteredIncidents].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    return [...filteredIncidents].sort((a, b) => 
+      a.log_number.localeCompare(b.log_number, undefined, { numeric: true, sensitivity: 'base' })
     );
   }, [filteredIncidents]);
 
@@ -872,7 +985,7 @@ export default function IncidentTable({
     return () => {
       endRenderMeasurement('IncidentTable')
     }
-  }, [])
+  }, [endRenderMeasurement, startRenderMeasurement])
 
   // Show Back to Top if many incidents and scrolled down
   useEffect(() => {
@@ -987,11 +1100,44 @@ export default function IncidentTable({
             {PRIORITY_FILTER_OPTIONS.map((priorityOption) => {
               const isActive = normalizedSelectedPriorities.includes(priorityOption);
               const config = getPriorityDisplayConfig(priorityOption);
-              const Icon = config.icon;
+              
+              // Get badge style based on priority
+              const getBadgeStyle = (priority: string) => {
+                switch (priority) {
+                  case 'urgent':
+                    return 'bg-red-600/10 dark:bg-red-600/20 hover:bg-red-600/10 text-red-500 border-red-600/60'
+                  case 'high':
+                    return 'bg-red-600/10 dark:bg-red-600/20 hover:bg-red-600/10 text-red-500 border-red-600/60'
+                  case 'medium':
+                    return 'bg-amber-600/10 dark:bg-amber-600/20 hover:bg-amber-600/10 text-amber-500 border-amber-600/60'
+                  case 'low':
+                    return 'bg-emerald-600/10 dark:bg-emerald-600/20 hover:bg-emerald-600/10 text-emerald-500 border-emerald-600/60'
+                  default:
+                    return 'bg-gray-600/10 dark:bg-gray-600/20 hover:bg-gray-600/10 text-gray-500 border-gray-600/60'
+                }
+              }
+              
+              const getDotColor = (priority: string) => {
+                switch (priority) {
+                  case 'urgent':
+                  case 'high':
+                    return 'bg-red-500'
+                  case 'medium':
+                    return 'bg-amber-500'
+                  case 'low':
+                    return 'bg-emerald-500'
+                  default:
+                    return 'bg-gray-500'
+                }
+              }
+              
+              const badgeStyle = getBadgeStyle(priorityOption);
+              const dotColor = getDotColor(priorityOption);
+              
               const buttonClasses = [
-                'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500',
-                getPriorityChipClass(priorityOption, isActive),
-                isActive ? 'shadow-md' : 'hover:shadow-sm',
+                'flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500',
+                badgeStyle,
+                !isActive && 'opacity-60',
               ]
                 .filter(Boolean)
                 .join(' ');
@@ -1004,7 +1150,7 @@ export default function IncidentTable({
                   className={buttonClasses}
                   aria-pressed={isActive}
                 >
-                  <Icon size={18} aria-hidden />
+                  <div className={`h-1.5 w-1.5 rounded-full ${dotColor} mr-2`} />
                   <span>{config.label}</span>
                 </button>
               );
@@ -1201,7 +1347,7 @@ export default function IncidentTable({
                   isMatchFlowLog 
                     ? 'bg-gray-50/50 dark:bg-gray-800/50 opacity-75 border-gray-300 dark:border-gray-600' 
                     : isHighPriorityAndOpen(incident)
-                    ? 'ring-2 ring-red-400 shadow-xl shadow-red-500/50 z-20 animate-pulse-border motion-reduce:animate-none border-red-300'
+                    ? 'ring-2 ring-red-400 border-red-300 z-20 animate-pulse-bg motion-reduce:animate-none'
                     : 'border-gray-200 dark:border-[#2d437a] active:border-blue-400 dark:active:border-blue-500'
                 }`}
                 style={{
@@ -1372,16 +1518,16 @@ export default function IncidentTable({
                 height: '100%'
               }}
             >
-              <table className="w-full caption-bottom text-sm table-fixed">
+              <table className="w-full min-w-[960px] caption-bottom text-sm table-auto">
                 <thead className="sticky top-0 z-30 bg-[#f8f9fb] dark:bg-[#1a1f2d] shadow-sm border-b border-border/60">
                   <tr className="hover:bg-transparent border-none">
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[3%] border-b border-border/60 border-r border-border/30">LOG</th>
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[5%] border-b border-border/60 border-r border-border/30">From</th>
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[5%] border-b border-border/60 border-r border-border/30">To</th>
-                    <th className="h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[48%] xl:flex-grow border-b border-border/60 border-r border-border/30">Occurrence</th>
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[8%] border-b border-border/60 border-r border-border/30">Type</th>
-                    <th className="h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[23%] xl:flex-grow border-b border-border/60 border-r border-border/30">Action</th>
-                    <th className="h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider w-[8%] border-b border-border/60">Status</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.log}`}>Log</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.callsign}`}>From</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.callsign}`}>To</th>
+                    <th className={`h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.occurrence}`}>Occurrence</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.type}`}>Type</th>
+                    <th className={`h-12 px-4 py-3 text-left align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.action}`}>Action</th>
+                    <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 ${tableColumnWidths.status}`}>Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-[#23408e] divide-y divide-gray-200 dark:divide-[#2d437a]">
@@ -1389,6 +1535,7 @@ export default function IncidentTable({
                   const isMatchFlowLog = incident.type === 'match_log'
                   const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
                   const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
+                  const isGoalType = /goal/i.test(incident.incident_type || '')
                   let rowColor = getRowStyle(incident);
                   if (rowColor === 'hover:bg-gray-50') {
                     rowColor = idx % 2 === 0 ? 'bg-white dark:bg-[#23408e] hover:bg-gray-50 dark:hover:bg-[#1a2a57]' : 'bg-gray-50 dark:bg-[#1a2a57] hover:bg-gray-100 dark:hover:bg-[#182447]';
@@ -1404,7 +1551,7 @@ export default function IncidentTable({
                         isMatchFlowLog 
                           ? 'hover:bg-gray-100/50 dark:hover:bg-gray-700/50 border-gray-300 dark:border-gray-600' 
                           : isHighPriorityAndOpen(incident)
-                          ? 'ring-2 ring-red-400 shadow-2xl shadow-red-500/70 z-20 animate-pulse-border motion-reduce:animate-none border-red-300 hover:bg-muted/40 dark:hover:bg-[#1a2a57]/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300'
+                          ? 'ring-2 ring-red-400 border-red-300 z-20 animate-pulse-bg motion-reduce:animate-none hover:-translate-y-1 transition-all duration-300'
                           : 'hover:bg-muted/40 dark:hover:bg-[#1a2a57]/60 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-500'
                       }`}
                       onClick={(e) => {
@@ -1414,14 +1561,11 @@ export default function IncidentTable({
                         }
                       }}
                     >
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30">
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30 ${tableColumnWidths.log}`}>
                         <div className="flex flex-col items-center gap-0.5">
                           <div className="flex items-center gap-1 justify-center">
                             {isHighPriorityAndOpen(incident) && !isMatchFlowLog && (
                               <MapPinIcon className="h-3 w-3 text-red-500 animate-pulse" title="Pinned: High Priority Open" />
-                            )}
-                            {isMatchFlowLog && (
-                              <span className="text-sm mr-1" title="Match Flow Log">⚽</span>
                             )}
                             <span className={`px-1.5 py-0.5 rounded-lg font-mono text-xs font-bold ${
                               isMatchFlowLog 
@@ -1441,7 +1585,7 @@ export default function IncidentTable({
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
                         <div className="max-w-[80px] mx-auto">
                           <span
                             title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
@@ -1461,7 +1605,7 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
                         <div className="max-w-[80px] mx-auto">
                           <span
                             title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
@@ -1481,7 +1625,7 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className={`p-4 align-middle text-xs leading-relaxed border-r border-border/30 ${
+                      <td className={`px-4 py-3 align-middle text-xs leading-relaxed border-r border-border/30 ${tableColumnWidths.occurrence} ${
                         isMatchFlowLog ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'
                       }`} style={{
                         lineHeight: '1.3',
@@ -1499,11 +1643,11 @@ export default function IncidentTable({
                           {incident.occurrence}
                         </span>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30">
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.type}`}>
                         <div className="flex items-center justify-center">
                           {isMatchFlowLog ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm bg-gray-400 text-white">
-                              <span>⚽</span>
+                              {isGoalType && <span>⚽</span>}
                               <span>{incident.incident_type}</span>
                             </span>
                           ) : (
@@ -1514,7 +1658,7 @@ export default function IncidentTable({
                           )}
                         </div>
                       </td>
-                      <td className="p-4 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30" style={{
+                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30 ${tableColumnWidths.action}`} style={{
                         lineHeight: '1.3',
                         maxHeight: '2.6em',
                         overflow: 'hidden',
@@ -1530,7 +1674,7 @@ export default function IncidentTable({
                           {incident.action_taken}
                         </span>
                       </td>
-                      <td className="p-4 align-middle text-center">
+                      <td className={`px-4 py-3 align-middle text-center ${tableColumnWidths.status}`}>
                         <div className="flex flex-col items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
                           <div className="flex flex-wrap gap-1.5 items-center justify-center">
                             <PriorityBadge priority={incident.priority} />
@@ -1614,7 +1758,7 @@ export default function IncidentTable({
             {/* Board View */}
             <div className="card-depth h-[700px] p-6 shadow-3">
               <CollaborationBoard
-                eventId={propCurrentEventId || currentEventId || ''}
+                eventId={effectiveEventId || ''}
                 currentUser={currentUser}
                 searchQuery={searchQuery}
                 incidents={incidents}

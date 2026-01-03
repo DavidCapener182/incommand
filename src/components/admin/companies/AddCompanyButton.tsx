@@ -2,15 +2,17 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { getAllPlans, type PlanCode } from '@/config/PricingConfig';
 
 export default function AddCompanyButton() {
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
-  const [plan, setPlan] = React.useState<'trial' | 'basic' | 'premium'>('trial');
+  const [plan, setPlan] = React.useState<PlanCode>('starter');
   const [status, setStatus] = React.useState<'active' | 'inactive'>('active');
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const router = useRouter();
+  const plans = getAllPlans();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,7 +28,7 @@ export default function AddCompanyButton() {
       if (!res.ok) throw new Error(json.error || 'Failed to create company');
       setOpen(false);
       setName("");
-      setPlan('trial');
+      setPlan('starter');
       setStatus('active');
       router.refresh();
     } catch (err: any) {
@@ -60,10 +62,12 @@ export default function AddCompanyButton() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm mb-1">Subscription plan</label>
-                  <select value={plan} onChange={(e) => setPlan(e.target.value as any)} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-blue-600 dark:border-[#2d437a] dark:bg-[#1a2a57] dark:text-white">
-                    <option value="trial">Trial</option>
-                    <option value="basic">Basic</option>
-                    <option value="premium">Premium</option>
+                  <select value={plan} onChange={(e) => setPlan(e.target.value as PlanCode)} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-blue-600 dark:border-[#2d437a] dark:bg-[#1a2a57] dark:text-white">
+                    {plans.map((p) => (
+                      <option key={p.code} value={p.code}>
+                        {p.displayName}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

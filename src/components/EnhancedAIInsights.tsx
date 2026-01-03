@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -114,16 +114,9 @@ export default function EnhancedAIInsights({
     return () => clearTimeout(timer);
   }, [currentIndex]);
 
-  // Generate predictive forecast data
-  useEffect(() => {
-    if (enablePredictiveMode && insights.length > 0) {
-      generatePredictiveForecast();
-      analyzePatterns();
-    }
-  }, [insights, enablePredictiveMode]);
+  const currentInsight = insights[currentIndex];
 
-  const generatePredictiveForecast = () => {
-    const currentInsight = insights[currentIndex];
+  const generatePredictiveForecast = useCallback(() => {
     if (!currentInsight) return;
 
     // Simulate predictive forecasting based on current data
@@ -153,9 +146,9 @@ export default function EnhancedAIInsights({
     };
 
     setPredictiveData(forecast);
-  };
+  }, [currentInsight]);
 
-  const analyzePatterns = () => {
+  const analyzePatterns = useCallback(() => {
     const patterns: PatternAnalysis[] = [
       {
         patternType: 'temporal',
@@ -193,9 +186,15 @@ export default function EnhancedAIInsights({
     ];
 
     setPatternData(patterns);
-  };
+  }, []);
 
-  const currentInsight = insights[currentIndex];
+  // Generate predictive forecast data
+  useEffect(() => {
+    if (enablePredictiveMode && insights.length > 0) {
+      generatePredictiveForecast();
+      analyzePatterns();
+    }
+  }, [insights.length, enablePredictiveMode, generatePredictiveForecast, analyzePatterns]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {

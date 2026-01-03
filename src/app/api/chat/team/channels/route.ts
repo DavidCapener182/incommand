@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get custom channels
-    const { data: channels, error } = await supabase
+    const { data: channels, error } = await (supabase as any)
       .from('chat_channels')
       .select('*')
       .eq('event_id', eventId)
@@ -72,13 +72,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has access
-    const { data: userAccess, error: accessError } = await supabase
+    const { data: userAccess, error: accessError } = await (supabase as any)
       .from('profiles')
       .select('company_id')
       .eq('id', createdBy)
       .single()
 
-    if (accessError || !userAccess || userAccess.company_id !== companyId) {
+    if (accessError || !userAccess || (userAccess as any).company_id !== companyId) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create channel (align with schema: no created_by or is_private columns)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('chat_channels')
       .insert({
         name,

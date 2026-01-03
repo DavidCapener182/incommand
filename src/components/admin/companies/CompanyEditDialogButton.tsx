@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { getAllPlans } from '@/config/PricingConfig'
 
 interface Props {
 	id: string
@@ -17,10 +18,22 @@ interface Props {
 
 export default function CompanyEditDialogButton({ id, name, plan, status, className = '' }: Props) {
 	const [open, setOpen] = React.useState(false)
-	const [form, setForm] = React.useState({ name: name || '', subscription_plan: plan || 'trial', account_status: status || 'active' })
+	// Map legacy plans to new ones
+	const mapLegacyPlan = (p: string | null | undefined): string => {
+		if (!p) return 'starter'
+		if (p === 'trial' || p === 'basic') return 'starter'
+		if (p === 'premium' || p === 'professional') return 'operational'
+		return p
+	}
+	const [form, setForm] = React.useState({ 
+		name: name || '', 
+		subscription_plan: mapLegacyPlan(plan), 
+		account_status: status || 'active' 
+	})
 	const [saving, setSaving] = React.useState(false)
 	const [error, setError] = React.useState<string | null>(null)
 	const router = useRouter()
+	const plans = getAllPlans()
 
 	const onSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
@@ -62,9 +75,12 @@ export default function CompanyEditDialogButton({ id, name, plan, status, classN
 						<Select value={String(form.subscription_plan)} onValueChange={(v) => setForm({ ...form, subscription_plan: v })}>
 							<SelectTrigger><SelectValue placeholder="Plan" /></SelectTrigger>
 							<SelectContent>
-								<SelectItem value="trial">Trial</SelectItem>
-								<SelectItem value="basic">Basic</SelectItem>
-								<SelectItem value="premium">Premium</SelectItem>
+								<SelectItem value="trial">Trial (Legacy)</SelectItem>
+								{plans.map((plan) => (
+									<SelectItem key={plan.code} value={plan.code}>
+										{plan.displayName}
+									</SelectItem>
+								))}
 							</SelectContent>
 						</Select>
 					</div>
@@ -88,5 +104,3 @@ export default function CompanyEditDialogButton({ id, name, plan, status, classN
 		</Dialog>
 	)
 }
-
-

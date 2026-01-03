@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth, requireOrganizationAccess } from '@/lib/middleware/auth'
 import type { Database } from '@/types/supabase'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, 'organization_admin', async (context) => {
     const url = new URL(request.url)
@@ -25,8 +28,8 @@ export async function GET(request: NextRequest) {
         .eq('organization_id', resolvedOrg)
         .order('created_at', { ascending: false })
         .limit(12),
-      context.serviceClient
-        .from<any, any>('invoices')
+      (context.serviceClient as any)
+        .from('invoices')
         .select('*')
         .eq('organization_id', resolvedOrg)
         .order('issued_date', { ascending: false })

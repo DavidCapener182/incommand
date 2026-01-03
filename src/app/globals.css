@@ -4,12 +4,31 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .animate-marquee {
+    animation: marquee var(--duration, 30s) linear infinite;
+  }
+
+  .marquee-paused:hover .animate-marquee {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @layer base {
   html {
-    font-family: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
   body {
-    font-family: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
@@ -39,6 +58,11 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
 
 .animate-pulse-slow {
   animation: pulse-slow 4s ease-in-out infinite;
+}
+
+/* Custom pulse-border animation for high priority incidents - uses same pulse-glow animation but slower */
+.animate-pulse-border {
+  animation: pulse-glow 3s ease-in-out infinite;
 }
 
 /* Mobile-first form input styling */
@@ -487,17 +511,26 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
   animation: scroll-slow 40s linear infinite;
 }
 
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 1;
+/* Removed - using box-shadow version below instead */
+
+/* Background color animation for high priority open incidents */
+@keyframes pulse-bg {
+  0% {
+    background-color: rgba(239, 68, 68, 0.1); /* red */
   }
-  50% {
-    opacity: 0.7;
+  33% {
+    background-color: rgba(251, 146, 60, 0.15); /* orange */
+  }
+  66% {
+    background-color: rgba(234, 179, 8, 0.15); /* yellow */
+  }
+  100% {
+    background-color: rgba(239, 68, 68, 0.1); /* red */
   }
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+.animate-pulse-bg {
+  animation: pulse-bg 3s ease-in-out infinite;
 }
 
 /* Screen reader only utility */
@@ -572,6 +605,10 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
   50% {
     box-shadow: 0 0 30px rgba(239, 68, 68, 0.7), 0 0 60px rgba(220, 38, 38, 0.4), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
 
 /* Mobile-optimized pulse glow */

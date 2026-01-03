@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { withAdminAuth } from '@/lib/middleware/auth'
 import { recordAdminAudit } from '@/lib/admin/audit'
 import { z } from 'zod'
-import { defaultMarketingPlans } from '@/data/marketingPlans'
+import { getAllPlans, getPlan, type PlanCode } from '@/config/PricingConfig'
 
 const createPlanSchema = z.object({
   name: z.string().min(2),
@@ -15,40 +15,55 @@ const createPlanSchema = z.object({
 
 export async function GET(request: NextRequest) {
   return withAdminAuth(request, 'billing_manager', async (context) => {
-    const { data, error } = await context.serviceClient
-      .from('plans' as any)
-      .select('id, name, code, price_monthly, price_annual, currency, metadata, is_active, created_at, updated_at')
+    // Try to fetch from database first
+    const { data: dbPlans, error } = await (context.serviceClient as any)
+      .from('subscription_plans')
+      .select('*')
+      .eq('is_active', true)
+      .eq('deprecated', false)
       .order('price_monthly', { ascending: true })
 
-    if (error) {
-      // Fallback to marketing defaults
-      return NextResponse.json({ plans: defaultMarketingPlans.map(p => ({
-        id: p.code,
-        name: p.name,
+    if (!error && dbPlans && dbPlans.length > 0) {
+      // Transform database plans to API format
+      const plans = dbPlans.map((p: any) => ({
+        id: p.id,
         code: p.code,
-        price_monthly: p.priceMonthly,
-        price_annual: null,
-        currency: 'GBP',
-        metadata: { features: p.features },
-        is_active: true,
-      })) })
+        name: p.display_name,
+        displayName: p.display_name,
+        price_monthly: p.price_monthly,
+        price_annual: p.price_annual,
+        currency: p.currency,
+        billing_cycles: p.billing_cycles,
+        features: p.features,
+        metadata: p.metadata,
+        version: p.version,
+        effective_at: p.effective_at,
+        is_active: p.is_active,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+      }))
+      
+      return NextResponse.json({ plans })
     }
 
-    const rows = data ?? []
-    if (rows.length === 0) {
-      return NextResponse.json({ plans: defaultMarketingPlans.map(p => ({
-        id: p.code,
-        name: p.name,
-        code: p.code,
-        price_monthly: p.priceMonthly,
-        price_annual: null,
-        currency: 'GBP',
-        metadata: { features: p.features },
-        is_active: true,
-      })) })
-    }
+    // Fallback to config-based plans
+    const configPlans = getAllPlans().map(plan => ({
+      id: plan.code,
+      code: plan.code,
+      name: plan.displayName,
+      displayName: plan.displayName,
+      price_monthly: typeof plan.pricing.monthly === 'number' ? plan.pricing.monthly : null,
+      price_annual: typeof plan.pricing.annual === 'number' ? plan.pricing.annual : null,
+      currency: plan.pricing.currency,
+      billing_cycles: plan.pricing.billingCycles,
+      features: plan.features,
+      metadata: plan.metadata,
+      version: plan.metadata.version,
+      effective_at: plan.metadata.effectiveAt,
+      is_active: true,
+    }))
 
-    return NextResponse.json({ plans: rows })
+    return NextResponse.json({ plans: configPlans })
   })
 }
 
@@ -63,8 +78,8 @@ export async function POST(request: NextRequest) {
 
     // Insert if table exists; otherwise return mock
     try {
-      const { data, error } = await context.serviceClient
-        .from('plans' as any)
+      const { data, error } = await (context.serviceClient as any)
+        .from('plans')
         .insert({
           name: parsed.data.name,
           code: parsed.data.code,

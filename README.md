@@ -1,268 +1,352 @@
-# inCommand (Event Control)
+# inCommand - Professional Event Command & Control System
 
-## Overview
+> **Enterprise-grade event management platform with AI intelligence, mobile-first design, and complete collaboration suite**
 
-inCommand is a comprehensive event control dashboard built with Next.js and Supabase. It features multi-tenancy, user profiles, event/incident management, role-based permissions, real-time notifications, AI-powered insights, and a modern, responsive UI designed for professional event management.
+[![Production Ready](https://img.shields.io/badge/status-production%20ready-brightgreen)]()
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)]()
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-green)]()
 
-## Key Features
+---
 
-### Core Event Management
-- **Multi-Tenancy**: Company isolation for users and events
-- **Event & Incident Management**: Create, view, and manage events and incidents with role-based permissions
-- **Photo Attachments**: Upload and preview incident photos with audit logging
-- **User Profiles**: Display user roles and profile information
-- **Real-time Updates**: Live incident tracking with automatic refresh
+## 🌟 What is inCommand?
 
-### AI-Powered Features
-- **AI Chat Assistant**: Intelligent chatbot with conversation history for event management support
-- **AI-Powered Debrief Summary**: Automatically generates comprehensive debrief reports with event overview, attendance analysis, incident tables, and key learning points
-- **AI Insights Carousel**: Rotating AI-generated insights with auto-advance functionality and manual navigation
-- **Predictive Analytics**: AI-based predictions for future incidents and trends
+inCommand is a **professional command and control system** designed for event management, combining real-time incident tracking, AI-powered analytics, mobile-first operations, and enterprise collaboration tools into one comprehensive platform.
 
-### Advanced Notification System
-- **Smart Toast Notifications**: 
-  - Repositioned to avoid menu bar interference
-  - Extended duration for high-priority incidents (12 seconds) and regular incidents (8 seconds)
-  - Client-side deduplication to prevent duplicate notifications
-  - Priority-based color coding and animations
-- **Notification Drawer**: 
-  - Right-side sliding drawer with backdrop
-  - Activity feed with recent actions and incident updates
-  - AI-powered summary with quick stats and urgent alerts
-  - Mark all as read functionality
-  - Persistent notification tracking with localStorage
-  - Real-time badge with unread count and animations
-- **Real-time Subscriptions**: Live incident updates with toast notifications for new incidents and status changes
+**Built for**: Security operations, event managers, emergency responders, venue operators, and command centers.
 
-### Staff Management & Operations
-- **Modern Callsign Assignment**: 
-  - Card-based interface with color-coded departments
-  - Visual status indicators and staff avatars with skill badges
-  - Real-time assignment with dropdown menus and search functionality
-  - Responsive design supporting 1-8 column layouts
-- **Department Management**: Full CRUD operations with custom colors and categories
-- **Staff Database**: Company-isolated staff records with role and skill tracking
-- **Available Staff Display**: Compact cards with hover tooltips showing qualifications
+---
 
-### Super Admin & Business Intelligence
-- **Development Tracking**: Comprehensive cost tracking system for development hours and AI usage
-- **ROI Analytics**: Break-even analysis and profitability projections
-- **Subscription Modeling**: Revenue forecasting with £25/month pricing structure
-- **Business Metrics**: Real-time investment tracking with detailed cost breakdowns
-- **Super Admin Access**: Restricted to authorized email addresses with full system oversight
+## ✨ Key Features
 
-### Analytics Dashboard
-- **Incident Heatmap**: Visualizes incident locations to identify hotspots
-- **Performance Metrics**: Tracks key performance indicators for events
-- **Comprehensive Event Analysis**: AI-powered analysis of entire event database including:
-  - Event status overview (total/open/high-priority incidents)
-  - Complete incident type breakdown
-  - Recent activity analysis
-  - Trend analysis and pattern detection
-  - Location hotspot identification
-  - Actionable security recommendations
+### 🤖 AI-Powered Intelligence
+- Natural language incident search
+- Predictive staffing recommendations
+- Auto-categorization and tagging
+- Trend detection and anomaly alerts
+- Risk prediction models
+- AI decision support assistant
+- ChatGPT-style conversational interface
 
-### Dashboard Cards & UI
-- **Venue Occupancy**: Live stats with progress bar, color-coded capacity levels, and critical state animations (pulse + red border at 100%)
-- **Weather Card**: Current weather and forecast for venue location (responsive design)
-- **What3Words Map Card**: Clickable card opening fullscreen modal map with enhanced mobile layout
-- **Current Event Card**: Integrated AI insights with cycling paragraphs and navigation controls
-- **Responsive Navigation**: Collapsible hamburger menu for mobile devices
-- **Enhanced KPI Grid**: Progressive responsive layout (2→4→6→8 columns) with reduced padding for better space utilization
-- **Real-time Timestamps**: "Last Updated" timestamp above incident table for live operations awareness
-- **Floating Action Button**: Persistent "New Incident" button with smart visibility management
+### 📱 Mobile-First Operations
+- Progressive Web App (PWA) - installable on any device
+- Full offline mode with background sync
+- Voice-to-text incident reporting
+- Camera photo capture with GPS tagging
+- Touch-optimized interface
+- Quick action buttons
 
-### Enhanced User Experience
-- **Incident Creation Modal**: 
-  - Complete UI/UX redesign with three-column responsive layout
-  - Quick Add bar moved to full-width top section for better visibility
-  - Incident Type chips with color-coded categories and search functionality
-  - Independent scrolling for incident type list (no interference with other fields)
-  - Section headers with icons and improved visual hierarchy
-  - Styled select components with custom chevrons
-  - Enhanced textareas with light grey backgrounds
-  - Sticky footer with modern button styles (red "Log Incident", blue outline "Save as Draft")
-  - Usage-based incident type sorting per device/browser
-  - Improved quick actions and context-aware logic
-  - Pre-filled attendance quick input
-  - Complete form reset functionality
-- **Incident Log Table**: 
-  - Responsive design with proper column alignment
-  - Type column centered on mobile
-  - Truncated occurrence/action columns on desktop
-  - Status column always visible
-  - Real-time updates with subscription management
-- **Search & Filtering**: Enhanced search functionality with improved layout
-- **Mobile Optimization**: Comprehensive responsive design across all components
+### 📊 Advanced Analytics (9+ Dashboards)
+- Operational metrics and KPIs
+- Log quality assessment
+- Compliance tracking (JESIP/JDM)
+- Staff performance analytics
+- AI insights and predictions
+- Custom metric builder
+- Industry benchmarking
+- Exportable reports (PDF/CSV/JSON)
+- Real-time risk pulse monitoring
 
-### Technical Enhancements
-- **Build Optimization**: Resolved webpack module errors and build cache issues
-- **Performance Improvements**: Optimized API calls and reduced redundant requests
-- **Error Handling**: Enhanced error states with retry functionality
-- **Accessibility**: Improved ARIA labels, keyboard navigation, and WCAG AA contrast compliance
-- **State Management**: Proper context management for notifications and UI states
-- **Component Architecture**: Enhanced TypeScript safety and component organization
-- **Responsive Design**: Comprehensive mobile-first approach with logical stacking
+### 🔗 Complete Integration Suite
+- Email notifications (Resend, SendGrid)
+- SMS alerts (Twilio, AWS SNS)
+- Webhook system (8+ events)
+- REST API with full documentation
+- Automated shift handoffs
+- External system connectors
 
-## Recent Major Updates (January 2025)
+### 🏢 Enterprise-Ready
+- Multi-tenant architecture
+- Role-based access control (7 roles, 25+ permissions)
+- Audit logging and compliance
+- Data encryption at rest and in transit
+- Scalable infrastructure
+- Professional incident logging templates
 
-### Dashboard & Incident Creation UI/UX Overhaul (January 2025)
-- **Dashboard Enhancements**: 
-  - Added "Last Updated" timestamp above incident table for real-time awareness
-  - Enhanced venue occupancy with critical state animations (pulse + red border at 100% capacity)
-  - Implemented progressive responsive KPI grid (2→4→6→8 columns)
-  - Reduced KPI card padding for better space utilization
-  - Fixed floating "New Incident" button visibility management
-- **Incident Creation Modal Redesign**:
-  - Complete visual overhaul with three-column responsive layout
-  - Quick Add bar moved to full-width top section
-  - Incident Type chips with color-coded categories and search functionality
-  - Independent scrolling for incident type list (no interference with other fields)
-  - Section headers with icons and improved visual hierarchy
-  - Styled select components with custom chevrons
-  - Enhanced textareas with light grey backgrounds
-  - Sticky footer with modern button styles (red "Log Incident", blue outline "Save as Draft")
-  - Full accessibility compliance with ARIA labels and keyboard navigation
+### 📝 Professional Incident Management
+- Structured logging templates (JESIP/JDM compliant)
+- Dual timestamps (occurrence + logged)
+- Non-destructive amendments with audit trail
+- Real-time multi-user synchronization
+- Training mode for safe practice
+- Revision history and compliance tracking
 
-## Recent Major Updates (June 2025)
+### 🎯 Real-Time Operations
+- Live incident dashboard
+- WebSocket-based real-time updates
+- Command center view
+- Staff dispatch and task assignment
+- Radio traffic analysis
+- Crowd intelligence monitoring
+- Operational readiness tracking
 
-### Group Chat UI/UX & Logic Overhaul (June 26, 2025)
-- **Resolved persistent syntax error** in `EventMessagesPanel.tsx` ("Unexpected token `div`")
-- **Comprehensive UI/UX and Supabase logic improvements for the Messages tab:**
-  - Sidebar: sticky event header, always-visible icons, group separation, scrollable, active state styling
-  - Chat header: group icon, subtitle, "View Members" button with badge, avatars, tooltips
-  - Message area: empty state, avatars, role-colored names, timestamps, bubble styles, pinned messages, action icons, date separators, read receipts
-  - Input bar: dynamic placeholder, attachment icon, send button, focus/active states, (optionally) @mentions and keyboard shortcuts
-  - General: dashboard-style UI, dark mode, responsive sidebar, ARIA labels, keyboard accessibility
-  - Supabase: real-time updates, group creation, member assignment
-  - **Toast notifications**: new message toasts with click-to-jump (scrolls to and highlights relevant message)
-  - Polish: hover/active states, empty group state, mobile navigation, notification click-to-jump
-- **Laid groundwork for further refinements** (per detailed user feedback)
+---
 
-### Development Tracking & Business Intelligence (Latest)
-- **Development Cost Tracking**: Comprehensive system for tracking development hours and AI usage costs
-  - Super admin dashboard with ROI projections and break-even analysis
-  - Automatic cost calculation (£40/hour development, AI usage tracking)
-  - Subscription revenue modeling (£25/month per subscriber)
-  - Real-time investment tracking with profitability timeline
-- **EventPricingCalculator**: Interactive pricing component for subscription modeling
-- **Business Metrics**: Complete development lifecycle tracking with cost transparency
+## 🚀 Quick Start
 
-### Staff Management & Callsign Assignment Overhaul
-- **Modern Callsign Interface**: Complete redesign with card-based layout
-  - Color-coded department cards (Management=Purple, Security=Blue, etc.)
-  - Visual status indicators (green checkmarks, orange warnings)
-  - Staff avatars with initials and skill badges (SIA, First Aid, etc.)
-  - Responsive grid layout (1-8 columns based on screen size)
-- **Enhanced Staff Management**: 
-  - Company-isolated staff data with proper Supabase integration
-  - Real-time staff assignment with dropdown menus
-  - Available staff display with hover tooltips for skills
-  - Drag & drop assignment capabilities
-- **Department Management**: Full CRUD operations for departments
-  - Custom department creation with color selection (9 muted color options)
-  - Edit/delete functionality with confirmation dialogs
-  - Dynamic category management system
+### Prerequisites
+- Node.js 18+ and npm
+- Supabase account and project
+- Environment variables configured (see `.env.example`)
 
-### Dashboard & UI Improvements
-- **Fixed Dashboard Layout**: Resolved TopIncidentTypesCard compilation errors
-- **Separated Card Components**: What3Words and Top 3 Incident Types now properly separated
-- **Company Footer**: Dynamic company name display from user profiles
-- **Navigation Cleanup**: Removed redundant "Staff Management" from sidebar
-- **Responsive Design**: Enhanced mobile layout with proper card spacing
+### Installation
 
-### Technical Infrastructure
-- **Database Schema Enhancements**: 
-  - New `dev_sessions` and `ai_usage` tables for cost tracking
-  - Improved `staff` table with company isolation
-  - Enhanced audit logging capabilities
-- **API Route Expansion**:
-  - `/api/seed-dev-data` - Development data seeding
-  - `/api/seed-subscription-data` - Subscription data management
-  - `/api/setup-dev-tables` - Database table creation
-  - `/api/setup-subscription-table` - Subscription infrastructure
-- **Server-Side Improvements**: Fixed AI insights API with proper Supabase client configuration
+```bash
+# Clone the repository
+git clone <repository-url>
+cd incommand
 
-### Notification System Overhaul
-- **Smart Toast System**: Eliminated duplicate notifications with intelligent deduplication
-- **Notification Drawer**: Complete activity feed with AI insights and real-time updates
-- **Persistent Tracking**: localStorage-based read notification management
-- **Enhanced UX**: Proper positioning, animations, and user feedback
+# Install dependencies
+npm install
 
-## Technology Stack
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your Supabase credentials and API keys
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL, Real-time subscriptions, Authentication)
-- **AI Integration**: OpenAI GPT-4o-mini, Perplexity AI
-- **Deployment**: Vercel with automatic GitHub integration
-- **External APIs**: Weather, Geocoding, What3Words integration
+# Run database migrations
+# See database/ directory for migration files
 
-## AI Architecture
+# Start development server
+npm run dev
+```
 
-- OpenAI primary (server). If unavailable, server responds with `fallback: 'browser-recommended'` and the client performs WebLLM parsing. WebLLM is not initialized on the server.
+The application will be available at `http://localhost:3000`
 
-Additional details:
-- OpenAI is the primary AI provider for server-side parsing. If the server cannot use OpenAI (e.g., missing key or outage), the endpoint responds with a fallback signal and minimal heuristics.
-- When this occurs, the server includes `fallback: 'browser-recommended'` in the JSON. The client then initializes WebLLM and performs parsing locally in the browser.
-- WebLLM is a browser-only runtime and is intentionally not initialized on the server.
+### Production Build
 
-## Setup
+```bash
+# Build for production
+npm run build
 
-1. **Install dependencies**
-   ```sh
-   npm install
-   ```
+# Start production server
+npm start
+```
 
-2. **Environment Variables**
-   - Copy `.env.example` to `.env.local` and configure:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-   OPENAI_API_KEY=your_openai_api_key
-   NEXT_PUBLIC_OPENWEATHER_API_KEY=your_weather_api_key
-   NEXT_PUBLIC_WHAT3WORDS_API_KEY=your_what3words_api_key
-   # Optional: configure the browser LLM model used by WebLLM (defaults to a small, browser-friendly model)
-   NEXT_PUBLIC_WEBLLM_MODEL_ID=Llama-3.2-3B-Instruct-q4f32_1-MLC
-   ```
+---
 
-   - Optional: Local LLM (Ollama) configuration if you want server-side fallback to a local model
-     ```
-     OLLAMA_BASE_URL=http://localhost:11434
-     OLLAMA_MODEL_DEFAULT=llama3.2
-     OLLAMA_MODEL_DEBRIEF=llama3.2
-     OLLAMA_MODEL_SENTIMENT=llama3.2
-     # OLLAMA_API_KEY=  # only if using a remote Ollama server requiring auth
-     ```
+## 📚 Documentation
 
-3. **Run the development server**
-   ```sh
-   npm run dev
-   ```
+### For Users
+- **[Quick Start Guide](QUICK_START.md)** - Get up and running in 5 minutes
+- **[User Guide](docs/USER_GUIDE.md)** - Complete feature guide
+- **[Tutorials](docs/TUTORIALS.md)** - Step-by-step walkthroughs
 
-4. **Build for production**
-   ```sh
-   npm run build
-   ```
+### For Administrators
+- **[Admin Guide](docs/ADMIN_GUIDE.md)** - System configuration
+- **[Configuration Guide](docs/CONFIGURATION_GUIDE.md)** - All integrations
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Problem solving
 
-## Key Components
+### For Developers
+- **[API Documentation](docs/API_DOCUMENTATION.md)** - REST API reference
+- **[Platform Overview](docs/incommand-overview.md)** - Architecture overview
+- **[Implementation Summary](docs/IMPLEMENTATION_SUMMARY.md)** - Technical details
+- **[Feature Catalogue](docs/FEATURE_CATALOGUE.md)** - Complete feature list
 
-- **Dashboard**: Main event overview with real-time updates
-- **Incidents**: Comprehensive incident management with filtering and search
-- **Analytics**: AI-powered event analysis and reporting
-- **Notifications**: Real-time notification system with drawer interface
-- **AI Chat**: Intelligent assistant for event management support
+---
 
-## Customization
+## 🛠️ Technology Stack
 
-- Dashboard cards and analytics components: `src/components/` and `src/app/analytics/page.tsx`
-- Notification system: `src/components/NotificationDrawer.tsx` and `src/contexts/NotificationContext.tsx`
-- AI features: `src/components/AIChat.tsx` and related API endpoints
-- Styling: Tailwind CSS configuration in `tailwind.config.js`
+### Frontend
+- **Next.js 14** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **Framer Motion** - Animations
+- **Radix UI** - Accessible components
 
-## Contributing
+### Backend
+- **Supabase** - Database, authentication, real-time subscriptions
+- **PostgreSQL** - Relational database
+- **Next.js API Routes** - Serverless functions
 
-Pull requests are welcome! Please open an issue first to discuss major changes. Follow the existing code style and include tests for new features.
+### AI & Integrations
+- **OpenAI** - Natural language processing and AI features
+- **what3words** - Precise location services
+- **Resend/SendGrid** - Email delivery
+- **Twilio** - SMS notifications
 
-## License
+### Mobile
+- **Progressive Web App (PWA)** - Installable app experience
+- **Service Workers** - Offline support and caching
+- **IndexedDB** - Client-side data storage
 
-MIT 
+---
+
+## 📁 Project Structure
+
+```
+incommand/
+├── src/
+│   ├── app/              # Next.js App Router pages
+│   ├── components/        # React components
+│   ├── lib/              # Utilities and helpers
+│   ├── hooks/            # React hooks
+│   ├── types/            # TypeScript definitions
+│   └── contexts/         # React contexts
+├── database/             # SQL migrations and schemas
+├── docs/                 # Documentation
+├── public/               # Static assets
+└── scripts/              # Build and utility scripts
+```
+
+---
+
+## 🎯 Main Features Overview
+
+### Incident Management
+- ✅ Professional structured logging templates
+- ✅ Dual timestamps (occurrence + logged)
+- ✅ Non-destructive amendments
+- ✅ Auto-escalation
+- ✅ GPS location capture
+- ✅ Photo attachments
+- ✅ Real-time synchronization
+
+### Analytics & Reporting
+- ✅ 9+ dashboard types
+- ✅ Custom metric builder
+- ✅ PDF/CSV/JSON export
+- ✅ Scheduled reports
+- ✅ Benchmarking system
+- ✅ Compliance reports
+
+### AI Features
+- ✅ ChatGPT-style assistant
+- ✅ Trend detection
+- ✅ Anomaly alerts
+- ✅ Auto-categorization
+- ✅ Predictive staffing
+- ✅ Natural language search
+
+### Mobile
+- ✅ PWA (install on phone)
+- ✅ Offline mode
+- ✅ Voice input
+- ✅ Photo capture
+- ✅ GPS tracking
+- ✅ Quick actions
+
+### Collaboration
+- ✅ Live chat
+- ✅ Real-time updates
+- ✅ Command hierarchy
+- ✅ Team coordination
+- ✅ File sharing
+
+---
+
+## 🔧 Development
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev              # Start development server
+npm run dev:fast         # Start with Turbopack
+
+# Building
+npm run build            # Production build
+npm run build:analyze    # Build with bundle analysis
+
+# Code Quality
+npm run lint             # Run ESLint
+npm run lint:fix         # Fix linting issues
+npm run typecheck        # TypeScript type checking
+
+# Testing
+npm test                 # Run tests
+npm run test:watch       # Watch mode
+
+# Database
+npm run backfill:auditable-logs  # Backfill audit logs
+```
+
+### Environment Variables
+
+Required environment variables (see `.env.example`):
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Service role key (server-side)
+- `OPENAI_API_KEY` - OpenAI API key for AI features
+- `RESEND_API_KEY` - Email service API key
+- Additional keys for integrations (SMS, etc.)
+
+---
+
+## 🏗️ Architecture
+
+### Multi-Tenant Design
+- Company-scoped data isolation
+- Event-based organization
+- Role-based access control (RBAC)
+- Row-level security (RLS) policies
+
+### Real-Time Updates
+- Supabase Realtime subscriptions
+- WebSocket connections
+- Optimistic UI updates
+- Conflict resolution
+
+### Offline Support
+- Service Worker caching
+- IndexedDB storage
+- Background sync queue
+- Conflict resolution on reconnect
+
+---
+
+## 📊 Database Schema
+
+Key tables:
+- `incidents` - Incident logs with audit trail
+- `events` - Event management
+- `profiles` - User profiles with roles
+- `companies` - Multi-tenant organization
+- `staffing_forecasts` - Predictive staffing data
+- `analytics_metrics` - Custom metrics
+- See `database/` directory for complete schema
+
+---
+
+## 🔒 Security
+
+- Row-level security (RLS) on all tables
+- Role-based access control (RBAC)
+- API key management
+- Audit logging for all changes
+- Data encryption at rest and in transit
+- Secure authentication via Supabase Auth
+
+---
+
+## 📈 Roadmap
+
+- [ ] Deeper predictive alerts
+- [ ] Advanced collaboration features
+- [ ] Expanded integrations
+- [ ] Mobile native apps
+- [ ] Advanced reporting templates
+
+---
+
+## 🤝 Contributing
+
+This is a private project. For questions or support, contact the development team.
+
+---
+
+## 📄 License
+
+Proprietary - All rights reserved
+
+---
+
+## 📞 Support
+
+- **Documentation**: See `docs/` directory
+- **Quick Start**: See [QUICK_START.md](QUICK_START.md)
+- **Troubleshooting**: See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+
+---
+
+**inCommand v2.0 - Ultimate Platform**  
+**Status**: ✅ Production Ready

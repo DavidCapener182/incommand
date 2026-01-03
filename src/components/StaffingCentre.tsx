@@ -6,8 +6,8 @@ import {
   Users,
   RotateCcw,
   Search,
-  Clock,
-  RefreshCcw,
+  Clock3,
+  RotateCcw as RefreshCcw,
   Lightbulb,
   UserCheck,
   BarChart3,
@@ -27,6 +27,7 @@ import CallsignAssignmentTab from '@/components/staff/CallsignAssignmentTab'
 import { PageBackground } from '@/components/ui/PageBackground'
 import { StackedPanel } from '@/components/ui/StackedPanel'
 import { SectionContainer, SectionHeader } from '@/components/ui/SectionContainer'
+import { StaffingRequirementsTab } from '@/components/staff/StaffingRequirementsTab'
 
 interface StaffMember {
   id: string
@@ -189,7 +190,7 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
   const undoShortcutRef = useRef<(event: KeyboardEvent) => void>()
   
   // New Week 3 features state
-  const [activeTab, setActiveTab] = useState<'callsign' | 'radio' | 'skills' | 'performance'>('callsign')
+  const [activeTab, setActiveTab] = useState<'callsign' | 'requirements' | 'radio' | 'skills' | 'performance'>('callsign')
   const [currentEvent, setCurrentEvent] = useState<any>(null)
   const [showAddStaffModal, setShowAddStaffModal] = useState(false)
 
@@ -305,49 +306,18 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
       } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('company_id')
         .eq('id', user.id)
         .maybeSingle()
 
-      setCompanyId(profile?.company_id ?? null)
+      const profileData = profile as any;
+      setCompanyId(profileData?.company_id ?? null)
     }
 
     void fetchProfile()
   }, [])
-
-  useEffect(() => {
-    if (!companyId) return
-    
-    const fetchStaff = async () => {
-      const { data, error } = await supabase
-        .from('staff')
-        .select('id, full_name, contact_number, email, skill_tags, notes, active')
-        .eq('company_id', companyId)
-        .order('full_name', { ascending: true })
-
-      if (error) {
-        console.error('Failed to load staff roster', error)
-        setAvailableStaff([])
-        return
-      }
-
-      const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
-      console.log('StaffingCentre: Loaded staff data:', data)
-      console.log('StaffingCentre: Normalized staff:', normalized)
-      
-      // Remove duplicates based on ID
-      const uniqueStaff = normalized.filter((staff, index, self) => 
-        index === self.findIndex(s => s.id === staff.id)
-      )
-      console.log('StaffingCentre: Unique staff after deduplication:', uniqueStaff)
-      
-      distributeStaff(uniqueStaff)
-    }
-
-    void fetchStaff()
-  }, [companyId])
 
   const normalizeStaffRecord = useCallback((record: any, index: number): StaffMember => {
     const qualifications = Array.isArray(record.skill_tags)
@@ -381,6 +351,33 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
     })
     setColumns(nextColumns)
   }, [])
+
+  useEffect(() => {
+    if (!companyId) return
+    
+    const fetchStaff = async () => {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, full_name, contact_number, email, skill_tags, notes, active')
+        .eq('company_id', companyId)
+        .order('full_name', { ascending: true })
+
+      if (error) {
+        console.error('Failed to load staff roster', error)
+        setAvailableStaff([])
+        return
+      }
+
+      const normalized = (data ?? []).map((item, index) => normalizeStaffRecord(item, index))
+      const uniqueStaff = normalized.filter((staff, index, self) => 
+        index === self.findIndex(s => s.id === staff.id)
+      )
+      
+      distributeStaff(uniqueStaff)
+    }
+
+    void fetchStaff()
+  }, [companyId, distributeStaff, normalizeStaffRecord])
 
   const inferDepartmentFromSkills = (staff: StaffMember): string | null => {
     const tags = staff.qualifications.map((tag) => tag.toLowerCase())
@@ -574,6 +571,20 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
               </div>
             </button>
             <button
+              onClick={() => setActiveTab('requirements')}
+              className={`${
+                activeTab === 'requirements'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-500'
+                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border-transparent'
+              } touch-target whitespace-nowrap flex-shrink-0 sm:flex-1 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 border-2 font-medium text-xs sm:text-sm transition-all duration-200`}
+            >
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Staffing Levels</span>
+                <span className="sm:hidden">Levels</span>
+              </div>
+            </button>
+            <button
               onClick={() => setActiveTab('radio')}
               className={`${
                 activeTab === 'radio'
@@ -659,6 +670,26 @@ export default function StaffingCentre({ eventId: _eventId }: StaffingCentreProp
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
                 Create an event to enable radio sign-out functionality
+              </p>
+            </section>
+          )
+            )}
+
+            {activeTab === 'requirements' && (
+          currentEvent && companyId ? (
+            <StaffingRequirementsTab
+              eventId={currentEvent.id}
+              companyId={companyId}
+              eventType={currentEvent.event_type}
+            />
+          ) : (
+            <section className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Active Event
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Select an event to manage staffing requests and confirmed numbers.
               </p>
             </section>
           )

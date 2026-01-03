@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getServiceClient } from '@/lib/supabaseServer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const supabase = getServiceClient();
+  const supabase = getServiceClient() as any;
 
   if (req.method === 'POST') {
     const { incident_id, linked_incident_id, created_by } = req.body;

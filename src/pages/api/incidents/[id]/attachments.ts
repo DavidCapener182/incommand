@@ -3,7 +3,7 @@ import { getServiceClient } from '@/lib/supabaseServer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
-  const supabase = getServiceClient();
+  const supabase = getServiceClient() as any;
   if (req.method === 'GET') {
     const { data, error } = await supabase
       .from('incident_attachments')

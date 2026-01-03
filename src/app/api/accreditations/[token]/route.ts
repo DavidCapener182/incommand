@@ -70,14 +70,14 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const now = new Date().toISOString()
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await ((supabase as any)
       .from('vendor_accreditations')
       .update({
         status: 'pending_review',
         induction_completed: true,
         induction_completed_at: now
       })
-      .eq('id', accreditation.id)
+      .eq('id', (accreditation as any).id) as any)
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })

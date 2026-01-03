@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getServiceSupabaseClient } from '@/lib/supabaseServer'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const INCIDENT_TYPES = ['Ejection', 'ejection', 'Refusal', 'refusal']
 
 export async function GET() {
@@ -12,20 +15,20 @@ export async function GET() {
     const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString()
     const fortyEightHoursAgo = new Date(now - 48 * 60 * 60 * 1000).toISOString()
 
-    const { data: currentEvent } = await supabase
+    const { data: currentEvent } = await (supabase as any)
       .from('events')
       .select('id')
       .eq('is_current', true)
       .maybeSingle()
 
-    let query = supabase
+    let query = (supabase as any)
       .from('incident_logs')
       .select('id, incident_type, created_at')
       .gte('created_at', fortyEightHoursAgo)
       .in('incident_type', INCIDENT_TYPES)
 
-    if (currentEvent?.id) {
-      query = query.eq('event_id', currentEvent.id)
+    if ((currentEvent as any)?.id) {
+      query = query.eq('event_id', (currentEvent as any).id)
     }
 
     const { data, error } = await query
@@ -34,7 +37,7 @@ export async function GET() {
       throw error
     }
 
-    const records = data || []
+    const records = (data as any[]) || []
     const last24 = records.filter((record) => record.created_at >= twentyFourHoursAgo)
     const previous24 = records.filter((record) => record.created_at < twentyFourHoursAgo)
     const lastHour = last24.filter((record) => record.created_at >= oneHourAgo)

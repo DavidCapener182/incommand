@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   PlusIcon, 
@@ -55,19 +55,20 @@ export default function InviteManagement({ eventId }: InviteManagementProps) {
     const fetchCurrentEvent = async () => {
       if (!currentEventId) {
         try {
-          const { data: currentEvent, error } = await supabase
+          const { data: currentEvent, error } = await (supabase as any)
             .from('events')
             .select('id')
             .eq('is_current', true)
             .single();
           
-          if (error || !currentEvent) {
+          const eventData = currentEvent as any;
+          if (error || !eventData) {
             setError('No current event found');
             setLoading(false);
             return;
           }
           
-          setCurrentEventId(currentEvent.id);
+          setCurrentEventId(eventData.id);
         } catch (err) {
           setError('Failed to fetch current event');
           setLoading(false);
@@ -78,13 +79,7 @@ export default function InviteManagement({ eventId }: InviteManagementProps) {
     fetchCurrentEvent();
   }, [currentEventId]);
 
-  useEffect(() => {
-    if (currentEventId) {
-      fetchInvites();
-    }
-  }, [currentEventId]);
-
-  const fetchInvites = async () => {
+  const fetchInvites = useCallback(async () => {
     if (!currentEventId) return;
     
     try {
@@ -104,7 +99,13 @@ export default function InviteManagement({ eventId }: InviteManagementProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentEventId]);
+
+  useEffect(() => {
+    if (currentEventId) {
+      fetchInvites();
+    }
+  }, [currentEventId, fetchInvites]);
 
   const createInvite = async (e: React.FormEvent) => {
     e.preventDefault();

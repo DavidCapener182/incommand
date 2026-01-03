@@ -11,15 +11,6 @@ import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
 import OfflineIndicator from '../components/OfflineIndicator'
 import { defaultMetadata } from '../config/seo.config'
-import { Inter } from 'next/font/google'
-
-// Configure Inter font with weights 400, 500, 600, 700
-const inter = Inter({ 
-  subsets: ['latin'], 
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-inter',
-  display: 'swap'
-})
 
 export const metadata: Metadata = {
   ...defaultMetadata,
@@ -48,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`scroll-smooth ${inter.variable}`}>
+    <html lang="en" className="scroll-smooth">
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

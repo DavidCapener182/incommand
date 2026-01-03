@@ -3,6 +3,8 @@ import { RiskScoringEngine, RiskScore } from './riskScoring';
 import { PatternRecognitionEngine } from './patternRecognition';
 import { getWeatherData } from '../services/weatherService';
 
+const supabaseClient = supabase as any;
+
 export interface PredictiveAlert {
   id: string;
   alertType: 'weather' | 'crowd' | 'risk' | 'incident';
@@ -114,7 +116,7 @@ export class PredictiveAlertSystem {
 
   async monitorCrowdDensityAlerts(): Promise<CrowdAlert[]> {
     try {
-      const { data: event } = await supabase
+      const { data: event } = await supabaseClient
         .from('events')
         .select('current_attendance, max_capacity')
         .eq('id', this.eventId)
@@ -491,7 +493,7 @@ export class PredictiveAlertSystem {
   private async predictCrowdDensity(): Promise<number> {
     try {
       // Simple prediction based on current trends
-      const { data: attendanceHistory } = await supabase
+      const { data: attendanceHistory } = await supabaseClient
         .from('attendance_records')
         .select('attendance_count, recorded_at')
         .eq('event_id', this.eventId)
@@ -514,7 +516,7 @@ export class PredictiveAlertSystem {
       // const predictedAttendance = currentAttendance + (rateOfChange * 4); // 4 time periods ahead
       const predictedAttendance = 0; // Default to 0 since field doesn't exist
 
-      const { data: event } = await supabase
+      const { data: event } = await supabaseClient
         .from('events')
         .select('max_capacity')
         .eq('id', this.eventId)

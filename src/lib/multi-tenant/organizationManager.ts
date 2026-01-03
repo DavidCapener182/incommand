@@ -4,6 +4,7 @@
  */
 
 import type { Organization, OrganizationSettings } from '@/lib/permissions/rbac'
+import { getPlan, type PlanCode } from '@/config/PricingConfig'
 
 export interface OrganizationHierarchy {
   id: string
@@ -22,6 +23,42 @@ export interface SubscriptionTier {
   limits: OrganizationSettings['limits']
 }
 
+/**
+ * Convert Plan from PricingConfig to SubscriptionTier format
+ * Maintains backward compatibility with existing code
+ */
+function planToSubscriptionTier(planCode: PlanCode): SubscriptionTier | null {
+  const plan = getPlan(planCode)
+  if (!plan) return null
+
+  const price = typeof plan.pricing.monthly === 'number' ? plan.pricing.monthly : 0
+  
+  return {
+    id: plan.code,
+    name: plan.displayName,
+    price,
+    billingCycle: plan.pricing.billingCycles[0] || 'monthly',
+    features: {
+      maxEvents: plan.features.maxEvents === -1 ? -1 : plan.features.maxEvents,
+      maxUsers: plan.features.maxUsers === -1 ? -1 : plan.features.maxUsers,
+      aiFeatures: plan.features.features.some(f => f.toLowerCase().includes('ai')),
+      customMetrics: plan.features.features.some(f => f.toLowerCase().includes('analytics') || f.toLowerCase().includes('metrics')),
+      apiAccess: plan.features.features.some(f => f.toLowerCase().includes('api')),
+      whiteLabel: plan.features.features.some(f => f.toLowerCase().includes('white-label') || f.toLowerCase().includes('white label')),
+    },
+    limits: {
+      storageGB: plan.features.maxEvents === -1 ? -1 : Math.max(1, plan.features.maxEvents * 5), // Estimate based on events
+      apiCallsPerMonth: plan.features.features.some(f => f.toLowerCase().includes('api')) ? (plan.features.maxEvents === -1 ? -1 : plan.features.maxEvents * 1000) : 0,
+      emailsPerMonth: plan.features.maxEvents === -1 ? -1 : plan.features.maxEvents * 500,
+      smsPerMonth: plan.features.features.some(f => f.toLowerCase().includes('sms')) ? (plan.features.maxEvents === -1 ? -1 : plan.features.maxEvents * 100) : 0,
+    }
+  }
+}
+
+/**
+ * Subscription tiers derived from PricingConfig
+ * Includes legacy 'free' tier for backward compatibility
+ */
 export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   {
     id: 'free',
@@ -43,46 +80,9 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
       smsPerMonth: 0
     }
   },
-  {
-    id: 'professional',
-    name: 'Professional',
-    price: 99,
-    billingCycle: 'monthly',
-    features: {
-      maxEvents: 20,
-      maxUsers: 25,
-      aiFeatures: true,
-      customMetrics: true,
-      apiAccess: true,
-      whiteLabel: false
-    },
-    limits: {
-      storageGB: 50,
-      apiCallsPerMonth: 10000,
-      emailsPerMonth: 5000,
-      smsPerMonth: 500
-    }
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 499,
-    billingCycle: 'monthly',
-    features: {
-      maxEvents: -1, // Unlimited
-      maxUsers: -1, // Unlimited
-      aiFeatures: true,
-      customMetrics: true,
-      apiAccess: true,
-      whiteLabel: true
-    },
-    limits: {
-      storageGB: -1, // Unlimited
-      apiCallsPerMonth: -1, // Unlimited
-      emailsPerMonth: -1, // Unlimited
-      smsPerMonth: -1 // Unlimited
-    }
-  }
+  ...(['starter', 'operational', 'command', 'enterprise'] as PlanCode[])
+    .map(planToSubscriptionTier)
+    .filter((tier): tier is SubscriptionTier => tier !== null)
 ]
 
 export class OrganizationManager {
@@ -93,10 +93,12 @@ export class OrganizationManager {
    */
   createOrganization(
     name: string,
-    tier: 'free' | 'professional' | 'enterprise' = 'free'
+    tier: 'free' | 'starter' | 'operational' | 'command' | 'enterprise' | 'professional' = 'free'
   ): Organization {
     const slug = this.generateSlug(name)
-    const tierConfig = SUBSCRIPTION_TIERS.find(t => t.id === tier)!
+    // Map 'professional' to 'operational' for backward compatibility
+    const mappedTier = tier === 'professional' ? 'operational' : tier
+    const tierConfig = SUBSCRIPTION_TIERS.find(t => t.id === mappedTier) || SUBSCRIPTION_TIERS[0]
 
     const organization: Organization = {
       id: `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -174,14 +176,16 @@ export class OrganizationManager {
   /**
    * Upgrade organization
    */
-  upgrade(organizationId: string, newTier: 'professional' | 'enterprise'): Organization | null {
+  upgrade(organizationId: string, newTier: 'starter' | 'operational' | 'command' | 'enterprise' | 'professional'): Organization | null {
     const org = this.organizations.get(organizationId)
     if (!org) return null
 
-    const tierConfig = SUBSCRIPTION_TIERS.find(t => t.id === newTier)
+    // Map 'professional' to 'operational' for backward compatibility
+    const mappedTier = newTier === 'professional' ? 'operational' : newTier
+    const tierConfig = SUBSCRIPTION_TIERS.find(t => t.id === mappedTier)
     if (!tierConfig) return null
 
-    org.tier = newTier
+    org.tier = mappedTier as any
     org.settings.features = tierConfig.features
     org.settings.limits = tierConfig.limits
 

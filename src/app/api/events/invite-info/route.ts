@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       eventName: eventName || 'Event',
-      eventId: invite.event_id,
-      inviteId: invite.id
+      eventId: (invite as any).event_id,
+      inviteId: (invite as any).id
     });
 
   } catch (error) {

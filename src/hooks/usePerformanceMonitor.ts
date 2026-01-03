@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 
 interface PerformanceMetrics {
   renderTime: number
@@ -52,7 +52,10 @@ export function usePerformanceMonitor(options: UsePerformanceMonitorOptions = {}
   const performanceObserver = useRef<PerformanceObserver | null>(null)
   const errorCount = useRef(0)
 
-  const finalThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds }
+  const finalThresholds = useMemo(
+    () => ({ ...DEFAULT_THRESHOLDS, ...thresholds }),
+    [thresholds]
+  )
 
   // Measure render time
   const startRenderMeasurement = useCallback(() => {

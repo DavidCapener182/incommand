@@ -1,6 +1,8 @@
 import { supabase } from './supabase'
 import { UserPreferences, SystemSettings } from '../types/settings'
 
+const supabaseClient = supabase as any
+
 // Conflict resolution strategies
 export type ConflictResolutionStrategy = 'last-write-wins' | 'merge' | 'user-choice'
 
@@ -217,7 +219,7 @@ async function attemptSyncWithRetry(
   let lastError: any = null
   while (attempt <= maxRetries) {
     try {
-      const { data: remotePreferences, error: fetchError } = await supabase
+      const { data: remotePreferences, error: fetchError } = await supabaseClient
         .from('user_preferences')
         .select('*')
         .eq('user_id', userId)
@@ -225,7 +227,7 @@ async function attemptSyncWithRetry(
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
 
       if (!remotePreferences) {
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseClient
           .from('user_preferences')
           .insert({
             user_id: userId,
@@ -238,7 +240,7 @@ async function attemptSyncWithRetry(
 
       const conflicts = await detectConflicts(userId, preferences as UserPreferences, remotePreferences as unknown as UserPreferences)
       if (conflicts.length === 0) {
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseClient
           .from('user_preferences')
           .upsert({
             user_id: userId,
@@ -250,7 +252,7 @@ async function attemptSyncWithRetry(
       }
 
       const { resolvedPreferences, resolvedConflicts } = resolveConflicts(conflicts, strategy)
-      const { error: saveError } = await supabase
+      const { error: saveError } = await supabaseClient
         .from('user_preferences')
         .upsert({
           user_id: userId,
@@ -339,7 +341,7 @@ export function setupRealtimeSync(
   userId: string,
   onSettingsChange: (event: SettingsChangeEvent) => void
 ): () => void {
-  const subscription = supabase
+  const subscription = supabaseClient
     .channel('settings_changes')
     .on(
       'postgres_changes',
@@ -349,7 +351,7 @@ export function setupRealtimeSync(
         table: 'user_preferences',
         filter: `user_id=eq.${userId}`
       },
-      (payload) => {
+      (payload: any) => {
         const newRow = (payload as any).new as any
         const oldRow = (payload as any).old as any
         const evt: SettingsChangeEvent = {
@@ -498,7 +500,7 @@ export function migrateSettings(
 export async function getSyncStatus(userId: string): Promise<SyncStatus> {
   try {
     // Get last sync time from audit logs
-    const { data: lastSync } = await supabase
+    const { data: lastSync } = await supabaseClient
       .from('settings_audit_logs')
       .select('created_at')
       .eq('user_id', userId)
@@ -506,13 +508,14 @@ export async function getSyncStatus(userId: string): Promise<SyncStatus> {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+    const lastSyncRecord = lastSync as { created_at?: string } | null
     
     // Check for pending syncs
     const isSyncing = pendingSyncs.has(`sync_${userId}`)
     
     return {
       isSyncing,
-      lastSyncTime: lastSync && 'timestamp' in lastSync ? (lastSync.timestamp as string) : null,
+      lastSyncTime: lastSyncRecord?.created_at ?? null,
       conflicts: [],
       errors: []
     }
@@ -551,7 +554,7 @@ export async function batchSyncSettings(
   
   try {
     // Get current preferences
-    const { data: currentPreferences, error: fetchError } = await supabase
+    const { data: currentPreferences, error: fetchError } = await supabaseClient
       .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
@@ -589,7 +592,7 @@ export async function batchSyncSettings(
     const { resolvedPreferences, resolvedConflicts } = resolveConflicts(allConflicts, strategy)
     
     // Save resolved preferences
-    const { error: saveError } = await supabase
+    const { error: saveError } = await supabaseClient
       .from('user_preferences')
       .upsert({
         user_id: userId,

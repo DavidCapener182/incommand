@@ -218,17 +218,24 @@ export async function calculateLogQualityMetrics(
     let query = supabase
       .from('incident_logs')
       .select('*')
-      .gte('time_logged', startDate.toISOString())
-      .lte('time_logged', endDate.toISOString())
 
+    // If eventId is provided, get ALL logs for that event (ignore date range)
+    // If no eventId, filter by date range
     if (eventId) {
       query = query.eq('event_id', eventId)
+      // Don't apply date filters - we want all logs for the event
+    } else {
+      // Filter by date range when no eventId is provided
+      query = query.gte('time_logged', startDate.toISOString())
+        .lte('time_logged', endDate.toISOString())
     }
 
     const { data: logs, error } = await query
 
     if (error) throw error
-    if (!logs || logs.length === 0) {
+    const logList = (logs ?? []) as IncidentLog[]
+
+    if (logList.length === 0) {
       return {
         overallScore: 0,
         completeness: 0,
@@ -244,11 +251,11 @@ export async function calculateLogQualityMetrics(
     }
 
     // Convert logs to match IncidentLog interface
-    const convertedLogs = logs.map(log => ({
-      ...log,
-      id: log.id.toString(),
+    const convertedLogs = logList.map(log => ({
+      ...(log as Record<string, any>),
+      id: (log as any).id?.toString?.() ?? '',
       entry_type: log.entry_type as 'contemporaneous' | 'retrospective' | undefined
-    }))
+    })) as IncidentLog[]
 
     // Calculate individual scores
     const completenessScores = convertedLogs.map(log => calculateCompletenessScore(log as any))
@@ -272,7 +279,7 @@ export async function calculateLogQualityMetrics(
       (100 - retrospectiveRate) * 0.05 // Fewer retrospective is better
     )
 
-    const breakdown = getFieldBreakdown(logs)
+    const breakdown = getFieldBreakdown(convertedLogs)
 
     return {
       overallScore: Math.round(overallScore),
@@ -282,7 +289,7 @@ export async function calculateLogQualityMetrics(
       amendmentRate: Math.round(amendmentRate * 10) / 10,
       retrospectiveRate: Math.round(retrospectiveRate * 10) / 10,
       breakdown,
-      totalLogs: logs.length,
+      totalLogs: convertedLogs.length,
       periodStart: startDate.toISOString(),
       periodEnd: endDate.toISOString()
     }
@@ -392,12 +399,13 @@ export async function getTopPerformingOperators(
     const { data: logs, error } = await query
 
     if (error) throw error
-    if (!logs || logs.length === 0) return []
+    const logList = (logs ?? []) as IncidentLog[]
+    if (logList.length === 0) return []
 
     // Group by user
     const userMap = new Map<string, { logs: IncidentLog[], callsign?: string }>()
     
-    logs.forEach(log => {
+    logList.forEach(log => {
       if (!log.logged_by_user_id) return
       
       if (!userMap.has(log.logged_by_user_id)) {
@@ -431,4 +439,3 @@ export async function getTopPerformingOperators(
     throw error
   }
 }
-

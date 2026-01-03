@@ -26,21 +26,21 @@ export async function POST(req: NextRequest) {
     const incidentHash = buildIncidentHash(incidentType, occurrence)
 
     // Check cache hit
-    const { data: cached } = await supabase
+    const { data: cached } = await (supabase as any)
       .from('best_practice_cache')
       .select('best_practice, ttl_expires_at')
       .eq('incident_hash', incidentHash)
       .gt('ttl_expires_at', new Date().toISOString())
       .maybeSingle()
 
-    if (cached?.best_practice) {
-      return NextResponse.json<BestPracticeApiResponse>({ bestPractice: cached.best_practice as any, fromCache: true })
+    if ((cached as any)?.best_practice) {
+      return NextResponse.json<BestPracticeApiResponse>({ bestPractice: (cached as any).best_practice as any, fromCache: true })
     }
 
     // Basic per-user rate limit: 6/min for this endpoint
     if (userId) {
       const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
-      const { count } = await supabase
+      const { count } = await (supabase as any)
         .from('ai_usage_logs')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', oneMinuteAgo)
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     // Clamp and store cache
     const ttlHours = Number(process.env.BEST_PRACTICE_TTL_HOURS || 36)
     const expiresAt = new Date(Date.now() + ttlHours * 3600 * 1000).toISOString()
-    await supabase.from('best_practice_cache').upsert({
+    await (supabase as any).from('best_practice_cache').upsert({
       incident_hash: incidentHash,
       incident_type: incidentType,
       occurrence_excerpt: occurrence.slice(0, 240),

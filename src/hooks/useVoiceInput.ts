@@ -59,11 +59,17 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
   const onEndRef = useRef<typeof onEnd | undefined>(onEnd)
   const onErrorRef = useRef<typeof onError | undefined>(onError)
   const onSilenceDetectedRef = useRef<typeof onSilenceDetected | undefined>(onSilenceDetected)
+  const isListeningRef = useRef(state.isListening)
 
   onResultRef.current = onResult
   onEndRef.current = onEnd
   onErrorRef.current = onError
   onSilenceDetectedRef.current = onSilenceDetected
+  isListeningRef.current = state.isListening
+
+  useEffect(() => {
+    isListeningRef.current = state.isListening
+  }, [state.isListening])
 
   // Initialize speech recognition
   useEffect(() => {
@@ -110,7 +116,7 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
       // Start new silence timer with customizable timeout
       if (continuous) {
         silenceTimerRef.current = setTimeout(() => {
-          if (recognitionRef.current && state.isListening) {
+          if (recognitionRef.current && isListeningRef.current) {
             console.log('Stopping due to silence detection')
             onSilenceDetectedRef.current?.()
             recognition.stop()
@@ -195,7 +201,7 @@ export function useVoiceInput(options: VoiceInputOptions = {}) {
       onEndRef.current?.()
 
       // Auto-restart if continuous mode and still should be listening
-      if (continuous && state.isListening) {
+      if (continuous && isListeningRef.current) {
         restartTimeoutRef.current = setTimeout(() => {
           try {
             recognition.start()

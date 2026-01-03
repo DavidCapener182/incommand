@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 import { logger } from './logger';
 
+const supabaseClient = supabase as any;
+
 export interface RiskScore {
   overallScore: number;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
@@ -194,7 +196,7 @@ export class RiskScoringEngine {
 
   async getLocationSpecificRiskScores(): Promise<LocationRiskScore[]> {
     try {
-      const { data: incidents, error } = await supabase
+      const { data: incidents, error } = await supabaseClient
         .from('incident_logs')
         .select('*')
         .eq('event_id', this.eventId)
@@ -208,7 +210,8 @@ export class RiskScoringEngine {
 
       // Group incidents by location
       const locationGroups = new Map<string, any[]>();
-      incidents.forEach(incident => {
+      const incidentList = incidents as any[];
+      incidentList.forEach((incident: any) => {
         const location = incident.location || 'Unknown';
         if (!locationGroups.has(location)) {
           locationGroups.set(location, []);
@@ -233,7 +236,7 @@ export class RiskScoringEngine {
 
   async getIncidentTypeRiskScores(): Promise<IncidentTypeRisk[]> {
     try {
-      const { data: incidents, error } = await supabase
+      const { data: incidents, error } = await supabaseClient
         .from('incident_logs')
         .select('*')
         .eq('event_id', this.eventId)
@@ -247,7 +250,8 @@ export class RiskScoringEngine {
 
       // Group incidents by type
       const typeGroups = new Map<string, any[]>();
-      incidents.forEach(incident => {
+      const incidentList = incidents as any[];
+      incidentList.forEach((incident: any) => {
         const incidentType = incident.incident_type;
         if (!typeGroups.has(incidentType)) {
           typeGroups.set(incidentType, []);
@@ -272,7 +276,7 @@ export class RiskScoringEngine {
 
   private async calculateCrowdDensityRisk(): Promise<RiskFactor> {
     try {
-      const { data: event } = await supabase
+      const { data: event } = await supabaseClient
         .from('events')
         .select('current_attendance, max_capacity')
         .eq('id', this.eventId)
@@ -373,7 +377,7 @@ export class RiskScoringEngine {
 
   private async calculateIncidentFrequencyRisk(): Promise<RiskFactor> {
     try {
-      const { data: incidents, error } = await supabase
+      const { data: incidents, error } = await supabaseClient
         .from('incident_logs')
         .select('*')
         .eq('event_id', this.eventId)
@@ -488,7 +492,7 @@ export class RiskScoringEngine {
 
   private async calculateEventTypeRisk(): Promise<RiskFactor> {
     try {
-      const { data: event } = await supabase
+      const { data: event } = await supabaseClient
         .from('events')
         .select('event_type')
         .eq('id', this.eventId)

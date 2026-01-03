@@ -19,13 +19,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has access
-    const { data: userAccess, error: accessError } = await supabase
+    const { data: userAccess, error: accessError } = await (supabase as any)
       .from('profiles')
       .select('company_id')
       .eq('id', userId)
       .single()
 
-    if (accessError || !userAccess || userAccess.company_id !== companyId) {
+    if (accessError || !userAccess || (userAccess as any).company_id !== companyId) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Archive conversation
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('chat_messages')
       .insert({
         channel_id: `ai_archive_${conversationId}`,
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get archived conversations
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('chat_messages')
       .select('*')
       .eq('event_id', eventId)
@@ -115,9 +115,10 @@ export async function GET(request: NextRequest) {
 
     // Parse archived messages
     const conversations: any[] = []
-    data?.forEach(row => {
+    const dataArray = (data as any[]) || []
+    dataArray.forEach((row: any) => {
       try {
-        const messages = JSON.parse(row.message)
+        const messages = JSON.parse((row as any).message)
         conversations.push({
           id: row.id,
           conversationId: (row.metadata as any)?.conversationId,

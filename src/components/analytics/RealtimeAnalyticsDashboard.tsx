@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline'
 import MobileOptimizedChart from '../MobileOptimizedChart'
 import { triggerHaptic } from '@/utils/hapticFeedback'
+import { supabase } from '@/lib/supabase'
 
 interface AnalyticsMetric {
   label: string
@@ -40,65 +41,164 @@ export default function RealtimeAnalyticsDashboard({
   const [isLive, setIsLive] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [chartData, setChartData] = useState<any[]>([])
+  const [isFetching, setIsFetching] = useState(false)
 
   // Fetch initial analytics data
   const fetchAnalytics = useCallback(async () => {
+    if (!eventId || isFetching) {
+      return
+    }
+
+    setIsFetching(true)
     try {
-      // Mock data for now - replace with actual API call
-      const mockMetrics: AnalyticsMetric[] = [
-        {
-          label: 'Active Incidents',
-          value: 3,
-          change: -12.5,
-          trend: 'down',
-          color: 'text-red-600',
-          icon: ExclamationTriangleIcon
-        },
-        {
-          label: 'Staff On Duty',
-          value: 12,
-          change: 8.3,
-          trend: 'up',
-          color: 'text-blue-600',
-          icon: UserGroupIcon
-        },
-        {
-          label: 'Avg Response Time',
-          value: 4.2,
-          change: -15.2,
-          trend: 'up',
-          color: 'text-green-600',
-          icon: ClockIcon
-        },
-        {
-          label: 'Incidents Per Hour',
-          value: 2.8,
-          change: 5.1,
-          trend: 'down',
-          color: 'text-purple-600',
-          icon: ChartBarIcon
+      const [
+        { data: incidents, error: incidentError },
+        { data: assignments, error: assignmentError }
+      ] = await Promise.all([
+        supabase
+          .from('incident_logs')
+          .select('id, status, created_at, updated_at')
+          .eq('event_id', eventId)
+          .order('created_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('position_assignments')
+          .select('id, department')
+          .eq('event_id', eventId)
+      ])
+
+      if (incidentError) {
+        throw incidentError
+      }
+      if (assignmentError) {
+        throw assignmentError
+      }
+
+      const incidentList = (incidents || []) as any[]
+      const assignmentList = (assignments || []) as any[]
+
+      const activeIncidents = incidentList.filter((incident: any) => {
+        const status = String(incident.status || '').toLowerCase()
+        return status !== 'closed' && status !== 'resolved' && status !== 'logged'
+      })
+
+      const incidentsWithResponse = incidentList.filter(
+        (incident: any) => incident.created_at && incident.updated_at
+      )
+
+      const avgResponseMinutes =
+        incidentsWithResponse.length > 0
+          ? incidentsWithResponse.reduce((acc, incident) => {
+              const created = new Date(incident.created_at as string).getTime()
+              const updated = new Date(incident.updated_at as string).getTime()
+              return acc + (updated - created) / (1000 * 60)
+            }, 0) / incidentsWithResponse.length
+          : 0
+
+      const monitoringHours = 6
+      const now = Date.now()
+      const windowStart = now - monitoringHours * 60 * 60 * 1000
+      const hourlyBuckets = Array.from({ length: monitoringHours }).map((_, index) => {
+        const start = windowStart + index * 60 * 60 * 1000
+        const end = start + 60 * 60 * 1000
+        const count = incidentList.filter((incident: any) => {
+          const created = new Date(incident.created_at as string).getTime()
+          return created >= start && created < end
+        }).length
+        return {
+          label: new Date(start).toLocaleTimeString([], { hour: '2-digit' }),
+          count
         }
-      ]
-      
-      const mockChartData = [
-        { x: 0, y: 2 },
-        { x: 1, y: 3 },
-        { x: 2, y: 1 },
-        { x: 3, y: 4 },
-        { x: 4, y: 2 },
-        { x: 5, y: 3 }
-      ]
-      
-      setMetrics(mockMetrics)
-      setChartData(mockChartData)
+      })
+
+      const incidentsPerHour = hourlyBuckets[hourlyBuckets.length - 1]?.count ?? 0
+      const previousHour =
+        hourlyBuckets.length > 1 ? hourlyBuckets[hourlyBuckets.length - 2].count : incidentsPerHour
+
+      const staffingDepartments = new Set(['security', 'police', 'medical', 'medic'])
+      const staffOnDuty = assignmentList.filter((assignment) =>
+        staffingDepartments.has(String(assignment.department || '').toLowerCase())
+      ).length
+
+      setChartData(hourlyBuckets.map((bucket, idx) => ({ x: idx, y: bucket.count })))
+      setMetrics((prevMetrics) => {
+        const getPrevValue = (label: string) =>
+          prevMetrics.find((metric) => metric.label === label)?.value ?? null
+
+        const buildChange = (label: string, nextValue: number) => {
+          const prevValue = getPrevValue(label)
+          if (prevValue === null || prevValue === 0) return 0
+          return Number((((nextValue - prevValue) / prevValue) * 100).toFixed(1))
+        }
+
+        const buildTrend = (label: string, nextValue: number): AnalyticsMetric['trend'] => {
+          const prevValue = getPrevValue(label)
+          if (prevValue === null) return 'stable'
+          if (nextValue > prevValue) return 'up'
+          if (nextValue < prevValue) return 'down'
+          return 'stable'
+        }
+
+        return [
+          {
+            label: 'Active Incidents',
+            value: activeIncidents.length,
+            change: buildChange('Active Incidents', activeIncidents.length),
+            trend: buildTrend('Active Incidents', activeIncidents.length),
+            color: 'text-red-600',
+            icon: ExclamationTriangleIcon
+          },
+          {
+            label: 'Staff On Duty',
+            value: staffOnDuty,
+            change: buildChange('Staff On Duty', staffOnDuty),
+            trend: buildTrend('Staff On Duty', staffOnDuty),
+            color: 'text-blue-600',
+            icon: UserGroupIcon
+          },
+          {
+            label: 'Avg Response Time',
+            value: Number(avgResponseMinutes.toFixed(1)),
+            change: buildChange('Avg Response Time', Number(avgResponseMinutes.toFixed(1))),
+            trend: buildTrend('Avg Response Time', Number(avgResponseMinutes.toFixed(1))),
+            color: 'text-green-600',
+            icon: ClockIcon
+          },
+          {
+            label: 'Incidents Per Hour',
+            value: incidentsPerHour,
+            change:
+              previousHour === 0
+                ? 0
+                : Number((((incidentsPerHour - previousHour) / previousHour) * 100).toFixed(1)),
+            trend:
+              incidentsPerHour > previousHour
+                ? 'up'
+                : incidentsPerHour < previousHour
+                ? 'down'
+                : 'stable',
+            color: 'text-purple-600',
+            icon: ChartBarIcon
+          }
+        ]
+      })
+
       setLastUpdate(new Date())
     } catch (error) {
       console.error('Failed to fetch real-time analytics:', error)
+    } finally {
+      setIsFetching(false)
     }
-  }, [])
+  }, [eventId, isFetching])
 
   // Set up auto-refresh
   useEffect(() => {
+    if (!eventId) {
+      setMetrics([])
+      setChartData([])
+      return
+    }
+
     fetchAnalytics()
     
     if (!isLive) return
@@ -108,7 +208,7 @@ export default function RealtimeAnalyticsDashboard({
     }, refreshInterval)
 
     return () => clearInterval(interval)
-  }, [fetchAnalytics, refreshInterval, isLive])
+  }, [fetchAnalytics, refreshInterval, isLive, eventId])
 
   const toggleLive = () => {
     setIsLive(!isLive)

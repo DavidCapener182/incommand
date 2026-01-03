@@ -70,7 +70,7 @@ export default function AddStaffModal({ isOpen, onClose, onStaffAdded, companyId
     setLoading(true)
     try {
       // Generate a UUID for the staff member
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('staff')
         .insert({
           full_name: formData.full_name.trim(),

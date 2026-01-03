@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServiceClient } from '@/lib/supabaseServer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const supabase = getServiceClient();
+  const supabase = getServiceClient() as any;
   const { event_id } = req.query;
   if (!event_id || typeof event_id !== 'string') {
     return res.status(400).json({ error: 'Missing event_id' });

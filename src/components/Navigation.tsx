@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLES } from '../types/auth'
 import { useEventMembership } from '../hooks/useEventMembership'
+import { useUserPlan } from '../hooks/useUserPlan'
 import EventCreationModal from './EventCreationModal'
 import { supabase } from '../lib/supabase'
 import ProfileMenu from './ProfileMenu'
@@ -94,6 +95,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   const pathname = usePathname() || '';
   const { signOut, user, role } = useAuth();
   const { isTemporaryMember, canAccessAdminFeatures, hasActiveMembership } = useEventMembership();
+  const userPlan = useUserPlan() || 'starter';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileReportsOpen, setMobileReportsOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
@@ -321,13 +323,44 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
             {/* Logo - Left side */}
             <div className="flex items-center flex-shrink-0">
               <Link href="/incidents" className="flex items-center" data-tour="dashboard">
-                <Image
-                  src="/inCommand.png"
-                  alt="inCommand Logo"
-                  width={150}
-                  height={40}
-                  priority
-                />
+                <div 
+                  className="flex items-center h-10" 
+                  style={{ 
+                    width: '150px',
+                    fontSize: '24px',
+                    fontFamily: "'Montserrat', sans-serif"
+                  }}
+                >
+                  <svg 
+                    className="flex-shrink-0" 
+                    viewBox="0 0 100 100" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ width: '1em', height: '1em' }}
+                  >
+                    <circle 
+                      cx="50" 
+                      cy="50" 
+                      r="45" 
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                    />
+                    <path 
+                      d="M20 55 L45 75 L85 20" 
+                      fill="none"
+                      stroke="#ed1c24"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <div 
+                    className="text-white font-bold whitespace-nowrap leading-none pl-2"
+                  >
+                    InCommand
+                  </div>
+                </div>
               </Link>
             </div>
             
@@ -336,15 +369,22 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               {/* Desktop Nav */}
               {!minimal && (
                 <div className="hidden xl:flex xl:items-center">
-                  <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
-                    <NavigationMenuList className="gap-8">
-                      <NavigationMenuItem>
-                        <Link href="/incidents" className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                  <div className="flex items-center gap-8">
+                    <a 
+                      href="/incidents" 
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        window.location.href = '/incidents'
+                      }}
+                      className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                    >
                           Incidents
-                        </Link>
-                      </NavigationMenuItem>
+                    </a>
                       
                       {/* Reports Dropdown */}
+                    <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
+                      <NavigationMenuList className="gap-0">
                       <NavigationMenuItem>
                         <NavigationMenuTrigger 
                           className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500 !text-white' : ''} ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
@@ -360,143 +400,265 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                         <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md font-sans">
                           <ul className="grid w-[300px] gap-4 p-4">
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/analytics" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Analytics</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">View event analytics and insights.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/analytics';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/analytics';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Analytics</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">View event analytics and insights.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/analytics?tab=end-of-event" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">End of Event Report</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Generate comprehensive event reports.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/analytics?tab=end-of-event';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/analytics?tab=end-of-event';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">End of Event Report</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Generate comprehensive event reports.</div>
+                              </div>
                             </li>
                           </ul>
                         </NavigationMenuContent>
                       </NavigationMenuItem>
+                    </NavigationMenuList>
+                  </NavigationMenu>
 
-                      <NavigationMenuItem>
-                        <Link 
+                    <a 
                           href="/staffing" 
-                          className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        window.location.href = '/staffing'
+                      }}
+                      className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                         >
                           Staff
-                        </Link>
-                      </NavigationMenuItem>
+                    </a>
 
-                      <NavigationMenuItem>
-                        <Link href="/help" className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                    <a 
+                          href="/tasks" 
+                          onClick={(e) => {
+                              e.preventDefault()
+                        e.stopPropagation()
+                        if (!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN)) {
+                              setShowNoEventModal(true)
+                          return
+                            }
+                        window.location.href = '/tasks'
+                          }}
+                      className={`${isActive('/tasks')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+                        >
+                          Tasks
+                    </a>
+
+                    <a 
+                      href="/help"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        window.location.href = '/help'
+                      }}
+                      className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                    >
                           Help
-                        </Link>
-                      </NavigationMenuItem>
+                    </a>
 
                       {canAccessAdminFeatures && (
-                        <NavigationMenuItem>
-                          <Link href="/settings" className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans`}>
+                      <a 
+                        href="/settings"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          window.location.href = '/settings'
+                        }}
+                        className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                      >
                             Settings
-                          </Link>
-                        </NavigationMenuItem>
+                      </a>
                       )}
 
                       {/* More Dropdown */}
+                    <NavigationMenu className="text-white" style={{ backgroundColor: 'transparent' }} viewport={false}>
+                      <NavigationMenuList className="gap-0">
                       <NavigationMenuItem>
                         <NavigationMenuTrigger
-                          className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/about') || pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/features') || pathname.startsWith('/pricing') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500 !text-white' : ''}`}
+                          className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500 !text-white' : ''}`}
                         >
                           More
                         </NavigationMenuTrigger>
                         <NavigationMenuContent className="!bg-[#3345A3]/95 !border-white/10 !text-white shadow-xl shadow-black/20 rounded-xl border backdrop-blur-md font-sans">
                           <ul className="grid w-[300px] gap-4 p-4">
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/features" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Features</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Explore all platform features.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/vendors';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/vendors';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Accreditation Management</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Manage Accreditation onboarding and access control.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/vendors" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Accreditation Management</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Manage Accreditation onboarding and access control.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/maintenance';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/maintenance';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Maintenance & Assets</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Track assets, work orders, and schedules.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/maintenance" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Maintenance & Assets</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Track assets, work orders, and schedules.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/lost-and-found';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/lost-and-found';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Lost &amp; Found</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Reconcile guest reports with recovered items.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/lost-and-found" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Lost &amp; Found</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Reconcile guest reports with recovered items.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/blog';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/blog';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Blog</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Read our latest blog posts.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/pricing" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Pricing</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">View pricing plans and options.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/careers';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/careers';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Careers</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Join our team.</div>
+                              </div>
                             </li>
                             <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/about" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">About</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Learn about our company and mission.</div>
-                                </Link>
-                              </NavigationMenuLink>
-                            </li>
-                            <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/blog" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Blog</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Read our latest blog posts.</div>
-                                </Link>
-                              </NavigationMenuLink>
-                            </li>
-                            <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/careers" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Careers</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Join our team.</div>
-                                </Link>
-                              </NavigationMenuLink>
-                            </li>
-                            <li>
-                              <NavigationMenuLink asChild>
-                                <Link href="/status" className="block p-3 rounded-lg hover:bg-white/10 transition-colors">
-                                  <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Status</div>
-                                  <div className="text-xs text-white/80 leading-relaxed font-sans">Check system status and uptime.</div>
-                                </Link>
-                              </NavigationMenuLink>
+                              <div 
+                                role="button"
+                                tabIndex={0}
+                                className="block p-3 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = '/status';
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    window.location.href = '/status';
+                                  }
+                                }}
+                              >
+                                <div className="text-sm font-medium tracking-tight leading-relaxed text-white font-sans">Status</div>
+                                <div className="text-xs text-white/80 leading-relaxed font-sans">Check system status and uptime.</div>
+                              </div>
                             </li>
                           </ul>
                         </NavigationMenuContent>
                       </NavigationMenuItem>
+                      </NavigationMenuList>
+                    </NavigationMenu>
 
                       {/* Admin Button - only show for admin users */}
                       {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
-                        <NavigationMenuItem>
-                          <Link href="/admin" className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 font-sans`}>
+                      <a 
+                        href="/admin"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          window.location.href = '/admin'
+                        }}
+                        className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 font-sans cursor-pointer`}
+                      >
                             Admin
-                          </Link>
-                        </NavigationMenuItem>
+                      </a>
                       )}
-                    </NavigationMenuList>
-                  </NavigationMenu>
+                  </div>
                 </div>
               )}
 
@@ -665,15 +827,25 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                 <div className="pl-6 space-y-1 py-2">
                   <Link 
                     href="/analytics" 
-                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} 
-                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/analytics');
+                      setMobileMenuOpen(false);
+                    }}
                   >
                     Analytics
                   </Link>
                   <Link 
                     href="/analytics?tab=end-of-event" 
-                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} 
-                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/analytics?tab=end-of-event');
+                      setMobileMenuOpen(false);
+                    }}
                   >
                     End of Event Report
                   </Link>
@@ -687,6 +859,13 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               onClick={() => setMobileMenuOpen(false)}
             >
               Staff
+            </Link>
+            <Link 
+              href="/tasks" 
+              className={`${isActive('/tasks')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Tasks
             </Link>
             <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Help</Link>
             {canAccessAdminFeatures && (
@@ -706,15 +885,78 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               </button>
               {mobileMoreOpen && (
                 <div className="pl-6 space-y-1 py-2">
-                  <Link href="/features" className={`${isActive('/features')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Features</Link>
-                  <Link href="/vendors" className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Accreditation Management</Link>
-                  <Link href="/maintenance" className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Maintenance &amp; Assets</Link>
-                  <Link href="/lost-and-found" className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Lost &amp; Found</Link>
-                  <Link href="/pricing" className={`${isActive('/pricing')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Pricing</Link>
-                  <Link href="/about" className={`${isActive('/about')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>About</Link>
-                  <Link href="/blog" className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Blog</Link>
-                  <Link href="/careers" className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Careers</Link>
-                  <Link href="/status" className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Status</Link>
+                  <Link 
+                    href="/vendors" 
+                    className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/vendors');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Accreditation Management
+                  </Link>
+                  <Link 
+                    href="/maintenance" 
+                    className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/maintenance');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Maintenance &amp; Assets
+                  </Link>
+                  <Link 
+                    href="/lost-and-found" 
+                    className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/lost-and-found');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Lost &amp; Found
+                  </Link>
+                  <Link 
+                    href="/blog" 
+                    className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/blog');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Blog
+                  </Link>
+                  <Link 
+                    href="/careers" 
+                    className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/careers');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Careers
+                  </Link>
+                  <Link 
+                    href="/status" 
+                    className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/status');
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Status
+                  </Link>
                 </div>
               )}
             </div>

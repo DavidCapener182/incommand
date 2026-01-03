@@ -15,6 +15,9 @@ import NewContentDialog from '@/components/admin/content/NewContentDialog'
 import Link from 'next/link'
 import { sa_listBlogPosts, sa_getContentStats } from '@/hooks/useSuperAdmin';
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export default async function ContentPage() {
   const { user, role } = await getServerUser();
   if (!user) redirect('/login');
@@ -227,4 +230,3 @@ export default async function ContentPage() {
     </SuperAdminLayout>
   );
 }
-

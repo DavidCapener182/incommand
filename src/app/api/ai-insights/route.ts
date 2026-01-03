@@ -60,14 +60,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Check cache
-    const { data: cached, error: cacheError } = await supabase
+    const { data: cached, error: cacheError } = await (supabase as any)
       .from('ai_insights_cache')
       .select('insights, updated_at')
       .eq('event_id', eventId)
       .eq('hour', hourKey)
       .single();
-    if (cached && cached.insights) {
-      return NextResponse.json({ insights: cached.insights, cached: true });
+    if (cached && (cached as any).insights) {
+      return NextResponse.json({ insights: (cached as any).insights, cached: true });
     }
 
     // Prepare prompts for multiple insights
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     }));
 
     // Cache the result
-    await supabase.from('ai_insights_cache').upsert({
+    await (supabase as any).from('ai_insights_cache').upsert({
       event_id: eventId,
       hour: hourKey,
       insights: completions,
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     // Log usage (simplified for now since logAIUsage function needs server-side client)
     try {
-      await supabase.from('ai_usage').insert({
+      await (supabase as any).from('ai_usage').insert({
         date: new Date().toISOString().split('T')[0],
         service: 'openai',
         usage_type: 'api_call',

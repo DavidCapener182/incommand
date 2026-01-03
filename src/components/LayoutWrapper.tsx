@@ -21,6 +21,9 @@ import PWAUpdateNotification from './PWAUpdateNotification'
 import PWASplashScreen from './PWASplashScreen'
 import FloatingActionButton from './FloatingActionButton'
 import { FooterSimple } from './FooterSimple'
+import LoginLoadingScreen from './LoginLoadingScreen'
+import MobileAppShell from './mobile/MobileAppShell'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 // FAB components removed (FloatingAIChat, Dock)
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -64,6 +67,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const { user } = useAuth();
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
   useEffect(() => {
     // Skip effects for style-lab route
@@ -114,6 +118,27 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   // Only show the main application navigation for authenticated users on operational pages
   // Don't show nav on admin routes (they use SuperAdminLayout)
   const showNav = user && !noNavRoutes.includes(pathname);
+
+  if (showNav && isMobile && !isAdminRoute) {
+    return (
+      <IncidentSummaryProvider>
+        <EscalationToastProvider>
+          <>
+            <AuthGate>
+              <div className="min-h-screen bg-white dark:bg-[#151d34]">
+                <MobileAppShell />
+              </div>
+            </AuthGate>
+            <GlobalEscalationToast />
+            <OfflineIndicator />
+            <PWAUpdateNotification />
+            <PWASplashScreen />
+            <LoginLoadingScreen />
+          </>
+        </EscalationToastProvider>
+      </IncidentSummaryProvider>
+    )
+  }
 
   const handleIncidentCreated = async () => {
     setIsIncidentModalOpen(false);
@@ -225,6 +250,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           <OfflineIndicator />
           <PWAUpdateNotification />
           <PWASplashScreen />
+          
+          {/* Login Loading Screen */}
+          <LoginLoadingScreen />
         </>
       </EscalationToastProvider>
     </IncidentSummaryProvider>

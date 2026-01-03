@@ -1,7 +1,7 @@
 // src/components/EnhancedSearch.tsx
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   MagnifyingGlassIcon, 
@@ -68,12 +68,12 @@ export default function EnhancedSearch({
   }, [])
 
   // Generate smart suggestions based on common patterns
-  const smartSuggestions: SearchSuggestion[] = [
+  const smartSuggestions: SearchSuggestion[] = useMemo(() => [
     { text: 'High priority open incidents', type: 'smart', filters: { types: [], statuses: ['open'], priorities: ['high', 'urgent'], query: '' } },
     { text: 'Medical incidents today', type: 'smart', filters: { types: ['Medical'], statuses: [], priorities: [], query: '' } },
     { text: 'Ejections this event', type: 'smart', filters: { types: ['Ejection'], statuses: [], priorities: [], query: '' } },
     { text: 'Unresolved incidents', type: 'smart', filters: { types: [], statuses: ['open', 'logged'], priorities: [], query: '' } },
-  ]
+  ], [])
 
   // Update suggestions when input changes or focus changes
   useEffect(() => {
@@ -117,7 +117,7 @@ export default function EnhancedSearch({
     }
 
     setSuggestions(newSuggestions.slice(0, 8)) // Limit to 8 suggestions
-  }, [value, isFocused, savedSearches, recentSearches])
+  }, [value, isFocused, savedSearches, recentSearches, smartSuggestions])
 
   // Save search to recent searches
   const saveToRecent = useCallback((query: string) => {
@@ -356,4 +356,3 @@ export default function EnhancedSearch({
     </div>
   )
 }
-

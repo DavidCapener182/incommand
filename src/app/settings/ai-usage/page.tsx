@@ -68,12 +68,12 @@ export default function AIUsagePage() {
 
         if (logsError) throw logsError;
 
-        const logs = allLogs || [];
+        const logs = (allLogs || []) as any[];
 
         // Calculate summary (always set, even if empty)
         const apiCalls = logs.length;
-        const tokensUsed = logs.reduce((sum, log) => sum + (log.tokens_used || 0), 0);
-        const totalCost = logs.reduce((sum, log) => sum + parseFloat(String(log.cost_usd || 0)), 0);
+        const tokensUsed = logs.reduce((sum, log: any) => sum + (log.tokens_used || 0), 0);
+        const totalCost = logs.reduce((sum, log: any) => sum + parseFloat(String(log.cost_usd || 0)), 0);
         const daysDiff = Math.max(1, daysBack);
         const avgPerDay = apiCalls / daysDiff;
 
@@ -87,7 +87,7 @@ export default function AIUsagePage() {
         // Calculate series data (group by date)
         const byDate = new Map<string, { calls: number; tokens: number; cost: number }>();
 
-        logs.forEach((log) => {
+        logs.forEach((log: any) => {
           if (!log.created_at) {
             return;
           }
@@ -171,19 +171,20 @@ export default function AIUsagePage() {
           const periodEnd = new Date(periodStart);
           periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-          const { data: periodUsage } = await supabase
+          const { data: periodUsage } = await (supabase as any)
             .from('ai_usage_logs')
             .select('tokens_used, cost_usd')
             .eq('user_id', user.id)
             .gte('created_at', periodStart.toISOString())
             .lt('created_at', periodEnd.toISOString());
 
-          const tokensUsedThisPeriod = (periodUsage || []).reduce(
-            (sum, log) => sum + (log.tokens_used || 0),
+          const periodUsageArray = (periodUsage || []) as any[];
+          const tokensUsedThisPeriod = periodUsageArray.reduce(
+            (sum, log: any) => sum + (log.tokens_used || 0),
             0
           );
-          const costUsedThisPeriod = (periodUsage || []).reduce(
-            (sum, log) => sum + parseFloat(String(log.cost_usd || 0)),
+          const costUsedThisPeriod = periodUsageArray.reduce(
+            (sum, log: any) => sum + parseFloat(String(log.cost_usd || 0)),
             0
           );
 

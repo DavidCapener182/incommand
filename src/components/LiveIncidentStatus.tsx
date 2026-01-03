@@ -59,25 +59,130 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
     }, 5000);
   }, []);
 
-  const handleSubscriptionError = useCallback((error: any, channelName: string) => {
-    console.error(`Subscription error for ${channelName}:`, error);
-    setConnectionError(`Connection error: ${error.message || 'Unknown error'}`);
-    setIsConnected(false);
-    
-    if (retryCount < MAX_RETRIES) {
-      setIsReconnecting(true);
-      const delay = calculateBackoffDelay(retryCount);
+  // Direct function to avoid circular dependency
+  const fetchLatestIncidentDirect = useCallback(async () => {
+    try {
+      // First, let's get all incidents to see what's available
+      let query = supabase
+        .from('incident_logs')
+        .select('*')
+        .order('timestamp', { ascending: false });
       
-      setTimeout(() => {
-        setRetryCount(prev => prev + 1);
-        setupSubscription();
-      }, delay);
+      // Try to filter by event_id if the column exists
+      try {
+        query = query.eq('event_id', eventId);
+      } catch (e) {
+        // If event_id column doesn't exist, just get all incidents
+        console.warn('event_id column not found, fetching all incidents');
+      }
       
-      showConnectionNotification(`Reconnecting in ${Math.round(delay / 1000)} seconds...`, false);
-    } else {
-      showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
+      const { data: allIncidents, error: allError } = await query;
+
+      if (allError) {
+        console.warn('Error fetching all incidents:', allError);
+        // Don't set connection error for data fetch issues - just use defaults
+        setConnectionError(null);
+        setCurrentIncident(null);
+        return;
+      }
+
+      console.log('All incidents for event:', allIncidents);
+
+      // Filter out attendance and sit rep incidents like the analytics page does
+      const allIncidentsArray = (allIncidents || []) as any[];
+      const filteredIncidents = allIncidentsArray.filter(
+        (incident: any) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
+      );
+
+      console.log('Filtered incidents:', filteredIncidents);
+
+      // Get the latest open incident
+      const latestOpen = filteredIncidents.find((incident: any) => 
+        !incident.is_closed && incident.status !== 'Logged'
+      );
+
+      console.log('Latest open incident:', latestOpen);
+
+      if (latestOpen) {
+        setCurrentIncident({
+          ...latestOpen,
+          id: latestOpen.id.toString(),
+          status: latestOpen.status || 'open'
+        });
+      } else {
+        setCurrentIncident(null);
+      }
+      
+      setConnectionError(null); // Clear errors on successful fetch
+    } catch (error) {
+      console.warn('Error in fetchLatestIncident:', error);
+      // Don't set connection error for data fetch issues - just use defaults
+      setConnectionError(null);
+      setCurrentIncident(null);
     }
-  }, [retryCount, calculateBackoffDelay, showConnectionNotification]);
+  }, [eventId]);
+
+  const fetchLatestIncident = useCallback(async () => {
+    try {
+      // First, let's get all incidents to see what's available
+      let query = supabase
+        .from('incident_logs')
+        .select('*')
+        .order('timestamp', { ascending: false });
+      
+      // Try to filter by event_id if the column exists
+      try {
+        query = query.eq('event_id', eventId);
+      } catch (e) {
+        // If event_id column doesn't exist, just get all incidents
+        console.warn('event_id column not found, fetching all incidents');
+      }
+      
+      const { data: allIncidents, error: allError } = await query;
+
+      if (allError) {
+        console.warn('Error fetching all incidents:', allError);
+        // Don't set connection error for data fetch issues - just use defaults
+        setConnectionError(null);
+        setCurrentIncident(null);
+        return;
+      }
+
+      console.log('All incidents for event:', allIncidents);
+
+      // Filter out attendance and sit rep incidents like the analytics page does
+      const allIncidentsArray = (allIncidents || []) as any[];
+      const filteredIncidents = allIncidentsArray.filter(
+        (incident: any) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
+      );
+
+      console.log('Filtered incidents:', filteredIncidents);
+
+      // Get the latest open incident
+      const latestOpen = filteredIncidents.find((incident: any) => 
+        !incident.is_closed && incident.status !== 'Logged'
+      );
+
+      console.log('Latest open incident:', latestOpen);
+
+      if (latestOpen) {
+        setCurrentIncident({
+          ...latestOpen,
+          id: latestOpen.id.toString(),
+          status: latestOpen.status || 'open'
+        });
+      } else {
+        setCurrentIncident(null);
+      }
+      
+      setConnectionError(null); // Clear errors on successful fetch
+    } catch (error) {
+      console.warn('Error in fetchLatestIncident:', error);
+      // Don't set connection error for data fetch issues - just use defaults
+      setConnectionError(null);
+      setCurrentIncident(null);
+    }
+  }, [eventId]);
 
   const setupSubscription = useCallback(async () => {
     let subscription: any;
@@ -126,130 +231,27 @@ export default function LiveIncidentStatus({ eventId }: LiveIncidentStatusProps)
     }
 
     return subscription;
-  }, [eventId]);
+  }, [eventId, fetchLatestIncident, fetchLatestIncidentDirect]);
 
-  // Direct function to avoid circular dependency
-  const fetchLatestIncidentDirect = async () => {
-    try {
-      // First, let's get all incidents to see what's available
-      let query = supabase
-        .from('incident_logs')
-        .select('*')
-        .order('timestamp', { ascending: false });
+  const handleSubscriptionError = useCallback((error: any, channelName: string) => {
+    console.error(`Subscription error for ${channelName}:`, error);
+    setConnectionError(`Connection error: ${error.message || 'Unknown error'}`);
+    setIsConnected(false);
+    
+    if (retryCount < MAX_RETRIES) {
+      setIsReconnecting(true);
+      const delay = calculateBackoffDelay(retryCount);
       
-      // Try to filter by event_id if the column exists
-      try {
-        query = query.eq('event_id', eventId);
-      } catch (e) {
-        // If event_id column doesn't exist, just get all incidents
-        console.warn('event_id column not found, fetching all incidents');
-      }
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        setupSubscription();
+      }, delay);
       
-      const { data: allIncidents, error: allError } = await query;
-
-      if (allError) {
-        console.warn('Error fetching all incidents:', allError);
-        // Don't set connection error for data fetch issues - just use defaults
-        setConnectionError(null);
-        setCurrentIncident(null);
-        return;
-      }
-
-      console.log('All incidents for event:', allIncidents);
-
-      // Filter out attendance and sit rep incidents like the analytics page does
-      const filteredIncidents = allIncidents?.filter(
-        (incident) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
-      ) || [];
-
-      console.log('Filtered incidents:', filteredIncidents);
-
-      // Get the latest open incident
-      const latestOpen = filteredIncidents.find(incident => 
-        !incident.is_closed && incident.status !== 'Logged'
-      );
-
-      console.log('Latest open incident:', latestOpen);
-
-      if (latestOpen) {
-        setCurrentIncident({
-          ...latestOpen,
-          id: latestOpen.id.toString(),
-          status: latestOpen.status || 'open'
-        });
-      } else {
-        setCurrentIncident(null);
-      }
-      
-      setConnectionError(null); // Clear errors on successful fetch
-    } catch (error) {
-      console.warn('Error in fetchLatestIncident:', error);
-      // Don't set connection error for data fetch issues - just use defaults
-      setConnectionError(null);
-      setCurrentIncident(null);
+      showConnectionNotification(`Reconnecting in ${Math.round(delay / 1000)} seconds...`, false);
+    } else {
+      showConnectionNotification('Connection failed after multiple attempts. Please refresh the page.', true);
     }
-  };
-
-  const fetchLatestIncident = useCallback(async () => {
-    try {
-      // First, let's get all incidents to see what's available
-      let query = supabase
-        .from('incident_logs')
-        .select('*')
-        .order('timestamp', { ascending: false });
-      
-      // Try to filter by event_id if the column exists
-      try {
-        query = query.eq('event_id', eventId);
-      } catch (e) {
-        // If event_id column doesn't exist, just get all incidents
-        console.warn('event_id column not found, fetching all incidents');
-      }
-      
-      const { data: allIncidents, error: allError } = await query;
-
-      if (allError) {
-        console.warn('Error fetching all incidents:', allError);
-        // Don't set connection error for data fetch issues - just use defaults
-        setConnectionError(null);
-        setCurrentIncident(null);
-        return;
-      }
-
-      console.log('All incidents for event:', allIncidents);
-
-      // Filter out attendance and sit rep incidents like the analytics page does
-      const filteredIncidents = allIncidents?.filter(
-        (incident) => !['Attendance', 'Sit Rep', 'Timings'].includes(incident.incident_type)
-      ) || [];
-
-      console.log('Filtered incidents:', filteredIncidents);
-
-      // Get the latest open incident
-      const latestOpen = filteredIncidents.find(incident => 
-        !incident.is_closed && incident.status !== 'Logged'
-      );
-
-      console.log('Latest open incident:', latestOpen);
-
-      if (latestOpen) {
-        setCurrentIncident({
-          ...latestOpen,
-          id: latestOpen.id.toString(),
-          status: latestOpen.status || 'open'
-        });
-      } else {
-        setCurrentIncident(null);
-      }
-      
-      setConnectionError(null); // Clear errors on successful fetch
-    } catch (error) {
-      console.warn('Error in fetchLatestIncident:', error);
-      // Don't set connection error for data fetch issues - just use defaults
-      setConnectionError(null);
-      setCurrentIncident(null);
-    }
-  }, [eventId]);
+  }, [retryCount, calculateBackoffDelay, showConnectionNotification, setupSubscription]);
 
   useEffect(() => {
     let subscription: any;

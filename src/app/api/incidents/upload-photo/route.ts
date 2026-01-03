@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       .getPublicUrl(fileName)
 
     // Store photo metadata in database
-    const { data: photoRecord, error: dbError } = await supabase
+    const { data: photoRecord, error: dbError } = await (supabase as any)
       .from('incident_photos')
       .insert({
         incident_id: parseInt(incidentId),

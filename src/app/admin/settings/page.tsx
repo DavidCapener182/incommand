@@ -12,6 +12,9 @@ import {
   WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline';
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export default async function SettingsPage() {
   const { user, role } = await getServerUser();
   if (!user) redirect('/login');
@@ -265,6 +268,5 @@ export default async function SettingsPage() {
     </SuperAdminLayout>
   );
 }
-
 
 
