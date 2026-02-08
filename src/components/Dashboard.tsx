@@ -1448,23 +1448,15 @@ export default function Dashboard() {
           <AnalyticsKPICards eventId={currentEvent.id} className="mt-1.5 mb-1" />
         </div>
       )}
-    </section>
 
-    {/* Divider */}
-    <div className="my-1 h-px w-full bg-slate-200/80 dark:bg-incommand-border/60" />
-
-    {/* Support Tools */}
-    <section
-      className="hidden md:block relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/60 to-slate-100/90 p-4 text-gray-900 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-slate-200/50 dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5"
-    >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/70 via-cyan-400/60 to-transparent" />
-      <div className="mb-4 border-b border-slate-200/80 pb-3 dark:border-slate-600/50">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+      {/* Support Tools - same card as Operational Metrics, no second accent */}
+      <div className="hidden md:block mt-6 pt-4 border-t border-slate-200/80 dark:border-slate-600/50">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300 mb-4">
           Support Tools
         </h3>
       </div>
 
-      <div>
+      <div className="hidden md:block">
 
         {/* Desktop Grid - Event-Specific Dashboard */}
         <div className={`hidden md:grid grid-cols-2 gap-4 pt-2 ${eventType === 'concert' ? 'lg:grid-cols-4' : 'lg:grid-cols-4 xl:grid-cols-6'}`}>
