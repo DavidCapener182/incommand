@@ -42,31 +42,43 @@ export default function SupportToolsFootball() {
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-5">
         <div className="col-span-1 md:col-span-2 lg:col-span-2 flex h-[260px]">
-          <FootballCard_StandOccupancy 
-            className="flex-1" 
-            onOpenModal={() => handleOpenModal('stand')}
-          />
+          <div className="relative flex-1 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-4 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-white/70 dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/70 via-cyan-400/60 to-transparent" />
+            <FootballCard_StandOccupancy 
+              className="relative flex-1" 
+              onOpenModal={() => handleOpenModal('stand')}
+            />
+          </div>
         </div>
 
         <div className="col-span-1 md:col-span-2 lg:col-span-2 flex h-[260px]">
-          <FootballCard_LiveScore 
-            className="flex-1" 
-            onOpenModal={() => handleOpenModal('fixture')}
-          />
+          <div className="relative flex-1 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-4 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-white/70 dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/70 via-cyan-400/60 to-transparent" />
+            <FootballCard_LiveScore 
+              className="relative flex-1" 
+              onOpenModal={() => handleOpenModal('fixture')}
+            />
+          </div>
         </div>
 
         <div className="col-span-1 flex h-[260px]">
-          <FootballCard_MedicalPolicing 
-            className="flex-1" 
-            onOpenModal={() => handleOpenModal('staff')}
-          />
+          <div className="relative flex-1 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-4 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-white/70 dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/70 via-cyan-400/60 to-transparent" />
+            <FootballCard_MedicalPolicing 
+              className="relative flex-1" 
+              onOpenModal={() => handleOpenModal('staff')}
+            />
+          </div>
         </div>
 
         <div className="col-span-1 flex h-[260px]">
-          <FootballCard_Transport 
-            className="flex-1" 
-            onOpenModal={() => handleOpenModal('transport')}
-          />
+          <div className="relative flex-1 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-4 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-white/70 dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/70 via-cyan-400/60 to-transparent" />
+            <FootballCard_Transport 
+              className="relative flex-1" 
+              onOpenModal={() => handleOpenModal('transport')}
+            />
+          </div>
         </div>
       </div>
 
@@ -105,5 +117,4 @@ export default function SupportToolsFootball() {
     </>
   )
 }
-
 

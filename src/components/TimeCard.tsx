@@ -1,15 +1,16 @@
 'use client'
 
 import React from 'react'
-import { 
-  Clock, 
-  Calendar, 
+import {
+  Clock,
+  Calendar,
   Timer,
   MoreHorizontal,
   PlayCircle,
   Hourglass
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CardFrame, CardHeader } from '@/components/ui/InCommandCard'
 
 export interface EventTiming {
   title: string
@@ -28,27 +29,6 @@ export interface TimeCardProps {
   timeSinceLastIncident: string
 }
 
-// --- Helper Components ---
-const CardFrame = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md h-full", className)}>
-    {children}
-  </div>
-)
-
-const CardHeader = ({ icon: Icon, title }: { icon: any; title: string }) => (
-  <div className="flex items-center justify-between mb-4">
-    <div className="flex items-center gap-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-        <Icon className="h-4 w-4" />
-      </div>
-      <span className="text-sm font-semibold text-slate-700">{title}</span>
-    </div>
-    <button className="text-slate-400 hover:text-slate-600 transition-colors">
-      <MoreHorizontal className="h-5 w-5" />
-    </button>
-  </div>
-)
-
 const TimeCard: React.FC<TimeCardProps> = ({ 
   currentTime, 
   eventTimings, 
@@ -63,8 +43,12 @@ const TimeCard: React.FC<TimeCardProps> = ({
 
   return (
     <CardFrame>
-      {/* Header */}
-      <CardHeader icon={Clock} title="Current Event" />
+      <CardHeader
+        icon={Clock}
+        title="Current Event"
+        action={() => {}}
+        actionNode={<MoreHorizontal className="h-4 w-4" />}
+      />
 
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0 mt-1">
@@ -74,7 +58,7 @@ const TimeCard: React.FC<TimeCardProps> = ({
           
           {/* 1. Time & Incident Pulse */}
           <div>
-            <h2 className="text-4xl font-mono font-bold tracking-tight text-slate-900 tabular-nums">
+            <h2 className="text-4xl font-mono font-bold tracking-tight text-slate-900 tabular-nums dark:text-white">
               {currentTime}
             </h2>
             <div className="mt-2 flex items-center gap-2">
@@ -82,15 +66,15 @@ const TimeCard: React.FC<TimeCardProps> = ({
                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                </div>
-               <p className="text-xs font-medium text-slate-500">
-                 Last incident: <span className="font-mono font-bold text-slate-700">{timeSinceLastIncident}</span>
+               <p className="text-xs font-medium text-slate-500 dark:text-slate-300">
+                 Last incident: <span className="font-mono font-bold text-slate-700 dark:text-slate-100">{timeSinceLastIncident}</span>
                </p>
             </div>
           </div>
 
           {/* 2. Highlight Card (Happening Now OR Up Next) */}
           {(currentSlot || activeNext) && (
-             <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+             <div className="rounded-xl border border-blue-200/80 bg-gradient-to-br from-blue-50/90 to-cyan-50/75 p-4 shadow-sm dark:border-blue-400/35 dark:bg-gradient-to-br dark:from-blue-900/25 dark:to-cyan-900/20">
                 <div className="flex items-center justify-between mb-2">
                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
                      {currentSlot?.isActuallyHappeningNow ? 'Happening Now' : 'Up Next'}
@@ -112,7 +96,7 @@ const TimeCard: React.FC<TimeCardProps> = ({
                    )}
                    
                    <div className="min-w-0">
-                      <h3 className="text-base font-bold text-slate-900 leading-tight line-clamp-2">
+                      <h3 className="text-base font-bold leading-tight text-slate-900 line-clamp-2 dark:text-slate-100">
                         {currentSlot?.title || activeNext?.title}
                       </h3>
                       {/* Show countdown only if looking at next event */}
@@ -129,9 +113,9 @@ const TimeCard: React.FC<TimeCardProps> = ({
 
         {/* RIGHT COLUMN: Schedule List */}
         <div className="flex flex-col h-full min-h-0 border-l border-slate-100 pl-0 lg:pl-6 border-t lg:border-t-0 pt-4 lg:pt-0">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="mb-3 flex items-center gap-2">
              <Calendar className="h-4 w-4 text-blue-600" />
-             <h3 className="text-sm font-semibold text-slate-900">Event Schedule</h3>
+             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Event Schedule</h3>
           </div>
           
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-1">
@@ -145,7 +129,7 @@ const TimeCard: React.FC<TimeCardProps> = ({
                     key={index} 
                     className={cn(
                       "flex items-center justify-between py-2 px-2.5 rounded-lg transition-colors",
-                      isHighlighted ? "bg-blue-50 border border-blue-100" : "hover:bg-slate-50 border border-transparent"
+                      isHighlighted ? "border border-blue-200 bg-blue-50/80 dark:border-blue-400/35 dark:bg-blue-900/20" : "border border-transparent hover:bg-slate-50 dark:hover:bg-[#1a2a52]/50"
                     )}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -155,7 +139,7 @@ const TimeCard: React.FC<TimeCardProps> = ({
                        )} />
                        <span className={cn(
                          "text-sm font-medium break-words",
-                         isHighlighted || isActive ? "text-slate-900" : "text-slate-600"
+                         isHighlighted || isActive ? "text-slate-900 dark:text-slate-100" : "text-slate-600 dark:text-slate-300"
                        )}>
                          {timing.title}
                        </span>

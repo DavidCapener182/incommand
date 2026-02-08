@@ -3,6 +3,7 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import type { Database } from '@/types/supabase'
+import { ALLOWED_BACK_OFFICE_EMAILS } from '@/lib/constants'
 
 // Standardized error messages that don't expose sensitive information
 const ERROR_MESSAGES = {
@@ -157,14 +158,15 @@ export async function middleware(req: NextRequest) {
           // If user is logged in and visiting login or signup, redirect based on role
           if (session) {
             const redirectUrl = req.nextUrl.clone()
-            
-            // Check if this is david@incommand.uk (superadmin) - redirect to admin
-            if (session.user.email === 'david@incommand.uk') {
+            redirectUrl.search = '' // Don't carry error/params to the destination URL
+
+            // Check if this is a back-office admin - redirect to admin
+            if (session.user.email && ALLOWED_BACK_OFFICE_EMAILS.includes(session.user.email)) {
               redirectUrl.pathname = "/admin"
             } else {
               redirectUrl.pathname = "/incidents"
             }
-            
+
             return NextResponse.redirect(redirectUrl)
           }
         } catch (error) {
@@ -223,8 +225,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Special handling for david@incommand.uk - redirect to admin pages
-  if (session.user.email === 'david@incommand.uk' && (pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard/'))) {
+  // Special handling for back-office admins - redirect to admin pages
+  if (session.user.email && ALLOWED_BACK_OFFICE_EMAILS.includes(session.user.email) && (pathname === '/' || pathname === '/dashboard' || pathname.startsWith('/dashboard/'))) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = "/admin"
     return NextResponse.redirect(redirectUrl)
@@ -280,9 +282,8 @@ export async function middleware(req: NextRequest) {
           return NextResponse.redirect(loginUrl)
         }
 
-        // Restrict back office access to specific email only (company admins use /settings)
-        const allowedBackOfficeEmail = 'david@incommand.uk'
-        if (session.user.email !== allowedBackOfficeEmail) {
+        // Restrict back office access to specific emails only (company admins use /settings)
+        if (!session.user.email || !ALLOWED_BACK_OFFICE_EMAILS.includes(session.user.email)) {
           console.log('Middleware - Back office access denied - unauthorized email:', session.user.email)
           const loginUrl = new URL('/login', req.url)
           loginUrl.searchParams.set('error', 'Access denied. Back office access is restricted to system administrators.')

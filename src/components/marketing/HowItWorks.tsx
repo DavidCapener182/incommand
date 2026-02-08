@@ -25,10 +25,10 @@ const howItWorksSteps = [
 ]
 
 export const HowItWorks = () => (
-  <section id="how-it-works" className="relative w-full bg-white py-16 sm:py-24">
-    {/* Background decorative gradient */}
-    <div className="absolute inset-0 bg-[radial-gradient(#e0e7ff_1px,transparent_1px)] [background-size:16px_16px] opacity-25 pointer-events-none" />
-    
+  <section id="how-it-works" className="relative w-full py-16 sm:py-24">
+    <div className="pointer-events-none absolute inset-0 landing-noise opacity-20" />
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white to-transparent" />
+
     <div className="relative mx-auto max-w-7xl px-4 sm:px-6 md:px-10">
       <FadeIn className="mx-auto mb-16 max-w-3xl text-center">
         <h2 className="text-base font-semibold leading-7 text-[#23408e]">Workflow</h2>
@@ -42,7 +42,10 @@ export const HowItWorks = () => (
 
       <div className="relative grid grid-cols-1 gap-8 md:grid-cols-3">
         {/* Connector Line (Desktop Only) */}
-        <div className="absolute left-0 top-12 hidden h-0.5 w-full -translate-y-1/2 border-t-2 border-dashed border-blue-100 md:block" aria-hidden="true" />
+        <div
+          className="absolute left-0 top-16 hidden h-0.5 w-full -translate-y-1/2 bg-gradient-to-r from-blue-100 via-blue-200 to-blue-100 md:block"
+          aria-hidden="true"
+        />
 
         {howItWorksSteps.map((step, index) => (
           <FadeIn
@@ -50,22 +53,21 @@ export const HowItWorks = () => (
             delay={index * 0.15}
             className="relative flex flex-col items-center text-center"
           >
-            {/* Icon Circle */}
-            <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-white shadow-xl shadow-blue-900/5 ring-1 ring-slate-200 transition-transform duration-300 hover:scale-110">
-              <div className="absolute -top-3 rounded-full bg-[#23408e] px-3 py-1 text-xs font-bold text-white shadow-sm">
+            <div className="landing-section-shell relative z-10 w-full px-6 py-8 transition-all duration-300 hover:-translate-y-1">
+              <div className="mb-5 inline-flex rounded-full border border-[#23408e]/15 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#23408e]">
                 Step {step.step}
               </div>
-              <step.icon className="h-10 w-10 text-blue-600" />
-            </div>
 
-            {/* Content */}
-            <div className="rounded-2xl bg-slate-50/50 p-6 transition-colors hover:bg-blue-50/50">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-900/25">
+                <step.icon className="h-9 w-9" />
+              </div>
+
               <h3 className="mb-3 text-xl font-bold text-slate-900">{step.title}</h3>
               <p className="text-base leading-relaxed text-slate-600">
                 {step.description}
               </p>
             </div>
-            
+
             {/* Mobile Arrow (Hidden on Desktop) */}
             {index < howItWorksSteps.length - 1 && (
               <div className="my-4 md:hidden">

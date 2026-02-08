@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ExclamationTriangleIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ExclamationTriangleIcon, ArrowPathIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
 import type { EntryType } from '../../../types/auditableLog'
 import { validateEntryType } from '../../../lib/auditableLogging'
 import { callOpenAI } from '@/services/incidentAIService'
+import { CardFrame, CardHeader } from '@/components/ui/InCommandCard'
 
 export interface IncidentConfigurationCardProps {
   priority: string
@@ -78,35 +79,35 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
   const getColor = (p: string) => {
     switch (p.toLowerCase()) {
       case 'high':
-        return 'border-orange-200 bg-orange-50 text-orange-800'
+        return 'border-orange-200 bg-orange-50/80 text-orange-800'
       case 'urgent':
-        return 'border-red-200 bg-red-50 text-red-800'
+        return 'border-red-200 bg-red-50/80 text-red-800'
       default:
-        return 'border-slate-200 bg-white dark:bg-slate-900'
+        return 'border-slate-200 bg-white'
     }
   }
 
   return (
-    <div className={`${
-      priority === 'high' ? 'border-l-4 border-l-red-500 pl-4' : ''
-    }`} role="region" aria-labelledby="configuration-title">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
-          <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </div>
-        <h3 id="configuration-title" className="text-sm font-semibold text-gray-900 dark:text-white">Incident Configuration</h3>
-      </div>
-      <div className={`rounded-xl border shadow-sm p-4 flex items-center justify-between transition-colors ${getColor(priority)}`}>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">Priority Level</span>
+    <CardFrame
+      className={priority === 'high' ? 'ring-1 ring-red-200' : ''}
+      role="region"
+      aria-labelledby="configuration-title"
+    >
+      <CardHeader
+        icon={Cog6ToothIcon}
+        title="Incident Configuration"
+        titleId="configuration-title"
+        variant="amber"
+      />
+      <div className="space-y-4">
+        <div className={`flex items-center justify-between rounded-xl border p-4 shadow-sm transition-colors ${getColor(priority)}`}>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-slate-700">Priority Level</span>
           {description && (
             <button
               onClick={handleAssessRisk}
               disabled={analyzing}
-              className="flex items-center gap-1 text-[10px] bg-white/50 border border-black/10 px-2 py-1 rounded-full hover:bg-white/80 transition-colors"
+              className="flex items-center gap-1 rounded-full border border-black/10 bg-white/70 px-2.5 py-1 text-[10px] font-medium transition-colors hover:bg-white disabled:opacity-60"
             >
               {analyzing ? (
                 <>
@@ -125,7 +126,7 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
         <select
           value={priority}
           onChange={(e) => onPriorityChange(e.target.value)}
-          className="rounded-lg border-black/10 bg-white/50 text-sm p-2 cursor-pointer font-semibold"
+          className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
         >
           <option value="low">Low</option>
           <option value="medium">Medium</option>
@@ -135,13 +136,13 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
       </div>
       
       {/* Entry Type Section */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="rounded-xl border border-slate-200 bg-slate-50/55 p-4">
+        <label className="mb-2 block text-sm font-semibold text-slate-700">
           Entry Type
-          <span className="ml-1 text-gray-400" title="Select whether this is being logged in real-time or retrospectively">ⓘ</span>
+          <span className="ml-1 text-slate-400" title="Select whether this is being logged in real-time or retrospectively">ⓘ</span>
         </label>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
+        <div className="flex flex-col gap-2 md:flex-row md:gap-4">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-white px-2.5 py-2 shadow-sm">
             <input
               type="radio"
               name="entry_type"
@@ -153,9 +154,9 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
               }}
               className="text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700">⏱️ Contemporaneous (Real-time)</span>
+            <span className="text-sm text-slate-700">⏱️ Contemporaneous (Real-time)</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-white px-2.5 py-2 shadow-sm">
             <input
               type="radio"
               name="entry_type"
@@ -167,21 +168,22 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
               }}
               className="text-amber-600 focus:ring-amber-500"
             />
-            <span className="text-sm text-gray-700">🕓 Retrospective (Delayed)</span>
+            <span className="text-sm text-slate-700">🕓 Retrospective (Delayed)</span>
           </label>
         </div>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="mt-1 text-xs text-slate-500">
           {entryType === 'contemporaneous' 
             ? 'This entry is being logged in real-time or shortly after the incident'
             : 'This entry is being logged after a significant delay from when the incident occurred'
           }
         </p>
       </div>
+      </div>
 
       {/* Retrospective Justification (Conditional) */}
       {entryType === 'retrospective' && (
-        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <label htmlFor="retro-justification" className="block text-sm font-medium text-amber-800 mb-2">
+        <div className="mx-5 mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <label htmlFor="retro-justification" className="mb-2 block text-sm font-semibold text-amber-800">
             Retrospective Justification *
           </label>
           <textarea
@@ -190,20 +192,20 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
             onChange={(e) => onRetrospectiveJustificationChange(e.target.value)}
             placeholder="Explain why this entry is being logged retrospectively (e.g., 'Live comms prevented immediate logging')"
             rows={2}
-            className="w-full rounded-md border border-amber-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm font-sans"
+            className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
             required
           />
-          <p className="text-xs text-amber-700 mt-1">Required for retrospective entries</p>
+          <p className="mt-1 text-xs text-amber-700">Required for retrospective entries</p>
         </div>
       )}
 
       {/* Advanced Timestamps (Collapsible) */}
       {(showAdvancedTimestamps || entryType === 'retrospective') && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="mx-5 mb-5 rounded-xl border border-blue-200 bg-blue-50/80 p-3">
           <button
             type="button"
             onClick={() => onShowAdvancedTimestampsChange(!showAdvancedTimestamps)}
-            className="flex items-center gap-2 text-sm font-medium text-blue-800 mb-3"
+            className="mb-3 flex items-center gap-2 text-sm font-semibold text-blue-800"
           >
             {showAdvancedTimestamps ? '▼' : '▶'} Advanced Timestamps
           </button>
@@ -229,7 +231,7 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
                     )
                     onEntryTypeWarningsChange(validation.warnings)
                   }}
-                  className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-sans"
+                  className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -244,7 +246,7 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
                     const newTime = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString()
                     onTimeLoggedChange(newTime)
                   }}
-                  className="w-full rounded-md border border-blue-300 px-3 py-2 text-sm text-gray-900 bg-white dark:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-sans"
+                  className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled
                 />
                 <p className="text-xs text-blue-600 mt-1">Auto-set to current time</p>
@@ -256,7 +258,7 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
 
       {/* Entry Type Warnings */}
       {entryTypeWarnings.length > 0 && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="mx-5 mb-5 rounded-xl border border-yellow-200 bg-yellow-50 p-3">
           <div className="flex gap-2">
             <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -270,7 +272,6 @@ Return JSON with "risk_score" (1-10), "reasoning" (string explaining why this pr
           </div>
         </div>
       )}
-    </div>
+    </CardFrame>
   )
 }
-

@@ -5,6 +5,7 @@ import type { SupabaseClient, Session, User } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 import { ADMIN_ROLES, AdminRole, derivePermissions, getHighestRole, hasRequiredRole, normalizeRole } from '@/lib/security/roles'
 import { logger } from '@/lib/logger'
+import { ALLOWED_BACK_OFFICE_EMAILS } from '@/lib/constants'
 import { cookies } from 'next/headers'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 
@@ -145,13 +146,12 @@ async function createAdminContext(request: NextRequest): Promise<AdminContextRes
     const { roles, memberships } = await loadAdminRoles(serviceClient, user.id)
     const isSuperAdmin = roles.includes('super_admin')
 
-    // Restrict back office access to specific email only (company admins use /settings)
+    // Restrict back office access to specific emails only (company admins use /settings)
     // Super admins bypass this restriction
-    const allowedBackOfficeEmail = 'david@incommand.uk'
-    if (!isSuperAdmin && user.email !== allowedBackOfficeEmail) {
+    if (!isSuperAdmin && (!user.email || !ALLOWED_BACK_OFFICE_EMAILS.includes(user.email))) {
       logger.warn('Back office access denied - unauthorized email', { 
         attemptedEmail: user.email, 
-        allowedEmail: allowedBackOfficeEmail,
+        allowedEmails: ALLOWED_BACK_OFFICE_EMAILS,
         isSuperAdmin
       })
       return { response: NextResponse.json({ error: 'Access denied. Back office access is restricted to system administrators.' }, { status: 403 }) }

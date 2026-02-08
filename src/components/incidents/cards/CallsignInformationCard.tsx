@@ -3,6 +3,7 @@
 import React from 'react'
 import { ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
 import { TypingIndicator } from '@/components/ui/TypingIndicator'
+import { CardFrame, CardHeader } from '@/components/ui/InCommandCard'
 
 export interface CallsignInformationCardProps {
   callsignFrom: string
@@ -26,23 +27,24 @@ export default function CallsignInformationCard({
   updateTyping,
 }: CallsignInformationCardProps) {
   
-  const inputClass = "w-full rounded-lg border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all h-10 px-3 shadow-sm placeholder:text-slate-400"
+  const inputClass = "h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-800 shadow-sm transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      {/* Card Header */}
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-        <div className="bg-green-100 p-1.5 rounded-md text-green-600">
-          <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
-        </div>
-        <h3 id="callsign-title" className="font-semibold text-slate-800 text-sm">Callsign Information</h3>
-      </div>
-      
-      {/* Card Content */}
-      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5" role="region" aria-labelledby="callsign-title">
+    <CardFrame>
+      <CardHeader
+        icon={ChatBubbleBottomCenterTextIcon}
+        title="Callsign Information"
+        titleId="callsign-title"
+        variant="green"
+      />
+      <div
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2"
+        role="region"
+        aria-labelledby="callsign-title"
+      >
         {/* From Field */}
         <div className="relative space-y-1.5">
-          <label htmlFor="callsign-from" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">From</label>
+          <label htmlFor="callsign-from" className="text-xs font-semibold uppercase tracking-wide text-slate-500">From</label>
           <div className="relative">
             <input
               id="callsign-from"
@@ -61,7 +63,7 @@ export default function CallsignInformationCard({
 
         {/* To Field */}
         <div className="space-y-1.5">
-          <label htmlFor="callsign-to" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">To</label>
+          <label htmlFor="callsign-to" className="text-xs font-semibold uppercase tracking-wide text-slate-500">To</label>
           <input
             id="callsign-to"
             type="text"
@@ -72,6 +74,6 @@ export default function CallsignInformationCard({
           />
         </div>
       </div>
-    </div>
+    </CardFrame>
   )
 }

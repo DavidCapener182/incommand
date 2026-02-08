@@ -32,6 +32,10 @@ import {
   isToday,
   addMonths,
   subMonths,
+  addWeeks,
+  subWeeks,
+  addDays,
+  subDays,
   parseISO,
 } from 'date-fns'
 import {
@@ -143,14 +147,64 @@ export default function VenueCalendar() {
     return hasEvents(date)
   }
 
-  // Calendar grid for month view
+  const weekStartsOn1 = { weekStartsOn: 1 as const }
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }) // Monday
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
-  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+  const calendarStart = startOfWeek(monthStart, weekStartsOn1)
+  const calendarEnd = endOfWeek(monthEnd, weekStartsOn1)
+  const monthCalendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+
+  const weekStart = startOfWeek(currentDate, weekStartsOn1)
+  const weekEnd = endOfWeek(currentDate, weekStartsOn1)
+  const weekCalendarDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
+
+  const calendarDays = viewMode === 'month' ? monthCalendarDays : viewMode === 'week' ? weekCalendarDays : [currentDate]
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+  const handlePrev = () => {
+    if (viewMode === 'month') setCurrentDate((d) => subMonths(d, 1))
+    else if (viewMode === 'week') setCurrentDate((d) => subWeeks(d, 1))
+    else setCurrentDate((d) => subDays(d, 1))
+  }
+  const handleNext = () => {
+    if (viewMode === 'month') setCurrentDate((d) => addMonths(d, 1))
+    else if (viewMode === 'week') setCurrentDate((d) => addWeeks(d, 1))
+    else setCurrentDate((d) => addDays(d, 1))
+  }
+
+  function exportToIcal() {
+    const icsLines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//InCommand//Venue Calendar//EN',
+      'CALSCALE:GREGORIAN',
+    ]
+    filteredEvents.forEach((event) => {
+      const start = event.start_datetime ? new Date(event.start_datetime) : new Date()
+      const end = event.end_datetime ? new Date(event.end_datetime) : new Date(start.getTime() + 60 * 60 * 1000)
+      const formatIcalDate = (d: Date) => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'
+      icsLines.push(
+        'BEGIN:VEVENT',
+        `UID:${event.id}@incommand`,
+        `DTSTAMP:${formatIcalDate(new Date())}`,
+        `DTSTART:${formatIcalDate(start)}`,
+        `DTEND:${formatIcalDate(end)}`,
+        `SUMMARY:${(event.event_name || 'Event').replace(/\n/g, '\\n')}`,
+        `DESCRIPTION:${(event.venue_name || '').replace(/\n/g, '\\n')}`,
+        'END:VEVENT'
+      )
+    })
+    icsLines.push('END:VCALENDAR')
+    const blob = new Blob([icsLines.join('\r\n')], { type: 'text/calendar;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `venue-calendar-${format(currentDate, 'yyyy-MM')}.ics`
+    a.click()
+    URL.revokeObjectURL(url)
+    addToast({ type: 'success', title: 'Exported', message: 'Calendar exported to iCal file.' })
+  }
 
   if (loading) {
     return (
@@ -191,41 +245,47 @@ export default function VenueCalendar() {
           </SelectContent>
         </Select>
 
+        <div className="flex items-center gap-1">
+          {(['month', 'week', 'day'] as const).map((mode) => (
+            <Button
+              key={mode}
+              variant={viewMode === mode ? 'primary' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode(mode)}
+            >
+              {mode === 'month' ? 'Month' : mode === 'week' ? 'Week' : 'Day'}
+            </Button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-          >
+          <Button variant="outline" size="sm" onClick={handlePrev}>
             <ChevronLeftIcon className="h-4 w-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentDate(new Date())}
-          >
+          <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
             Today
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-          >
+          <Button variant="outline" size="sm" onClick={handleNext}>
             <ChevronRightIcon className="h-4 w-4" />
           </Button>
         </div>
 
         <div className="text-lg font-semibold text-gray-900 dark:text-white">
-          {format(currentDate, 'MMMM yyyy')}
+          {viewMode === 'month' && format(currentDate, 'MMMM yyyy')}
+          {viewMode === 'week' && `${format(weekStart, 'd MMM')} – ${format(weekEnd, 'd MMM yyyy')}`}
+          {viewMode === 'day' && format(currentDate, 'EEEE, d MMMM yyyy')}
         </div>
+
+        <Button variant="outline" size="sm" onClick={exportToIcal}>
+          Export iCal
+        </Button>
       </div>
 
       {/* Calendar Grid */}
       <Card>
         <CardContent className="p-6">
-          <div className="grid grid-cols-7 gap-2">
-            {/* Week day headers */}
-            {weekDays.map((day) => (
+          <div className={`grid gap-2 ${viewMode === 'day' ? 'grid-cols-1' : 'grid-cols-7'}`}>
+            {viewMode !== 'day' && weekDays.map((day) => (
               <div
                 key={day}
                 className="text-center text-sm font-semibold text-gray-600 dark:text-gray-400 py-2"
@@ -245,8 +305,9 @@ export default function VenueCalendar() {
                 <div
                   key={idx}
                   className={`
-                    min-h-[100px] p-2 border rounded-lg
-                    ${isCurrentMonth ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900/50'}
+                    p-2 border rounded-lg
+                    ${viewMode === 'day' ? 'min-h-[280px]' : 'min-h-[100px]'}
+                    ${viewMode === 'month' && !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-900/50' : 'bg-white dark:bg-gray-800'}
                     ${isCurrentDay ? 'ring-2 ring-blue-500' : ''}
                     ${booked ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'}
                     hover:shadow-md transition-shadow
@@ -264,16 +325,23 @@ export default function VenueCalendar() {
 
                   {dayEvents.length > 0 && (
                     <div className="space-y-1">
-                      {dayEvents.slice(0, 2).map((event) => (
+                      {(viewMode === 'day' ? dayEvents : dayEvents.slice(0, 2)).map((event) => (
                         <div
                           key={event.id}
-                          className="text-xs p-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded truncate"
+                          className={`p-1 rounded ${viewMode === 'day' ? 'text-sm p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' : 'text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 truncate'}`}
                           title={`${event.event_name} - ${event.venue_name}`}
                         >
-                          {event.event_name}
+                          <div className="font-medium">{event.event_name}</div>
+                          {viewMode === 'day' && (
+                            <div className="text-xs mt-0.5 flex items-center gap-2">
+                              <MapPinIcon className="h-3 w-3 shrink-0" />
+                              {event.venue_name}
+                              <span>{event.start_datetime ? format(parseISO(event.start_datetime), 'HH:mm') : ''}</span>
+                            </div>
+                          )}
                         </div>
                       ))}
-                      {dayEvents.length > 2 && (
+                      {viewMode !== 'day' && dayEvents.length > 2 && (
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           +{dayEvents.length - 2} more
                         </div>

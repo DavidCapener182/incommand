@@ -415,18 +415,16 @@ export class ChatService {
     emoji: string
   ): Promise<void> {
     try {
-      // TODO: Implement when chat_message_reactions table is created
-      console.log('Adding reaction:', { messageId, userId, emoji })
-      // const { error } = await supabase
-      //   .from('chat_message_reactions')
-      //   .upsert({
-      //     message_id: messageId,
-      //     user_id: userId,
-      //     emoji,
-      //     created_at: new Date().toISOString()
-      //   })
+      const { error } = await supabase
+        .from('chat_message_reactions')
+        .upsert({
+          message_id: messageId,
+          user_id: userId,
+          emoji,
+          created_at: new Date().toISOString()
+        })
 
-      // if (error) throw error
+      if (error) throw error
     } catch (error) {
       console.error('Error adding reaction:', error)
     }

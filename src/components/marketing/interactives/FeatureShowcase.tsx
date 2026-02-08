@@ -710,9 +710,9 @@ export default function FeatureShowcase() {
   const [activeFeature, setActiveFeature] = useState(0)
 
   return (
-    <div className="flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-6xl py-10">
-        <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-start">
+    <div className="relative flex flex-col items-center justify-center">
+      <div className="w-full max-w-6xl py-4 sm:py-8">
+        <div className="grid items-start gap-8 lg:grid-cols-2 lg:gap-12">
           
           {/* Left Column: Accordion */}
           <Accordion 
@@ -727,10 +727,10 @@ export default function FeatureShowcase() {
                 key={index} 
                 value={`item-${index}`} 
                 className={cn(
-                  "rounded-2xl border px-6 transition-all duration-300 overflow-hidden",
+                  "overflow-hidden rounded-2xl border px-6 transition-all duration-300",
                   activeFeature === index 
-                    ? "border-blue-600/30 bg-white shadow-md shadow-blue-900/5 pb-2 ring-1 ring-blue-600/10" 
-                    : "border-transparent hover:bg-white/60"
+                    ? "border-blue-600/30 bg-gradient-to-r from-white to-blue-50/65 pb-2 shadow-[0_24px_50px_-44px_rgba(37,99,235,0.8)] ring-1 ring-blue-600/10" 
+                    : "border-slate-200 bg-white/80 hover:border-blue-200 hover:bg-white"
                 )}
               >
                 <AccordionTrigger className="py-5 text-left hover:no-underline group">
@@ -739,7 +739,7 @@ export default function FeatureShowcase() {
                       "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors duration-300",
                       activeFeature === index 
                         ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
-                        : "bg-white border border-slate-200 text-slate-400 group-hover:border-blue-300 group-hover:text-blue-600"
+                        : "border border-slate-200 bg-white text-slate-400 group-hover:border-blue-300 group-hover:text-blue-600"
                     )}>
                       <Icon className="h-6 w-6" />
                     </div>
@@ -760,7 +760,7 @@ export default function FeatureShowcase() {
 
           {/* Right Column: Animated Visuals */}
           <div className="hidden lg:block relative h-full min-h-[600px] perspective-[2000px]">
-            <div className="sticky top-24 w-full aspect-[9/16] max-h-[650px] overflow-hidden rounded-[3rem] bg-slate-900 border-[12px] border-slate-900 shadow-[0_50px_100px_-20px_rgba(50,50,93,0.25),0_30px_60px_-30px_rgba(0,0,0,0.3),inset_0_-2px_6px_rgba(255,255,255,0.2)] ring-1 ring-slate-900/5 transform rotate-y-[-15deg] rotate-x-[5deg] hover:rotate-y-0 hover:rotate-x-0 transition-transform duration-700 ease-in-out">
+            <div className="sticky top-24 w-full aspect-[9/16] max-h-[650px] overflow-hidden rounded-[3rem] border-[12px] border-slate-900 bg-slate-900 shadow-[0_50px_100px_-20px_rgba(50,50,93,0.25),0_30px_60px_-30px_rgba(0,0,0,0.3),inset_0_-2px_6px_rgba(255,255,255,0.2)] ring-1 ring-slate-900/5 rotate-x-[4deg] rotate-y-[-12deg] transform transition-transform duration-700 ease-in-out hover:rotate-x-0 hover:rotate-y-0">
               
               {/* Screen Content */}
               <div className="h-full w-full bg-white relative overflow-hidden rounded-[2.2rem]">
@@ -785,7 +785,7 @@ export default function FeatureShowcase() {
             
             {/* Decorative Background Blurs */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-400/30 blur-[120px] -z-10 rounded-full mix-blend-multiply pointer-events-none opacity-70" />
-             <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-emerald-400/20 blur-[100px] -z-10 rounded-full mix-blend-multiply pointer-events-none opacity-60" />
+            <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-emerald-400/20 blur-[100px] -z-10 rounded-full mix-blend-multiply pointer-events-none opacity-60" />
           </div>
         </div>
       </div>

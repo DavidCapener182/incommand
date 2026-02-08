@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline - InCommand</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f3f4f6;
+      color: #1f2937;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 1rem;
+      padding: 2rem;
+      max-width: 24rem;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
+    p { font-size: 0.875rem; color: #6b7280; margin: 0 0 1.5rem; }
+    button {
+      background: #2A3990;
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:active { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>You're offline</h1>
+    <p>Check your connection and try again. Your data will sync when you're back online.</p>
+    <button type="button" onclick="window.location.reload()">Retry</button>
+  </div>
+</body>
+</html>

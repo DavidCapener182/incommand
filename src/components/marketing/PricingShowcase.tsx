@@ -59,11 +59,11 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
     <div className="w-full">
       {/* Billing Toggle */}
       <div className="flex flex-col items-center gap-3">
-        <div className="relative inline-flex h-12 items-center rounded-full bg-slate-100/80 p-1 ring-1 ring-slate-200">
+        <div className="relative inline-flex h-12 items-center rounded-full border border-blue-100 bg-white/90 p-1 shadow-lg shadow-blue-900/10">
           <button
             onClick={() => setBillingPeriod('monthly')}
             className={cn(
-              "relative z-10 rounded-full px-6 py-2 text-sm font-medium transition-colors duration-200",
+              "relative z-10 rounded-full px-6 py-2 text-sm font-semibold transition-colors duration-200",
               billingPeriod === 'monthly' ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
             )}
           >
@@ -72,7 +72,7 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
           <button
             onClick={() => setBillingPeriod('annual')}
             className={cn(
-              "relative z-10 rounded-full px-6 py-2 text-sm font-medium transition-colors duration-200",
+              "relative z-10 rounded-full px-6 py-2 text-sm font-semibold transition-colors duration-200",
               billingPeriod === 'annual' ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
             )}
           >
@@ -81,7 +81,7 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
           {/* Sliding Pill Background */}
           <div
             className={cn(
-              "absolute h-10 rounded-full bg-white shadow-sm ring-1 ring-slate-900/5 transition-all duration-300 ease-in-out",
+              "absolute h-10 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 shadow-sm ring-1 ring-blue-200/80 transition-all duration-300 ease-in-out",
               billingPeriod === 'monthly' ? "left-1" : "left-[calc(50%+2px)]"
             )}
             style={{ 
@@ -93,7 +93,7 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
         {/* Discount Badge */}
         {billingPeriod === 'annual' && (
           <FadeIn>
-            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-sm">
               Save up to 10%
             </span>
           </FadeIn>
@@ -112,12 +112,19 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
               key={plan.name} 
               delay={index * 0.1}
               className={cn(
-                'group relative flex flex-col rounded-3xl p-8 transition-all duration-300',
+                'group relative flex flex-col overflow-hidden rounded-3xl p-8 transition-all duration-300',
                 isPopular 
-                  ? 'bg-white shadow-2xl ring-4 ring-blue-50 border-blue-200 scale-100 z-10 lg:-mt-4 lg:pb-10' 
-                  : 'bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200'
+                  ? 'z-10 border border-blue-300 bg-gradient-to-b from-white to-blue-50/70 shadow-[0_40px_80px_-50px_rgba(37,99,235,0.8)] ring-1 ring-blue-200/80 lg:-mt-4 lg:pb-10' 
+                  : 'border border-slate-200/90 bg-white/95 shadow-[0_30px_70px_-55px_rgba(15,23,42,0.85)] hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_35px_75px_-50px_rgba(37,99,235,0.5)]'
               )}
             >
+              <div
+                className={cn(
+                  "absolute inset-x-0 top-0 h-1",
+                  isPopular ? "bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" : "bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 group-hover:from-blue-200 group-hover:via-blue-100 group-hover:to-blue-200"
+                )}
+              />
+
               {/* Popular Badge */}
               {isPopular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-[#23408e] px-4 py-1 text-xs font-bold uppercase tracking-wide text-white shadow-lg">
@@ -130,7 +137,7 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
                    <h3 className={cn("text-xl font-bold", isPopular ? "text-[#23408e]" : "text-slate-900")}>
                      {plan.name}
                    </h3>
-                   <p className="mt-2 text-sm leading-relaxed text-slate-500 min-h-[40px]">
+                   <p className="mt-2 min-h-[40px] text-sm leading-relaxed text-slate-500">
                      {plan.description}
                    </p>
                 </div>
@@ -164,7 +171,7 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
                       "inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2",
                       isPopular
                         ? "bg-[#23408e] text-white hover:bg-blue-800 hover:shadow-lg focus:ring-blue-600"
-                        : "bg-slate-50 text-slate-900 ring-1 ring-slate-200 hover:bg-slate-100 hover:ring-slate-300"
+                        : "bg-slate-50 text-slate-900 ring-1 ring-slate-200 hover:bg-blue-50 hover:ring-blue-300"
                     )}
                   >
                     {plan.cta}
@@ -178,8 +185,8 @@ export const PricingShowcase = ({ plans }: { plans: PricingPlan[] }) => {
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3 text-sm text-slate-600">
                       <div className={cn(
-                        "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                        isPopular ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
+                        "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-1",
+                        isPopular ? "bg-blue-100 text-blue-600 ring-blue-200" : "bg-slate-100 text-slate-500 ring-slate-200"
                       )}>
                         <Check className="h-3 w-3" strokeWidth={3} />
                       </div>

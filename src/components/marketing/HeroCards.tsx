@@ -141,10 +141,9 @@ const HeroCards = () => {
   ]
 
   return (
-    // UPDATED: Changed from lg:w-1/2 to w-full. We now handle the sizing in the parent FadeIn wrapper.
     <div className="relative mt-12 lg:mt-0 w-full perspective-1000">
-      <div className="relative w-full max-w-lg mx-auto transform lg:rotate-y-12 rotate-3 hover:rotate-0 transition-all duration-700">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200/60 p-6 min-h-[380px] flex flex-col">
+      <div className="relative mx-auto w-full max-w-lg rotate-2 transform transition-all duration-700 hover:rotate-0 lg:rotate-y-6">
+        <div className="flex min-h-[380px] flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-6 shadow-[0_40px_90px_-40px_rgba(15,23,42,0.95)]">
           {/* Header */}
           <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
@@ -187,7 +186,7 @@ const HeroCards = () => {
         </div>
         
         {/* Floating Badge - Constant */}
-        <div className="absolute -bottom-6 -left-6 bg-emerald-500 text-white p-4 rounded-xl shadow-xl flex items-center gap-3 animate-bounce-slow z-10">
+        <div className="absolute -bottom-6 -left-6 z-10 flex items-center gap-3 rounded-xl bg-emerald-500 p-4 text-white shadow-xl shadow-emerald-900/30 animate-bounce-slow">
            <ShieldCheck className="w-8 h-8" />
            <div>
               <div className="font-bold text-lg">System Active</div>

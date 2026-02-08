@@ -1,18 +1,11 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { 
-  Train, 
-  Bus, 
-  Car, 
-  AlertTriangle, 
-  MoreHorizontal,
-  MapPin,
-  Download
-} from 'lucide-react'
+import { Train, Bus, Car, AlertTriangle, MoreHorizontal, MapPin, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FootballData } from '@/types/football'
 import { StatusType } from '@/components/football/StatusIndicator'
+import { CardFrame, CardHeader } from '@/components/ui/InCommandCard'
 
 interface FootballCard_TransportProps {
   className?: string
@@ -20,28 +13,6 @@ interface FootballCard_TransportProps {
 }
 
 // --- Helper Components ---
-const CardFrame = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md h-full relative overflow-hidden", className)}>
-    {children}
-  </div>
-)
-
-const CardHeader = ({ icon: Icon, title, action }: { icon: any; title: string; action?: () => void }) => (
-  <div className="flex items-center justify-between mb-3 shrink-0">
-    <div className="flex items-center gap-2">
-      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-        <Icon className="h-3.5 w-3.5" />
-      </div>
-      <span className="text-sm font-semibold text-slate-700">{title}</span>
-    </div>
-    {action && (
-      <button onClick={action} className="text-slate-400 hover:text-slate-600 transition-colors">
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-    )}
-  </div>
-)
-
 const TransportItem = ({ 
   icon: Icon, 
   label, 

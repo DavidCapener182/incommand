@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { 
+import {
   Activity,
   ShieldAlert,
   AlertCircle,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
+import { CardFrame, CardHeader } from '@/components/ui/InCommandCard'
 
 export type SummaryStatus = 'open' | 'in_progress' | 'closed'
 
@@ -18,23 +19,6 @@ interface IncidentSummaryBarProps {
   activeStatus?: SummaryStatus | null
   className?: string
 }
-
-const CardFrame = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md h-full", className)}>
-    {children}
-  </div>
-)
-
-const CardHeader = ({ icon: Icon, title }: { icon: any; title: string }) => (
-  <div className="flex items-center justify-between mb-4">
-    <div className="flex items-center gap-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-        <Icon className="h-4 w-4" />
-      </div>
-      <span className="text-sm font-semibold text-slate-700">{title}</span>
-    </div>
-  </div>
-)
 
 export function IncidentSummaryBar({ onFilter, activeStatus, className }: IncidentSummaryBarProps) {
   const { counts } = useIncidentSummary()
@@ -65,10 +49,10 @@ export function IncidentSummaryBar({ onFilter, activeStatus, className }: Incide
          <div 
            onClick={() => onFilter?.(null)}
            className={cn(
-             "col-span-2 flex items-center justify-between rounded-xl border p-4 transition-all cursor-pointer hover:scale-[1.01]",
+             "col-span-2 flex cursor-pointer items-center justify-between rounded-xl border p-4 shadow-sm transition-all hover:scale-[1.01]",
              activeStatus === null 
-               ? "bg-slate-50 border-blue-300 shadow-sm" // Removed thick ring
-               : "bg-white border-slate-200 hover:border-blue-200 hover:bg-slate-50"
+               ? "border-blue-300 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-[0_10px_24px_-20px_rgba(37,99,235,0.45)] dark:border-blue-400/60 dark:bg-gradient-to-r dark:from-blue-900/30 dark:to-cyan-900/20" // Removed thick ring
+               : "border-slate-200 bg-white/90 hover:border-blue-200 hover:bg-slate-50 dark:border-[#2d437a]/60 dark:bg-[#101a35]/70 dark:hover:bg-[#15264a]/70"
            )}
          >
            <div>
@@ -80,7 +64,7 @@ export function IncidentSummaryBar({ onFilter, activeStatus, className }: Incide
            </div>
            <div className={cn(
              "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-             activeStatus === null ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"
+             activeStatus === null ? "bg-blue-100 text-blue-600 dark:bg-blue-500/25 dark:text-blue-200" : "bg-slate-100 text-slate-500 dark:bg-[#1b2b53] dark:text-slate-300"
            )}>
               <Activity className="h-5 w-5" />
            </div>
@@ -92,8 +76,8 @@ export function IncidentSummaryBar({ onFilter, activeStatus, className }: Incide
             className={cn(
               "flex flex-col justify-center gap-1 rounded-lg border p-3 text-center transition-all hover:shadow-sm",
               activeStatus === 'open' 
-                ? "border-red-200 bg-red-50 ring-1 ring-red-200" 
-                : "border-red-100 bg-red-50/50 hover:bg-red-50",
+                ? "border-red-200 bg-red-50 ring-1 ring-red-200 dark:border-red-400/40 dark:bg-red-900/20" 
+                : "border-red-100 bg-red-50/60 hover:bg-red-50 dark:border-red-400/25 dark:bg-red-900/10 dark:hover:bg-red-900/20",
               changedStatuses.has('open') && "animate-pulse bg-red-100"
             )}
          >
@@ -110,8 +94,8 @@ export function IncidentSummaryBar({ onFilter, activeStatus, className }: Incide
             className={cn(
               "flex flex-col justify-center gap-1 rounded-lg border p-3 text-center transition-all hover:shadow-sm",
               activeStatus === 'in_progress' 
-                ? "border-amber-200 bg-amber-50 ring-1 ring-amber-200" 
-                : "border-amber-100 bg-amber-50/50 hover:bg-amber-50",
+                ? "border-amber-200 bg-amber-50 ring-1 ring-amber-200 dark:border-amber-400/40 dark:bg-amber-900/20" 
+                : "border-amber-100 bg-amber-50/60 hover:bg-amber-50 dark:border-amber-400/25 dark:bg-amber-900/10 dark:hover:bg-amber-900/20",
               changedStatuses.has('in_progress') && "animate-pulse bg-amber-100"
             )}
          >

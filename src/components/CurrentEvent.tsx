@@ -48,7 +48,8 @@ interface AIInsight {
 
 // --- Helper Components ---
 const CardFrame = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md h-full", className)}>
+  <div className={cn("group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-5 shadow-[0_16px_34px_-22px_rgba(15,23,42,0.45)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-24px_rgba(15,23,42,0.45)] dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5", className)}>
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/75 via-cyan-400/60 to-transparent" />
     {children}
   </div>
 )
@@ -56,13 +57,13 @@ const CardFrame = ({ children, className }: { children: React.ReactNode; classNa
 const CardHeader = ({ icon: Icon, title, action }: { icon: any; title: string; action?: () => void }) => (
   <div className="flex items-center justify-between mb-4">
     <div className="flex items-center gap-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-700 ring-1 ring-blue-200/70 dark:from-blue-500/25 dark:to-cyan-500/20 dark:text-blue-200 dark:ring-blue-400/35">
         <Icon className="h-4 w-4" />
       </div>
-      <span className="text-sm font-semibold text-slate-700">{title}</span>
+      <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">{title}</span>
     </div>
     {action && (
-      <button onClick={action} className="text-slate-400 hover:text-slate-600 transition-colors">
+      <button onClick={action} className="text-slate-400 transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200">
         <MoreHorizontal className="h-5 w-5" />
       </button>
     )}
@@ -284,7 +285,7 @@ export default function CurrentEvent({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
-            className="flex gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 min-h-[100px]"
+            className="min-h-[100px] rounded-xl border border-slate-200/80 bg-white/85 p-4 shadow-sm dark:border-[#2d437a]/55 dark:bg-[#0f1a35]/70"
           >
             {aiLoading ? (
                <div className="space-y-2 w-full">
@@ -302,16 +303,16 @@ export default function CurrentEvent({
                </div>
             ) : (
                <>
-                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm text-blue-600 ring-1 ring-slate-100">
+                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm text-blue-600 ring-1 ring-slate-200 dark:bg-[#13213f] dark:text-blue-200 dark:ring-[#2d437a]/50">
                    {currentInsight?.title.includes('Security') ? <AlertCircle className="h-5 w-5" /> :
                     currentInsight?.title.includes('Crowd') ? <TrendingUp className="h-5 w-5" /> :
                     <Sparkles className="h-5 w-5" />}
                  </div>
                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-0.5">
+                    <div className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
                       {currentInsight?.title || 'Event Update'}
                     </div>
-                    <div className="text-sm font-medium text-slate-900 leading-snug line-clamp-3">
+                    <div className="line-clamp-3 text-sm font-medium leading-snug text-slate-900 dark:text-slate-100">
                       {currentInsight?.content}
                     </div>
                  </div>

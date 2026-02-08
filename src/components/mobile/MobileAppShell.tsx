@@ -1,22 +1,40 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
-import { HomeIcon, ChatBubbleLeftRightIcon, PlusIcon, CubeIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import {
+  HomeIcon,
+  ChatBubbleLeftRightIcon,
+  PlusIcon,
+  CubeIcon,
+  EllipsisHorizontalIcon,
+  ChartBarIcon,
+  Cog6ToothIcon,
+  UserGroupIcon,
+  ClipboardDocumentListIcon,
+  DocumentTextIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/24/outline'
 import { useEventContext } from '@/contexts/EventContext'
 import { useAuth } from '@/contexts/AuthContext'
 import MobileIncidentHome from './MobileIncidentHome'
 import MobileChat from './MobileChat'
 import MobileLostAndFound from './MobileLostAndFound'
+import MobileAnalytics from './MobileAnalytics'
+import MobileSettings from './MobileSettings'
+import MobileStaffing from './MobileStaffing'
+import MobileTasks from './MobileTasks'
 import IncidentCreationModal from '../IncidentCreationModal'
 import { useRouter } from 'next/navigation'
 
-type TabKey = 'incidents' | 'chat' | 'lost' | 'documents'
+type TabKey = 'incidents' | 'chat' | 'lost' | 'more'
+type MoreView = null | 'analytics' | 'settings' | 'staffing' | 'tasks'
 
 export default function MobileAppShell() {
   const { eventData, eventId, loading: eventLoading } = useEventContext()
   const { user } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabKey>('incidents')
+  const [moreView, setMoreView] = useState<MoreView>(null)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
 
   const companyId = useMemo(() => {
@@ -37,6 +55,47 @@ export default function MobileAppShell() {
     }
     if (activeTab === 'lost') {
       return <MobileLostAndFound />
+    }
+    if (activeTab === 'more') {
+      if (moreView === 'analytics') {
+        return <MobileAnalytics onBack={() => setMoreView(null)} />
+      }
+      if (moreView === 'settings') {
+        return <MobileSettings onBack={() => setMoreView(null)} />
+      }
+      if (moreView === 'staffing') {
+        return <MobileStaffing onBack={() => setMoreView(null)} />
+      }
+      if (moreView === 'tasks') {
+        return <MobileTasks onBack={() => setMoreView(null)} />
+      }
+      return (
+        <div className="space-y-2 p-4 pb-24">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white px-1">More</h2>
+          <div className="card-mobile divide-y divide-gray-100 dark:divide-gray-700/50">
+            {[
+              { id: 'reports' as const, label: 'Reports', icon: DocumentTextIcon, onClick: () => router.push('/reports') },
+              { id: 'analytics' as const, label: 'Analytics', icon: ChartBarIcon, onClick: () => setMoreView('analytics') },
+              { id: 'settings' as const, label: 'Settings', icon: Cog6ToothIcon, onClick: () => setMoreView('settings') },
+              { id: 'staffing' as const, label: 'Staffing', icon: UserGroupIcon, onClick: () => setMoreView('staffing') },
+              { id: 'tasks' as const, label: 'Tasks', icon: ClipboardDocumentListIcon, onClick: () => setMoreView('tasks') },
+            ].map(({ id, label, icon: Icon, onClick }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={onClick}
+                className="flex min-h-[48px] touch-target w-full items-center justify-between px-4 py-3 text-left text-gray-900 dark:text-white active:bg-gray-100 dark:active:bg-white/10"
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5 text-gray-400" />
+                  <span className="font-medium">{label}</span>
+                </div>
+                <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )
     }
     return (
       <MobileIncidentHome
@@ -69,12 +128,12 @@ export default function MobileAppShell() {
       className="relative flex flex-1 flex-col items-center justify-center py-1 transition-all duration-200 active:scale-95 group"
     >
       {isActive && (
-        <span className="absolute top-2 h-1 w-1 rounded-full bg-[#2A3990] dark:bg-blue-400 shadow-[0_0_8px_rgba(42,57,144,0.6)]" />
+        <span className="absolute top-2 h-1 w-1 rounded-full bg-incommand-brand-mobile dark:bg-blue-400 shadow-[0_0_8px_rgba(42,57,144,0.6)]" />
       )}
       <div
         className={`h-6 w-6 transition-colors duration-200 ${
           isActive
-            ? 'text-[#2A3990] dark:text-blue-400 stroke-[2px]'
+            ? 'text-incommand-brand-mobile dark:text-blue-400 stroke-[2px]'
             : 'text-gray-400 dark:text-gray-500 stroke-[1.5px] group-hover:text-gray-600 dark:group-hover:text-gray-300'
         }`}
       >
@@ -83,7 +142,7 @@ export default function MobileAppShell() {
       <span
         className={`mt-1 text-[10px] font-medium transition-colors duration-200 ${
           isActive
-            ? 'text-[#2A3990] dark:text-blue-400'
+            ? 'text-incommand-brand-mobile dark:text-blue-400'
             : 'text-gray-400 dark:text-gray-500'
         }`}
       >
@@ -93,9 +152,9 @@ export default function MobileAppShell() {
   )
 
   return (
-    <div className="min-h-screen h-screen overflow-hidden bg-gray-50 dark:bg-[#0e1427] text-gray-900 dark:text-gray-100 flex flex-col">
+    <div className="min-h-screen h-screen overflow-hidden bg-gray-50 dark:bg-incommand-quaternary-dark text-gray-900 dark:text-gray-100 flex flex-col">
       <div
-        className="bg-[#2A3990] text-white px-4 py-3 flex items-center justify-between shadow-sm"
+        className="bg-incommand-brand-mobile text-white px-4 py-3 flex items-center justify-between shadow-sm"
         style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}
       >
         <div className="flex items-center gap-2">
@@ -130,7 +189,7 @@ export default function MobileAppShell() {
           Mobile
         </span>
       </div>
-      <header className="px-4 pt-4 pb-3 bg-white/90 dark:bg-[#0f1a33]/80 backdrop-blur-md shadow-sm border-b border-gray-200/60 dark:border-gray-700/60">
+      <header className="px-4 pt-4 pb-3 bg-white/90 dark:bg-incommand-surface-alt/80 backdrop-blur-md shadow-sm border-b border-gray-200/60 dark:border-gray-700/60">
         <div className="flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-xs text-gray-500 dark:text-gray-400">Current Event</span>
@@ -154,7 +213,7 @@ export default function MobileAppShell() {
       <main className="flex-1 overflow-y-auto pb-28">{renderContent()}</main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 bg-white/90 dark:bg-[#0f1a33]/90 backdrop-blur-lg border-t border-gray-200/70 dark:border-gray-700/60"
+        className="fixed inset-x-0 bottom-0 z-20 bg-white/90 dark:bg-incommand-surface-alt/90 backdrop-blur-lg border-t border-gray-200/70 dark:border-gray-700/60"
         style={{
           paddingLeft: 'max(env(safe-area-inset-left), 1rem)',
           paddingRight: 'max(env(safe-area-inset-right), 1rem)',
@@ -187,7 +246,7 @@ export default function MobileAppShell() {
           <div className="flex flex-col items-center justify-start translate-y-1">
             <button
               onClick={() => setIsIncidentModalOpen(true)}
-              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#2A3990] to-[#4c5ecf] text-white shadow-lg shadow-blue-900/20 transition-transform active:scale-95 hover:shadow-xl dark:shadow-blue-900/40"
+              className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-incommand-brand-mobile to-[#4c5ecf] text-white shadow-lg shadow-blue-900/20 transition-transform active:scale-95 hover:shadow-xl dark:shadow-blue-900/40"
               aria-label="Log New Incident"
             >
               <PlusIcon className="h-6 w-6 stroke-[2.5px]" />
@@ -205,11 +264,14 @@ export default function MobileAppShell() {
             onClick={() => setActiveTab('lost')}
           />
           <NavItem
-            label="Documents"
-            icon={<DocumentTextIcon />}
-            tab="documents"
-            isActive={false}
-            onClick={() => router.push('/documents')}
+            label="More"
+            icon={<EllipsisHorizontalIcon />}
+            tab="more"
+            isActive={activeTab === 'more'}
+            onClick={() => {
+              setActiveTab('more')
+              setMoreView(null)
+            }}
           />
         </div>
       </nav>

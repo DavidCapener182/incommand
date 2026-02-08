@@ -225,10 +225,10 @@ export default function QuickTabs({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Quick Tab Buttons */}
-      <div className="flex flex-wrap gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300 self-center mr-2">
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Quick log tabs">
+        <span className="mr-2 self-center text-[11px] font-bold uppercase tracking-[0.12em] text-gray-600 dark:text-gray-300">
           Quick Log:
         </span>
         {tabs.map((tab) => {
@@ -239,6 +239,9 @@ export default function QuickTabs({
             <motion.button
               key={tab.id}
               type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={isActive ? `quicklog-panel-${tab.id}` : undefined}
               onClick={() => {
                 if (isActive) {
                   setActiveTab(null)
@@ -248,10 +251,10 @@ export default function QuickTabs({
                   setSuccessMessage(null)
                 }
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
                 isActive 
-                  ? colorClasses[tab.color as keyof typeof colorClasses] + ' shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? colorClasses[tab.color as keyof typeof colorClasses] + ' border-transparent shadow-lg'
+                  : 'border-slate-200 bg-white text-gray-700 shadow-sm hover:border-slate-300 hover:bg-slate-100 dark:border-slate-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
               }`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -273,7 +276,7 @@ export default function QuickTabs({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-600 dark:bg-gray-700">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-md font-semibold text-gray-900 dark:text-white">
@@ -438,4 +441,3 @@ export default function QuickTabs({
     </div>
   )
 }
-

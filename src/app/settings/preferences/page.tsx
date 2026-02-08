@@ -3,7 +3,6 @@
 import React, { useState } from 'react'
 import { 
   useUserPreferences, 
-  useThemePreference, 
   useNotificationPreferences, 
   useUIPreferences, 
   useAccessibilitySettings, 
@@ -12,7 +11,6 @@ import {
 } from '../../../hooks/useUserPreferences'
 import { useSyncPreferences } from '../../../hooks/useUserPreferences'
 import { 
-  THEME_OPTIONS, 
   TIME_FORMAT_OPTIONS, 
   FONT_SIZE_OPTIONS, 
   LINE_SPACING_OPTIONS, 
@@ -20,9 +18,6 @@ import {
   NOTIFICATION_FREQUENCY_OPTIONS 
 } from '../../../types/settings'
 import { 
-  SunIcon, 
-  MoonIcon, 
-  ComputerDesktopIcon,
   BellIcon,
   Cog6ToothIcon,
   EyeIcon,
@@ -34,7 +29,6 @@ import { useTooltipOnboarding } from '@/hooks/useTooltipOnboarding'
 
 const PreferencesPage: React.FC = () => {
   const { preferences, isLoading } = useUserPreferences()
-  const { theme, setTheme, isDark } = useThemePreference()
   const { notificationPreferences, updateNotificationPreference } = useNotificationPreferences()
   const { uiPreferences, updateUIPreference } = useUIPreferences()
   const { accessibilitySettings, updateAccessibilitySetting } = useAccessibilitySettings()
@@ -76,17 +70,6 @@ const PreferencesPage: React.FC = () => {
       setTimeout(() => setShowSuccess(false), 3000)
     } finally {
       setIsSyncing(false)
-    }
-  }
-
-  const handleThemeChange = async (newTheme: 'light' | 'dark' | 'auto') => {
-    try {
-      await setTheme(newTheme)
-      setSuccessMessage('Theme updated successfully')
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 3000)
-    } catch (error) {
-      console.error('Failed to update theme:', error)
     }
   }
 
@@ -244,55 +227,6 @@ const PreferencesPage: React.FC = () => {
               <a href="/green-guide" target="_blank" rel="noreferrer" className="text-emerald-700 dark:text-emerald-300 hover:underline">Open Green Guide (PDF)</a>
             </div>
           </div>
-          {/* Theme Preferences */}
-          <div className="card-alt p-6">
-            <div className="flex items-center mb-4">
-              <SunIcon className="h-6 w-6 text-yellow-500 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Theme Preferences
-              </h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Theme
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {THEME_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => handleThemeChange(option.value)}
-                      className={`p-3 rounded-md border-2 transition-colors ${
-                        theme === option.value
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                      }`}
-                    >
-                      <div className="flex items-center justify-center mb-2">
-                        {option.value === 'light' && <SunIcon className="h-5 w-5 text-yellow-500" />}
-                        {option.value === 'dark' && <MoonIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />}
-                        {option.value === 'auto' && <ComputerDesktopIcon className="h-5 w-5 text-blue-500" />}
-                      </div>
-                      <span className="text-xs font-medium text-gray-900 dark:text-white">
-                        {option.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Current Theme
-                </span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {isDark ? 'Dark' : 'Light'}
-                </span>
-              </div>
-            </div>
-          </div>
-
           {/* Notification Preferences */}
           <div className="card-alt p-6">
             <div className="flex items-center mb-4">

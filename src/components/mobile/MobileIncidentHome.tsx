@@ -57,7 +57,7 @@ export default function MobileIncidentHome({
     <div className="space-y-5 p-4 pb-24">
       
       {/* --- Card 1: Event Status & Actions --- */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-[#111a30]">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-incommand-surface">
         <div className="border-b border-gray-50 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-white/5">
           <div className="flex items-start justify-between">
             <div>
@@ -109,8 +109,8 @@ export default function MobileIncidentHome({
       </div>
 
       {/* --- Card 2: Recent Incidents List --- */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-[#111a30]">
-        <div className="flex items-center justify-between border-b border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-[#111a30]">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-incommand-surface">
+        <div className="flex items-center justify-between border-b border-gray-100 bg-white p-4 dark:border-gray-800 dark:bg-incommand-surface">
           <div>
             <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
               Recent Incidents

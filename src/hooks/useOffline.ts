@@ -41,38 +41,66 @@ export function useOffline() {
 
   // Initialize service worker
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw-enhanced.js')
-        .then((registration) => {
-          console.log('Service Worker registered:', registration)
-          setState(prev => ({ ...prev, isServiceWorkerReady: true }))
+    if (!('serviceWorker' in navigator)) {
+      return
+    }
 
-          // Listen for updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('New service worker available')
-                  // Prompt user to reload
-                  if (confirm('New version available! Reload to update?')) {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' })
-                    window.location.reload()
-                  }
+    const messageHandler = (event: MessageEvent) => {
+      handleServiceWorkerMessage(event.data)
+    }
+
+    // Avoid stale cached chunks during local development.
+    if (process.env.NODE_ENV !== 'production') {
+      const cleanupDevServiceWorkers = async () => {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations()
+          await Promise.all(registrations.map((registration) => registration.unregister()))
+          if ('caches' in window) {
+            const cacheKeys = await caches.keys()
+            await Promise.all(cacheKeys.map((key) => caches.delete(key)))
+          }
+          setState((prev) => ({ ...prev, isServiceWorkerReady: false }))
+        } catch (error) {
+          console.warn('Failed to clear development service workers:', error)
+        }
+      }
+
+      cleanupDevServiceWorkers()
+      return
+    }
+
+    navigator.serviceWorker
+      .register('/sw-enhanced.js')
+      .then((registration) => {
+        console.log('Service Worker registered:', registration)
+        setState(prev => ({ ...prev, isServiceWorkerReady: true }))
+
+        // Listen for updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('New service worker available')
+                // Prompt user to reload
+                if (confirm('New version available! Reload to update?')) {
+                  newWorker.postMessage({ type: 'SKIP_WAITING' })
+                  window.location.reload()
                 }
-              })
-            }
-          })
+              }
+            })
+          }
         })
-        .catch((error) => {
-          console.error('Service Worker registration failed:', error)
-        })
-
-      // Listen for service worker messages
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        handleServiceWorkerMessage(event.data)
       })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error)
+      })
+
+    // Listen for service worker messages
+    navigator.serviceWorker.addEventListener('message', messageHandler)
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', messageHandler)
     }
   }, [handleServiceWorkerMessage])
 

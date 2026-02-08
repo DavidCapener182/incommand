@@ -4,34 +4,32 @@ import Link from "next/link"
 
 export default function MarketingNavigation() {
   return (
-    <header className="sticky top-0 z-50">
-      {/* Top Navy Bar with logo and Log In button */}
-      <div className="w-full bg-[#1E3A8A] relative flex items-center justify-center py-5">
-        {/* Logo */}
-        <div className="relative z-30 flex items-center justify-center h-auto">
-          <div 
-            className="flex items-center w-48 sm:w-72 md:w-80 lg:w-[360px] h-auto text-xl sm:text-2xl md:text-3xl lg:text-4xl"
-            style={{ 
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#1E3A8A]/95 backdrop-blur-xl">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <Link href="/" className="group relative z-30 flex items-center justify-center">
+          <div
+            className="flex items-center text-xl sm:text-2xl md:text-3xl"
+            style={{
               fontFamily: "'Montserrat', sans-serif"
             }}
           >
-            <svg 
-              className="flex-shrink-0" 
-              viewBox="0 0 100 100" 
+            <svg
+              className="flex-shrink-0"
+              viewBox="0 0 100 100"
               xmlns="http://www.w3.org/2000/svg"
               style={{ width: '1em', height: '1em' }}
             >
-              <circle 
-                cx="50" 
-                cy="50" 
-                r="45" 
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
                 fill="none"
                 stroke="white"
                 strokeWidth="6"
                 strokeLinecap="round"
               />
-              <path 
-                d="M20 55 L45 75 L85 20" 
+              <path
+                d="M20 55 L45 75 L85 20"
                 fill="none"
                 stroke="#ed1c24"
                 strokeWidth="10"
@@ -39,19 +37,23 @@ export default function MarketingNavigation() {
                 strokeLinejoin="round"
               />
             </svg>
-            <div 
-              className="text-white font-bold whitespace-nowrap leading-none pl-2"
-            >
+            <div className="whitespace-nowrap pl-2 font-bold leading-none text-white transition-colors group-hover:text-blue-100">
               InCommand
             </div>
           </div>
-        </div>
+        </Link>
 
-        {/* Log In button – hidden on mobile, visible on desktop */}
-        <div className="absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 hidden sm:block">
+        <nav className="hidden items-center gap-6 lg:flex">
+          <a href="#features" className="text-sm font-medium text-blue-100 transition-colors hover:text-white">Features</a>
+          <a href="#how-it-works" className="text-sm font-medium text-blue-100 transition-colors hover:text-white">Workflow</a>
+          <a href="#pricing" className="text-sm font-medium text-blue-100 transition-colors hover:text-white">Pricing</a>
+          <a href="#faq" className="text-sm font-medium text-blue-100 transition-colors hover:text-white">FAQ</a>
+        </nav>
+
+        <div className="relative z-30">
           <Link
             href="/login"
-            className="px-5 py-2 sm:px-6 sm:py-2.5 border border-white/70 text-white font-semibold rounded-full text-sm sm:text-base hover:bg-white/15 hover:backdrop-blur-sm transition-all duration-300 shadow-sm"
+            className="inline-flex items-center rounded-full border border-white/70 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/15 sm:px-6 sm:text-base"
           >
             Log In
           </Link>

@@ -4,6 +4,7 @@ import React from 'react'
 import dynamic from 'next/dynamic'
 import { MapPinIcon } from '@heroicons/react/24/outline'
 import type { Coordinates } from '../../../hooks/useGeocodeLocation'
+import { CardFrame, CardHeader } from '@/components/ui/InCommandCard'
 
 // Dynamic import for Map to avoid SSR issues
 const IncidentLocationMap = dynamic(() => import('../../maps/IncidentLocationMap'), {
@@ -36,24 +37,21 @@ export default function LocationAndActionsCard({
   onMapLocationChange,
 }: LocationAndActionsCardProps) {
   
-  const inputClass = "w-full rounded-lg border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all h-10 px-3 shadow-sm placeholder:text-slate-400"
+  const inputClass = "h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-800 shadow-sm transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      
-      {/* Header */}
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-        <div className="bg-teal-100 p-1.5 rounded-md text-teal-600">
-          <MapPinIcon className="h-4 w-4" />
-        </div>
-        <h3 id="location-actions-title" className="font-semibold text-slate-800 text-sm">Location</h3>
-      </div>
-
-      <div className="p-5 space-y-4">
+    <CardFrame>
+      <CardHeader
+        icon={MapPinIcon}
+        title="Location"
+        titleId="location-actions-title"
+        variant="teal"
+      />
+      <div className="space-y-4">
         
         {/* Location Input */}
         <div className="space-y-1.5">
-          <label htmlFor="location" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          <label htmlFor="location" className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Exact Location
           </label>
           <input
@@ -68,23 +66,22 @@ export default function LocationAndActionsCard({
 
         {/* Map Visualization */}
         {shouldRenderMap && (
-          <div className="rounded-lg overflow-hidden border border-slate-200 shadow-sm ring-1 ring-slate-900/5">
+          <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm ring-1 ring-slate-900/5">
             <IncidentLocationMap
               coordinates={mapCoordinates}
               locationQuery={mapLocationQuery}
               overlays={[]}
               onLocationChange={onMapLocationChange}
             />
-            <div className="bg-slate-50 px-3 py-2 border-t border-slate-200">
-              <p className="text-[10px] text-slate-500 flex items-center gap-1">
+            <div className="border-t border-slate-200 bg-slate-50 px-3 py-2">
+              <p className="flex items-center gap-1 text-[10px] text-slate-500">
                 <MapPinIcon className="h-3 w-3" />
                 Drag marker to pinpoint exact location
               </p>
             </div>
           </div>
         )}
-
       </div>
-    </div>
+    </CardFrame>
   )
 }

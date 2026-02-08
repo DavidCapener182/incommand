@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { flushSync } from 'react-dom'
+import { flushSync, createPortal } from 'react-dom'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { supabase } from '../lib/supabase'
@@ -4367,10 +4367,14 @@ export default function IncidentCreationModal({
     return null;
   }
 
-  return (
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const modalContent = (
     <div 
       ref={modalRef}
-      className={`fixed inset-0 bg-black/60 backdrop-blur-md overflow-y-auto h-full w-full z-[60] ${isOpen ? '' : 'hidden'}`}
+      className={`fixed inset-0 z-[60] h-full w-full overflow-hidden bg-black/55 backdrop-blur-md ${isOpen ? '' : 'hidden'}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="incident-modal-title"
@@ -4389,12 +4393,13 @@ export default function IncidentCreationModal({
     >
       <div 
         ref={focusTrapRef as React.RefObject<HTMLDivElement>}
-        className="relative h-full overflow-hidden mx-auto p-0 border w-full shadow-2xl bg-white dark:bg-[#23408e] dark:border-[#2d437a]"
+        className="relative mx-auto flex h-full w-full flex-col overflow-hidden border border-slate-300/50 bg-gradient-to-b from-[#f6f9ff] to-[#eef3fb] p-0 shadow-2xl dark:border-incommand-border dark:bg-incommand-primary-dark"
       >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(37,99,235,0.08),transparent_36%),radial-gradient(circle_at_85%_0%,rgba(56,189,248,0.07),transparent_30%)]" />
         {/* Mobile: Full-screen modal */}
         <div className="block md:hidden h-full flex flex-col">
           {/* Mobile Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e] sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-incommand-border bg-white dark:bg-incommand-primary-dark sticky top-0 z-10">
             <h2 id="incident-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">Create Incident</h2>
             <button
               onClick={() => {
@@ -4413,7 +4418,7 @@ export default function IncidentCreationModal({
             {/* Mobile Form Content */}
             <div className="space-y-6">
               {/* Quick Add Section - Mobile Optimized */}
-              <div className="bg-gray-50 dark:bg-[#1a2f6b] rounded-xl p-4 space-y-4">
+              <div className="bg-gray-50 dark:bg-incommand-input-dark rounded-xl p-4 space-y-4">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Quick Entry</h3>
                 
                 <QuickTabs
@@ -4463,7 +4468,7 @@ export default function IncidentCreationModal({
                         priority: incidentType === 'Attendance' ? 'low' : prev.priority
                       }));
                     }}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-incommand-border rounded-lg bg-white dark:bg-incommand-input-dark text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
                     required
                   >
                     <option value="">Select incident type</option>
@@ -4484,7 +4489,7 @@ export default function IncidentCreationModal({
                     value={formData.occurrence}
                     onChange={(e) => setFormData(prev => ({ ...prev, occurrence: e.target.value }))}
                     placeholder="Describe what happened..."
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none touch-target min-h-[120px] text-base"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-incommand-border rounded-lg bg-white dark:bg-incommand-input-dark text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none touch-target min-h-[120px] text-base"
                     rows={4}
                     required
                   />
@@ -4501,7 +4506,7 @@ export default function IncidentCreationModal({
                       value={formData.callsign_from}
                       onChange={(e) => setFormData(prev => ({ ...prev, callsign_from: e.target.value }))}
                       placeholder="Your callsign"
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-incommand-border rounded-lg bg-white dark:bg-incommand-input-dark text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
                       required
                     />
                   </div>
@@ -4514,7 +4519,7 @@ export default function IncidentCreationModal({
                       value={formData.callsign_to}
                       onChange={(e) => setFormData(prev => ({ ...prev, callsign_to: e.target.value }))}
                       placeholder="Target callsign"
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-incommand-border rounded-lg bg-white dark:bg-incommand-input-dark text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-target min-h-[44px] text-base"
                       required
                     />
                   </div>
@@ -4529,7 +4534,7 @@ export default function IncidentCreationModal({
                     value={formData.action_taken}
                     onChange={(e) => setFormData(prev => ({ ...prev, action_taken: e.target.value }))}
                     placeholder="What action was taken?"
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-[#2d437a] rounded-lg bg-white dark:bg-[#1a2f6b] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none touch-target min-h-[100px] text-base"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-incommand-border rounded-lg bg-white dark:bg-incommand-input-dark text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none touch-target min-h-[100px] text-base"
                     rows={3}
                   />
                 </div>
@@ -4538,14 +4543,14 @@ export default function IncidentCreationModal({
           </div>
           
           {/* Mobile Footer */}
-          <div className="border-t border-gray-200 dark:border-[#2d437a] bg-white dark:bg-[#23408e] p-4 sticky bottom-0">
+          <div className="border-t border-gray-200 dark:border-incommand-border bg-white dark:bg-incommand-primary-dark p-4 sticky bottom-0">
             <div className="flex gap-3">
               <button
                 onClick={() => {
                   resetForm()
                   onClose()
                 }}
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-[#2d437a] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-target min-h-[44px] text-base font-medium"
+                className="flex-1 px-4 py-3 border border-gray-300 dark:border-incommand-border text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-target min-h-[44px] text-base font-medium"
               >
                 Cancel
               </button>
@@ -4561,15 +4566,15 @@ export default function IncidentCreationModal({
         </div>
         
         {/* Desktop: Original Modal Content */}
-        <div className="hidden md:flex md:flex-col md:h-screen md:overflow-hidden">
+        <div className="relative z-10 hidden h-full w-full flex-col overflow-hidden md:flex">
         {/* Real-time collaboration indicators */}
         {isConnected && (
-          <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+          <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur">
             <div className="flex items-center gap-1">
               {presenceUsers.filter(u => u.id !== user?.id).map((presenceUser) => (
                 <div
                   key={presenceUser.id}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white ring-2 ring-white"
                   style={{ backgroundColor: presenceUser.color }}
                   title={presenceUser.name}
                 >
@@ -4577,7 +4582,7 @@ export default function IncidentCreationModal({
                 </div>
               ))}
             </div>
-            <span className="text-xs text-gray-600 dark:text-gray-400">
+            <span className="text-xs font-medium text-slate-600 dark:text-gray-400">
               {presenceUsers.filter(u => u.id !== user?.id).length} collaborating
             </span>
           </div>
@@ -4599,10 +4604,10 @@ export default function IncidentCreationModal({
         />
 
         {/* 🔹 Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 px-4 py-6 sm:px-8 flex-grow overflow-y-auto pb-32">
+        <div className="mx-auto grid w-full max-w-[1880px] flex-grow grid-cols-1 items-start gap-8 overflow-y-auto px-5 py-7 pb-36 sm:px-8 lg:grid-cols-12">
             {/* Left Column - Incident Type Categories (Sidebar) */}
             <aside className="hidden lg:block col-span-3">
-              <div className="bg-gray-100/50 dark:bg-slate-800/50 rounded-xl border border-gray-200 dark:border-gray-700 p-4 h-full max-h-[calc(100vh-200px)] overflow-y-auto sticky top-0">
+              <div className="sticky top-5 h-full max-h-[calc(100vh-220px)] overflow-y-auto rounded-3xl border border-slate-200/90 bg-gradient-to-b from-slate-100/90 to-slate-50/75 p-5 shadow-[0_35px_70px_-50px_rgba(15,23,42,0.95)] dark:border-gray-700 dark:bg-slate-800/50">
                 <IncidentTypeCategories
                   selectedType={formData.incident_type}
                   onTypeSelect={handleIncidentTypeSelect}
@@ -4613,7 +4618,7 @@ export default function IncidentCreationModal({
             </aside>
 
             {/* Middle Column - Main Form Section */}
-            <section className="col-span-12 lg:col-span-6 space-y-6 pb-8">
+            <section className="col-span-12 space-y-7 pb-8 lg:col-span-6">
               <CallsignInformationCard
                 callsignFrom={formData.callsign_from}
                 callsignTo={formData.callsign_to}
@@ -4679,7 +4684,7 @@ export default function IncidentCreationModal({
             </section>
 
             {/* Right Column - AI Tools Panel */}
-            <aside className="col-span-12 lg:col-span-3 flex flex-col gap-4 h-full max-h-[calc(100vh-200px)]">
+            <aside className="col-span-12 flex h-full max-h-[calc(100vh-220px)] flex-col gap-5 lg:sticky lg:top-5 lg:col-span-3">
               <div className="flex-1 min-h-0">
                 <AIToolsPanel
                   formData={formData}
@@ -4713,8 +4718,8 @@ export default function IncidentCreationModal({
           </div>
 
         {/* 🔹 Fixed Bottom Input Bar (ChatGPT/Gemini Style) - Starts from middle, extends to right */}
-        <div className="fixed bottom-0 left-1/2 right-0 z-30 bg-white/90 dark:bg-[#1a2a57]/95 backdrop-blur-md border-t border-l border-slate-200 dark:border-[#2d437a] shadow-lg rounded-tl-2xl">
-          <div className="max-w-4xl px-4 py-4 sm:px-6 flex flex-col gap-3">
+        <div className="fixed bottom-0 left-0 right-0 z-30 rounded-t-2xl border-t border-slate-200/80 bg-white/94 shadow-[0_-18px_45px_-24px_rgba(15,23,42,0.65)] backdrop-blur-md lg:left-[25%] lg:rounded-tl-2xl lg:rounded-tr-none lg:border-l dark:border-incommand-border dark:bg-incommand-surface-elevated/95">
+          <div className="flex max-w-5xl flex-col gap-3 px-4 py-4 sm:px-6">
             
             {/* Recent Radio Messages - Compact */}
             {selectedEventId && (
@@ -4910,7 +4915,7 @@ export default function IncidentCreationModal({
             {/* Action Row - Below Input */}
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2 py-1 font-medium dark:bg-slate-800">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                   AI Online
                 </span>
@@ -4929,7 +4934,7 @@ export default function IncidentCreationModal({
           <button
             onClick={handleSubmitClick}
                   disabled={loading}
-                  className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg hover:shadow-xl transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex transform items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-600 hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
                   Log Incident <PaperAirplaneIcon className="w-4 h-4" />
           </button>
@@ -5060,4 +5065,6 @@ export default function IncidentCreationModal({
       />
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 } 

@@ -1,17 +1,12 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { 
-  Users, 
-  Shield, 
-  Stethoscope, 
-  Siren,
-  MoreHorizontal 
-} from 'lucide-react'
+import { Users, Shield, Stethoscope, Siren } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { FootballData } from '@/types/football'
 import { StatusDot, StatusType } from '@/components/football/StatusIndicator'
 import type { StaffingIngestionBundle } from '@/lib/staffing/dataIngestion'
+import { CardFrame, CardHeader } from '@/components/ui/InCommandCard'
 
 interface FootballCard_MedicalPolicingProps {
   className?: string
@@ -23,32 +18,6 @@ const ITEMS_PER_PAGE = 2
 const AUTO_SCROLL_INTERVAL = 3000 // 3 seconds per slide
 
 // --- Helper Components ---
-const CardFrame = ({ children, className, onMouseEnter, onMouseLeave }: { children: React.ReactNode; className?: string; onMouseEnter?: () => void; onMouseLeave?: () => void }) => (
-  <div 
-    onMouseEnter={onMouseEnter}
-    onMouseLeave={onMouseLeave}
-    className={cn("flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md h-full relative overflow-hidden", className)}
-  >
-    {children}
-  </div>
-)
-
-const CardHeader = ({ icon: Icon, title, action }: { icon: any; title: string; action?: () => void }) => (
-  <div className="flex items-center justify-between mb-3 shrink-0">
-    <div className="flex items-center gap-2">
-      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-        <Icon className="h-3.5 w-3.5" />
-      </div>
-      <span className="text-sm font-semibold text-slate-700">{title}</span>
-    </div>
-    {action && (
-      <button onClick={action} className="text-slate-400 hover:text-slate-600 transition-colors">
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-    )}
-  </div>
-)
-
 const StaffingBar = ({ 
   label, 
   actual, 

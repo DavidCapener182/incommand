@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getServerUser } from '@/lib/auth/getServerUser';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
+import Link from 'next/link';
 import { 
   CogIcon, 
   ShieldCheckIcon,
@@ -9,7 +10,8 @@ import {
   ServerIcon,
   GlobeAltIcon,
   CircleStackIcon,
-  WrenchScrewdriverIcon
+  WrenchScrewdriverIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 
 export const runtime = 'nodejs'
@@ -180,6 +182,27 @@ export default async function SettingsPage() {
               Manage Database
             </button>
           </div>
+
+          <Link href="/admin/settings/sso" className="block">
+            <div className="bg-white dark:bg-[#23408e] rounded-xl border border-gray-200 dark:border-[#2d437a] p-6 hover:ring-2 hover:ring-blue-400 transition-all">
+              <div className="flex items-center mb-4">
+                <UserGroupIcon className="h-8 w-8 text-blue-600 dark:text-blue-400 mr-3" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">SSO / Identity</h3>
+              </div>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">Configure Azure AD, Okta, or SAML for Single Sign-On (Command+ plans)</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-300">Azure AD</span>
+                  <span className="text-gray-900 dark:text-white">Configurable</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-300">Okta</span>
+                  <span className="text-gray-900 dark:text-white">Configurable</span>
+                </div>
+              </div>
+              <span className="inline-block mt-4 text-blue-600 dark:text-blue-400 font-medium text-sm">Configure SSO →</span>
+            </div>
+          </Link>
         </div>
 
         {/* System Maintenance */}

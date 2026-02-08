@@ -269,8 +269,9 @@ export default function NotificationSettingsPage() {
     if (!user) return;
     startTransition(async () => {
       try {
-        // TODO: Integrate with actual email service
-        console.log(`[Notification] Sending test email to user ${user.id}`);
+        const res = await fetch('/api/notifications/test-email', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to send test email');
         addToast({
           type: 'success',
           title: 'Test Email Sent',
@@ -338,8 +339,13 @@ export default function NotificationSettingsPage() {
     }
     startTransition(async () => {
       try {
-        // TODO: Integrate with actual SMS service
-        console.log(`[Notification] Sending test SMS to ${settings.smsNumber} for user ${user.id}`);
+        const res = await fetch('/api/notifications/test-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phoneNumber: settings.smsNumber }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to send test SMS');
         addToast({
           type: 'success',
           title: 'Test SMS Sent',

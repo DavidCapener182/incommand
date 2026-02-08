@@ -188,25 +188,13 @@ export const useNotificationPreferences = () => {
 }
 
 /**
- * Hook for theme preferences
+ * Hook for theme preferences. App is light-only; dark mode has been removed.
  */
 export const useThemePreference = () => {
-  const { userPreferences } = useAuth()
-  const { updatePreference } = useUpdatePreference()
-  
-  const currentTheme = useMemo(() => {
-    return userPreferences?.theme || DEFAULT_USER_PREFERENCES.theme
-  }, [userPreferences?.theme])
-  
-  const setTheme = useCallback(async (theme: 'light' | 'dark' | 'auto') => {
-    await updatePreference('theme', theme)
-  }, [updatePreference])
-  
-  return {
-    theme: currentTheme,
-    setTheme,
-    isDark: currentTheme === 'dark' || (currentTheme === 'auto' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches),
-  }
+  const setTheme = useCallback(async (_theme: 'light' | 'dark' | 'auto') => {
+    // No-op: theme is always light
+  }, [])
+  return { theme: 'light' as const, setTheme, isDark: false }
 }
 
 /**

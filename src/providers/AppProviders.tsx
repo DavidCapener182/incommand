@@ -7,6 +7,7 @@ import { NotificationDrawerProvider } from '../contexts/NotificationDrawerContex
 import { ToastProvider } from '../contexts/ToastContext'
 import { NightModeProvider } from '../contexts/NightModeContext'
 import { ThemeProvider } from '../contexts/ThemeContext'
+import GlobalErrorBoundary from '../components/GlobalErrorBoundary'
 
 interface AppProvidersProps {
   children: React.ReactNode
@@ -18,19 +19,21 @@ interface AppProvidersProps {
  */
 const AppProviders = memo(function AppProviders({ children }: AppProvidersProps) {
   return (
-    <ThemeProvider>
-      <NightModeProvider>
-        <AuthProvider>
-          <EventProvider>
-            <NotificationDrawerProvider>
-              <ToastProvider>
-                {children}
-              </ToastProvider>
-            </NotificationDrawerProvider>
-          </EventProvider>
-        </AuthProvider>
-      </NightModeProvider>
-    </ThemeProvider>
+    <GlobalErrorBoundary>
+      <ThemeProvider>
+        <NightModeProvider>
+          <AuthProvider>
+            <EventProvider>
+              <NotificationDrawerProvider>
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
+              </NotificationDrawerProvider>
+            </EventProvider>
+          </AuthProvider>
+        </NightModeProvider>
+      </ThemeProvider>
+    </GlobalErrorBoundary>
   )
 })
 

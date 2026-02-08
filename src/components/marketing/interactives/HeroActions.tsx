@@ -49,7 +49,7 @@ export const HeroActions = ({
               type="button"
               onClick={() => setOpen(true)}
               className={cn(
-                'bg-white text-blue-700 hover:bg-blue-100 hover:-translate-y-0.5 hover:shadow-xl px-8 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 active:scale-95',
+                'rounded-xl bg-white px-8 py-4 text-lg font-semibold text-blue-700 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-100 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
                 primaryButtonClassName,
               )}
             >
@@ -61,7 +61,7 @@ export const HeroActions = ({
           <Link
             href={primaryHref}
             className={cn(
-              'bg-white text-blue-700 hover:bg-blue-100 hover:-translate-y-0.5 hover:shadow-xl px-8 py-4 rounded-xl text-lg font-semibold shadow-lg transition-all duration-300 active:scale-95',
+              'rounded-xl bg-white px-8 py-4 text-lg font-semibold text-blue-700 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-100 hover:shadow-xl active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
               primaryButtonClassName,
             )}
           >
@@ -72,7 +72,7 @@ export const HeroActions = ({
           <Link
             href={secondaryHref}
             className={cn(
-              'bg-transparent border border-white text-white hover:bg-white/10 hover:-translate-y-0.5 hover:shadow-lg px-8 py-4 rounded-xl text-lg font-semibold shadow-md transition-all duration-300 active:scale-95',
+              'rounded-xl border border-white bg-transparent px-8 py-4 text-lg font-semibold text-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/10 hover:shadow-lg active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
               secondaryButtonClassName,
             )}
           >

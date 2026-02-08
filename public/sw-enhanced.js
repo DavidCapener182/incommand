@@ -3,7 +3,7 @@
  * Provides offline support, caching strategies, and background sync
  */
 
-const CACHE_VERSION = 'v1.0.0'
+const CACHE_VERSION = 'v1.0.3'
 const CACHE_NAME = `incommand-${CACHE_VERSION}`
 const DATA_CACHE_NAME = `incommand-data-${CACHE_VERSION}`
 const IMAGE_CACHE_NAME = `incommand-images-${CACHE_VERSION}`
@@ -11,6 +11,7 @@ const IMAGE_CACHE_NAME = `incommand-images-${CACHE_VERSION}`
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [
   '/',
+  '/offline-fallback.html',
   '/dashboard',
   '/incidents',
   '/staff',
@@ -90,11 +91,29 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Handle navigation requests with network-first, fallback to offline page
+  // Never cache Next.js build assets - always fetch fresh
+  if (url.pathname.startsWith('/_next/')) {
+    event.respondWith(fetch(request))
+    return
+  }
+
+  // Ensure critical assets (JS/CSS) always refresh
+  if (request.destination === 'style' || request.destination === 'script' || request.destination === 'worker') {
+    event.respondWith(fetch(request))
+    return
+  }
+
+  // Handle navigation requests: network first, then offline page, then static fallback
   if (request.mode === 'navigate') {
     event.respondWith(
-      networkFirstStrategy(request, CACHE_NAME).catch(() => {
-        return caches.match('/offline')
+      fetch(request).catch(() => {
+        return caches.match(request.url).then((cached) => {
+          if (cached) return cached
+          return caches.match('/offline').then((offlinePage) => {
+            if (offlinePage) return offlinePage
+            return caches.match('/offline-fallback.html')
+          })
+        })
       })
     )
     return

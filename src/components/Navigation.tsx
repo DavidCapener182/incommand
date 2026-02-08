@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase'
 import ProfileMenu from './ProfileMenu'
 import NotificationDrawer from './NotificationDrawer'
 import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
+import { ALLOWED_BACK_OFFICE_EMAILS } from '@/lib/constants'
 import { UsersIcon, ExclamationTriangleIcon, StarIcon, BoltIcon, BuildingOffice2Icon } from '@heroicons/react/24/solid'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Database } from '@/types/supabase'
@@ -55,42 +56,6 @@ function getRandomGreeting() {
   return GREETINGS[0];
 }
 
-// Add sun/moon icons
-const SunIcon = (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 1v2m0 18v2m11-11h-2M3 12H1m16.95 7.07l-1.41-1.41M6.34 6.34L4.93 4.93m12.02 0l-1.41 1.41M6.34 17.66l-1.41 1.41" />
-  </svg>
-);
-const MoonIcon = (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" />
-  </svg>
-);
-
-// Theme toggle logic
-function useTheme() {
-  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
-    }
-    return 'light';
-  });
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const setTheme = (t: 'light' | 'dark') => setThemeState(t);
-  return [theme, setTheme] as const;
-}
-
 export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   const pathname = usePathname() || '';
   const { signOut, user, role } = useAuth();
@@ -110,7 +75,6 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   const { isOpen: notificationDrawerOpen, setIsOpen: setNotificationDrawerOpen } = useNotificationDrawer();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const router = useRouter();
-  const [theme, setTheme] = useTheme();
   const [eventChats, setEventChats] = useState<{id: string, name: string, type: string}[]>([]);
   const [currentEvent, setCurrentEvent] = useState<any>(null);
   const [selectedEventChatId, setSelectedEventChatId] = useState<string | null>(null);
@@ -215,6 +179,13 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
     return '?';
   }
 
+  const openQuickActionsPanel = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('openQuickActions'));
+    }
+    setMobileMenuOpen(false);
+  };
+
   // Close mobile menu when clicking outside
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -315,7 +286,8 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   return (
     <>
       <nav
-        role="banner"
+        role="navigation"
+        aria-label="Main navigation"
         className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow font-sans"
       >
         <div className="px-4 sm:px-6 lg:px-8">
@@ -375,7 +347,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        window.location.href = '/incidents'
+                        router.push('/incidents')
                       }}
                       className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
                     >
@@ -407,12 +379,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  window.location.href = '/analytics';
+                                  router.push('/analytics');
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    window.location.href = '/analytics';
+                                    router.push('/analytics');
                                   }
                                 }}
                               >
@@ -428,12 +400,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  window.location.href = '/analytics?tab=end-of-event';
+                                  router.push('/analytics?tab=end-of-event');
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    window.location.href = '/analytics?tab=end-of-event';
+                                    router.push('/analytics?tab=end-of-event');
                                   }
                                 }}
                               >
@@ -452,7 +424,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        window.location.href = '/staffing'
+                        router.push('/staffing')
                       }}
                       className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                         >
@@ -468,7 +440,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                               setShowNoEventModal(true)
                           return
                             }
-                        window.location.href = '/tasks'
+                        router.push('/tasks')
                           }}
                       className={`${isActive('/tasks')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                         >
@@ -480,7 +452,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
-                        window.location.href = '/help'
+                        router.push('/help')
                       }}
                       className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
                     >
@@ -493,7 +465,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          window.location.href = '/settings'
+                          router.push('/settings')
                         }}
                         className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
                       >
@@ -520,12 +492,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  window.location.href = '/vendors';
+                                  router.push('/vendors');
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    window.location.href = '/vendors';
+                                    router.push('/vendors');
                                   }
                                 }}
                               >
@@ -541,12 +513,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  window.location.href = '/maintenance';
+                                  router.push('/maintenance');
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    window.location.href = '/maintenance';
+                                    router.push('/maintenance');
                                   }
                                 }}
                               >
@@ -562,12 +534,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  window.location.href = '/lost-and-found';
+                                  router.push('/lost-and-found');
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    window.location.href = '/lost-and-found';
+                                    router.push('/lost-and-found');
                                   }
                                 }}
                               >
@@ -583,12 +555,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  window.location.href = '/blog';
+                                  router.push('/blog');
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    window.location.href = '/blog';
+                                    router.push('/blog');
                                   }
                                 }}
                               >
@@ -604,12 +576,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  window.location.href = '/careers';
+                                  router.push('/careers');
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    window.location.href = '/careers';
+                                    router.push('/careers');
                                   }
                                 }}
                               >
@@ -625,12 +597,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  window.location.href = '/status';
+                                  router.push('/status');
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
-                                    window.location.href = '/status';
+                                    router.push('/status');
                                   }
                                 }}
                               >
@@ -644,14 +616,14 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                       </NavigationMenuList>
                     </NavigationMenu>
 
-                      {/* Admin Button - only show for admin users */}
-                      {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
+                      {/* Admin link - only show for back-office admins (allowed email + role) */}
+                      {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && user?.email && ALLOWED_BACK_OFFICE_EMAILS.includes(user.email) && (
                       <a 
                         href="/admin"
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          window.location.href = '/admin'
+                          router.push('/admin')
                         }}
                         className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 font-sans cursor-pointer`}
                       >
@@ -665,12 +637,15 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               {/* Theme Toggle Button */}
               {!minimal && (
                 <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="hidden xl:flex p-2 rounded-full bg-white/90 text-blue-900 hover:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 shadow"
-                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                  title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  onClick={openQuickActionsPanel}
+                  className="hidden 2xl:flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  aria-label="Open quick actions"
+                  title="Open quick actions (Cmd/Ctrl+K)"
                 >
-                  {theme === 'dark' ? SunIcon : MoonIcon}
+                  <span>Quick Actions</span>
+                  <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wide">
+                    Cmd/Ctrl+K
+                  </span>
                 </button>
               )}
 
@@ -804,7 +779,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Link href="/incidents" className={`${isActive('/incidents')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Incidents</Link>
+            <Link href="/incidents" className={`${isActive('/incidents')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Incidents</Link>
 
             {/* Reports Dropdown for Mobile */}
             <div>
@@ -816,7 +791,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   }
                   setMobileReportsOpen(!mobileReportsOpen);
                 }}
-                className={`touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center justify-between font-sans ${!hasCurrentEvent ? 'opacity-50' : ''}`}
+                className={`touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center justify-between font-sans ${!hasCurrentEvent ? 'opacity-50' : ''}`}
               >
                 <span>Reports</span>
                 <svg className={`w-5 h-5 transition-transform duration-200 ${mobileReportsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -827,7 +802,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                 <div className="pl-6 space-y-1 py-2">
                   <Link 
                     href="/analytics" 
-                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    className={`${isActive('/analytics')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-incommand-nav-hover-light transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -839,7 +814,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   </Link>
                   <Link 
                     href="/analytics?tab=end-of-event" 
-                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    className={`${isActive('/reports')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-incommand-nav-hover-light transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -855,28 +830,42 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
 
             <Link 
               href="/staffing" 
-              className={`${isActive('/staffing')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+              className={`${isActive('/staffing')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
               Staff
             </Link>
             <Link 
               href="/tasks" 
-              className={`${isActive('/tasks')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
-              onClick={() => setMobileMenuOpen(false)}
+              className={`${isActive('/tasks')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center font-sans ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+              onClick={(e) => {
+                if (!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN)) {
+                  e.preventDefault()
+                  setShowNoEventModal(true)
+                  return
+                }
+                setMobileMenuOpen(false)
+              }}
             >
               Tasks
             </Link>
-            <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Help</Link>
+            <Link href="/help" className={`${isActive('/help')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Help</Link>
+            <button
+              onClick={openQuickActionsPanel}
+              className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center justify-between font-sans"
+            >
+              <span>Quick Actions</span>
+              <span className="text-xs text-white/70">Cmd/Ctrl+K</span>
+            </button>
             {canAccessAdminFeatures && (
-              <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
+              <Link href="/settings" className={`${isActive('/settings')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Settings</Link>
             )}
             
             {/* More Dropdown for Mobile */}
             <div>
               <button
                 onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
-                className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center justify-between font-sans"
+                className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center justify-between font-sans"
               >
                 <span>More</span>
                 <svg className={`w-5 h-5 transition-transform duration-200 ${mobileMoreOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -887,7 +876,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                 <div className="pl-6 space-y-1 py-2">
                   <Link 
                     href="/vendors" 
-                    className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    className={`${isActive('/vendors')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-incommand-nav-hover-light transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -899,7 +888,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   </Link>
                   <Link 
                     href="/maintenance" 
-                    className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    className={`${isActive('/maintenance')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-incommand-nav-hover-light transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -911,7 +900,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   </Link>
                   <Link 
                     href="/lost-and-found" 
-                    className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    className={`${isActive('/lost-and-found')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-incommand-nav-hover-light transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -923,7 +912,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   </Link>
                   <Link 
                     href="/blog" 
-                    className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    className={`${isActive('/blog')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-incommand-nav-hover-light transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -935,7 +924,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   </Link>
                   <Link 
                     href="/careers" 
-                    className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    className={`${isActive('/careers')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-incommand-nav-hover-light transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -947,7 +936,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   </Link>
                   <Link 
                     href="/status" 
-                    className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-[#4c5aa9] transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
+                    className={`${isActive('/status')} touch-target block py-3 px-4 rounded-lg text-sm text-white/80 hover:bg-incommand-nav-hover-light transition-colors min-h-[44px] flex items-center font-sans cursor-pointer`} 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -961,8 +950,8 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               )}
             </div>
             
-            {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && (
-              <Link href="/admin" className={`${isActive('/admin')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Admin</Link>
+            {(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) && user?.email && ALLOWED_BACK_OFFICE_EMAILS.includes(user.email) && (
+              <Link href="/admin" className={`${isActive('/admin')} touch-target block py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] flex items-center font-sans`} onClick={() => setMobileMenuOpen(false)}>Admin</Link>
             )}
             
             {/* Divider */}
@@ -981,7 +970,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   }
                 }, 100);
               }}
-              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] font-sans"
+              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] font-sans"
             >
               <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -995,7 +984,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                 setNotificationDrawerOpen(true);
                 setMobileMenuOpen(false);
               }}
-              className="touch-target flex items-center justify-between w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] font-sans"
+              className="touch-target flex items-center justify-between w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-incommand-nav-hover transition-all duration-200 min-h-[44px] font-sans"
             >
               <span>Notifications</span>
               {unreadNotifications > 0 && (
@@ -1005,26 +994,6 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               )}
             </button>
 
-            {/* Theme Toggle for Mobile */}
-            <button
-              onClick={() => {
-                setTheme(theme === 'dark' ? 'light' : 'dark');
-                setMobileMenuOpen(false);
-              }}
-              className="touch-target flex items-center w-full py-4 px-4 rounded-xl text-base font-medium text-white hover:bg-[#3b4a9b] transition-all duration-200 min-h-[44px] font-sans"
-            >
-              {theme === 'dark' ? (
-                <>
-                  {SunIcon}
-                  <span className="ml-3">Light Mode</span>
-                </>
-              ) : (
-                <>
-                  {MoonIcon}
-                  <span className="ml-3">Dark Mode</span>
-                </>
-              )}
-            </button>
           </motion.div>
 
           {/* Sign Out - Fixed at bottom */}
@@ -1036,13 +1005,13 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                     await signOut();
                   } else {
                     // Fallback if signOut is not available
-                    window.location.href = '/login';
+                    router.replace('/login');
                   }
                   setMobileMenuOpen(false);
                 } catch (error) {
                   console.error('Error during logout:', error);
                   // Fallback: redirect to login
-                  window.location.href = '/login';
+                  router.replace('/login');
                 }
               }} 
               className="touch-target w-full text-left py-4 px-4 rounded-xl text-base font-semibold text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all duration-200 min-h-[44px] flex items-center font-sans"
@@ -1074,7 +1043,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                   setShowNoEventModal(false);
                   setShowEventCreation(true);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-[#3b4a9b]"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-incommand-nav-hover"
               >
                 Create Event
               </button>
@@ -1089,7 +1058,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
           onClose={() => setShowEventCreation(false)} 
           onEventCreated={() => { 
             setShowEventCreation(false); 
-            window.location.reload(); 
+            router.refresh();
           }} 
         />
       )}

@@ -164,13 +164,65 @@ export default function QuoteCalculator() {
   }
 
   const handleExportPDF = () => {
-    // TODO: Implement PDF export
-    alert('PDF export functionality coming soon!')
+    const q = displayQuote
+    const plan = PRICING_PLANS[q.recommendedPlan]
+    const b = q.breakdown
+    const breakdownRows = Array.isArray(b)
+      ? b
+      : [
+          { item: 'Base price', amount: b.basePrice },
+          ...(b.addOnsCost > 0 ? [{ item: 'Add-ons', amount: b.addOnsCost }] : []),
+        ]
+
+    const rows = breakdownRows
+      .map(
+        (row: { item?: string; label?: string; amount?: number; cost?: number }) =>
+          `<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb">${row.item || row.label || ''}</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right">${formatCurrency(row.amount ?? row.cost ?? 0)}/mo</td></tr>`
+      )
+      .join('')
+
+    const html = `<!DOCTYPE html><html><head><title>InCommand Quote</title><style>
+      body{font-family:system-ui,sans-serif;padding:40px;color:#1e293b;max-width:800px;margin:auto}
+      h1{font-size:24px;margin-bottom:4px} .sub{color:#64748b;font-size:14px;margin-bottom:32px}
+      table{width:100%;border-collapse:collapse;margin-bottom:24px}
+      th{text-align:left;padding:8px;border-bottom:2px solid #1e293b;font-size:13px}
+      .total{font-size:18px;font-weight:700} .label{color:#64748b;font-size:13px}
+      @media print{body{padding:20px}}
+    </style></head><body>
+      <h1>InCommand Pricing Quote</h1>
+      <p class="sub">Generated ${new Date().toLocaleDateString()} &middot; Recommended plan: <strong>${plan?.displayName ?? q.recommendedPlan}</strong></p>
+      <table>
+        <thead><tr><th>Item</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="display:flex;justify-content:space-between;border-top:2px solid #1e293b;padding-top:16px">
+        <div><span class="label">Monthly estimate</span><div class="total">${formatCurrency(q.monthlyEstimate)}/mo</div></div>
+        <div style="text-align:right"><span class="label">Annual estimate</span><div class="total">${formatCurrency(q.annualEstimate)}/yr</div></div>
+      </div>
+      <p style="margin-top:40px;font-size:12px;color:#94a3b8">This is an estimate only and does not constitute a binding offer. Final pricing may vary.</p>
+    </body></html>`
+
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.write(html)
+      win.document.close()
+      win.focus()
+      setTimeout(() => win.print(), 400)
+    }
   }
 
   const handleEmailQuote = () => {
-    // TODO: Implement email functionality
-    alert('Email quote functionality coming soon!')
+    const q = displayQuote
+    const plan = PRICING_PLANS[q.recommendedPlan]
+    const subject = encodeURIComponent(`InCommand Pricing Quote – ${plan?.displayName ?? q.recommendedPlan}`)
+    const body = encodeURIComponent(
+      `Hi,\n\nPlease find a pricing summary below:\n\n` +
+      `Recommended Plan: ${plan?.displayName ?? q.recommendedPlan}\n` +
+      `Monthly Estimate: ${formatCurrency(q.monthlyEstimate)}/mo\n` +
+      `Annual Estimate: ${formatCurrency(q.annualEstimate)}/yr\n\n` +
+      `This is an estimate only. Please reply to discuss further.\n\nBest regards`
+    )
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_self')
   }
 
   // Always use the latest calculated quote for display (updates automatically when inputs change)

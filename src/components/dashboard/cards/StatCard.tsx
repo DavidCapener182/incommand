@@ -23,6 +23,7 @@ export interface StatCardProps {
   changeType?: 'positive' | 'negative'
   isFirst?: boolean
   isLast?: boolean
+  forceLight?: boolean
 }
 
 export default function StatCard({ 
@@ -41,7 +42,8 @@ export default function StatCard({
   change,
   changeType,
   isFirst = false,
-  isLast = false
+  isLast = false,
+  forceLight = false
 }: StatCardProps) {
   const colorClasses = {
     blue: 'text-blue-500',
@@ -92,27 +94,39 @@ export default function StatCard({
   };
 
   const content = (
-    <Card className={cn(
-      'rounded-none border-0 shadow-none py-0 relative h-full bg-background',
-      '!border-0 !shadow-none',
+    <Card
+      style={forceLight ? { backgroundColor: '#ffffff', color: '#0f172a' } : undefined}
+      className={cn(
+      'group relative h-full overflow-hidden border border-slate-200 bg-white py-0 shadow-sm transition-colors duration-200',
+      forceLight ? 'text-slate-900 dark:border-slate-200 dark:bg-white dark:text-slate-900' : 'dark:border-[#2d437a]/70 dark:bg-[#13213f]',
       isFirst && 'rounded-tl-xl rounded-bl-xl',
       isLast && 'rounded-tr-xl rounded-br-xl',
       isFilterable && 'cursor-pointer touch-target',
-      isSelected && 'ring-2 ring-blue-500 ring-offset-0 dark:ring-offset-0 z-10',
+      isSelected && (forceLight
+        ? 'z-10 border-blue-300 bg-blue-50 ring-1 ring-blue-300/70'
+        : 'z-10 border-blue-300 bg-blue-50 ring-1 ring-blue-300/70 dark:border-blue-400 dark:bg-blue-900/20 dark:ring-blue-500/60'),
       pulse && 'animate-pulse',
       className
-    )} style={{ border: 'none !important', outline: 'none', boxShadow: 'none' }}>
-      <CardContent className="flex flex-col items-center justify-center gap-y-2 px-4 sm:px-6 py-2 sm:py-3 h-full">
-        <div className="flex items-center justify-center gap-2 w-full">
+    )}
+    >
+      <CardContent className="flex h-full flex-col items-center justify-center gap-y-2 px-4 py-3 sm:px-5 sm:py-3">
+        <div className="flex w-full items-center justify-center gap-2">
           {icon && (
-            <div className={cn(
-              "flex-shrink-0 flex items-center justify-center",
+            <div
+              style={forceLight ? { backgroundColor: '#f1f5f9' } : undefined}
+              className={cn(
+              "flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-100",
+              forceLight ? 'text-slate-700' : 'dark:bg-[#223052]',
               colorClasses[color as keyof typeof colorClasses] || 'text-gray-400'
-            )}>
+            )}
+            >
               {icon}
             </div>
           )}
-          <div className="text-sm font-medium text-muted-foreground text-center">
+          <div className={cn(
+            'text-center text-xs font-semibold uppercase tracking-[0.12em]',
+            forceLight ? 'text-slate-500' : 'text-muted-foreground'
+          )}>
             {title}
           </div>
           {change && (
@@ -128,7 +142,10 @@ export default function StatCard({
             </div>
           )}
         </div>
-        <div className="w-full flex-none text-3xl font-medium tracking-tight text-foreground text-center">
+        <div className={cn(
+          'w-full flex-none text-center text-3xl font-semibold tracking-tight',
+          forceLight ? 'text-slate-900' : 'text-foreground'
+        )}>
           {value}
         </div>
         {showPulse && (
@@ -145,6 +162,10 @@ export default function StatCard({
     return (
       <motion.div 
         ref={cardRef}
+        role="button"
+        tabIndex={0}
+        aria-label={`${title}: ${value}${isSelected ? ' (active filter)' : ''}`}
+        aria-pressed={isSelected}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ 
@@ -153,12 +174,13 @@ export default function StatCard({
           ease: "easeOut"
         }}
         whileHover={{ 
-          y: -4,
-          scale: 1.03,
+          y: -2,
+          scale: 1.01,
           transition: { duration: 0.2 }
         }}
         whileTap={{ scale: 0.97 }}
         onClick={onClick}
+        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onClick) { e.preventDefault(); onClick(); } }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setShowTooltip(false)}
       >
@@ -195,7 +217,7 @@ export default function StatCard({
         ease: "easeOut"
       }}
       whileHover={{ 
-        y: -4,
+        y: -2,
         transition: { duration: 0.2 }
       }}
     >
@@ -203,4 +225,3 @@ export default function StatCard({
     </motion.div>
   );
 }
-

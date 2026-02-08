@@ -116,6 +116,11 @@ const nextConfig = {
   
   // Security and performance headers
   async headers() {
+    const isProduction = process.env.NODE_ENV === 'production'
+    const staticAssetCacheControl = isProduction
+      ? 'public, max-age=31536000, immutable'
+      : 'no-store, no-cache, must-revalidate'
+
     return [
       {
         source: '/:path*',
@@ -140,7 +145,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: staticAssetCacheControl,
           },
         ],
       },
@@ -150,7 +155,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: staticAssetCacheControl,
           },
         ],
       },
@@ -160,7 +165,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: staticAssetCacheControl,
           },
         ],
       },

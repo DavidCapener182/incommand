@@ -501,6 +501,46 @@ export default function OfflineMode() {
         </Card>
       )}
 
+      {/* Data management */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Management</CardTitle>
+          <CardDescription>Manage cached data and local storage</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Clear completed operations</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Remove successfully synced items from the queue</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleClearCompleted}>
+              Clear
+            </Button>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Clear browser cache</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Remove cached pages and assets. Use if the app behaves unexpectedly.</p>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const keys = await caches.keys()
+                  await Promise.all(keys.map(k => caches.delete(k)))
+                  addToast({ type: 'success', title: 'Cache Cleared', message: 'All browser caches have been cleared.' })
+                } catch (e) {
+                  addToast({ type: 'error', title: 'Error', message: 'Failed to clear caches' })
+                }
+              }}
+            >
+              Clear Cache
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Info Card */}
       <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
         <CardContent className="p-4">

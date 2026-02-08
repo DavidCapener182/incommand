@@ -142,8 +142,8 @@ export default function IncidentTypeCategories({
   return (
     <div className="space-y-3 h-full overflow-y-auto custom-scrollbar pr-1">
       {/* Header */}
-      <div className="mb-4 px-1">
-        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Categories</h3>
+      <div className="mb-4 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 shadow-sm">
+        <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Categories</h3>
       </div>
 
       {/* Accordion List */}
@@ -157,17 +157,17 @@ export default function IncidentTypeCategories({
             <div 
               key={name} 
               className={cn(
-                "rounded-lg border transition-all duration-200 overflow-hidden",
-                isExpanded ? "border-blue-200 bg-white shadow-sm ring-1 ring-blue-100" : "border-slate-200 bg-white hover:border-slate-300"
+                "overflow-hidden rounded-xl border transition-all duration-200",
+                isExpanded ? "border-blue-200 bg-white shadow-sm ring-1 ring-blue-100" : "border-slate-200/90 bg-white/90 hover:border-slate-300 hover:shadow-sm"
               )}
             >
               {/* Category Header */}
               <button
                 onClick={() => setExpandedCategory(isExpanded ? null : name)}
-                className="w-full flex items-center justify-between p-3 text-left"
+                className="flex w-full items-center justify-between p-3 text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className={cn("p-1.5 rounded-md shrink-0", data.color)}>
+                  <div className={cn("shrink-0 rounded-md p-1.5", data.color)}>
                     <Icon className="h-4 w-4" />
                   </div>
                   <div>
@@ -184,7 +184,7 @@ export default function IncidentTypeCategories({
 
               {/* Incident Types List */}
               {isExpanded && (
-                <div className="border-t border-slate-100 bg-slate-50/50 p-2 space-y-1">
+                <div className="space-y-1 border-t border-slate-100 bg-slate-50/70 p-2">
                   {(data.types as string[]).map((type) => {
                     const isSelected = selectedType === type;
                     const usage = usageStats[type] || 0;
@@ -198,9 +198,9 @@ export default function IncidentTypeCategories({
                         key={type}
                         onClick={() => onTypeSelect(type)}
                         className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2 rounded-md text-left text-sm transition-colors",
+                          "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
                           isSelected 
-                            ? "bg-blue-100 text-blue-700 font-medium" 
+                            ? "bg-blue-100 text-blue-700 font-medium ring-1 ring-blue-200" 
                             : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
                         )}
                       >
@@ -222,7 +222,7 @@ export default function IncidentTypeCategories({
       </div>
       
       {/* Footer Tip */}
-      <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-dashed border-slate-200 text-center">
+      <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/80 p-3 text-center">
          <p className="text-[10px] text-slate-400 leading-relaxed">
            Categories are sorted by recent usage. Expand a section to see options.
          </p>

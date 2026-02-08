@@ -5,8 +5,8 @@ import AppProviders from '../providers/AppProviders'
 import LayoutWrapper from '../components/LayoutWrapper'
 import MaintenanceBanner from '../components/MaintenanceBanner'
 import { Analytics } from '@vercel/analytics/react'
-import OfflineIndicator from '../components/OfflineIndicator'
 import { defaultMetadata } from '../config/seo.config'
+import WebVitalsReporter from '../components/WebVitalsReporter'
 
 // Optimize Inter font with next/font
 const inter = Inter({
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: '#2A3990'
 }
 
@@ -44,8 +44,59 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`scroll-smooth ${inter.variable}`}>
+    <html lang="en" className={`scroll-smooth ${inter.variable} light`} suppressHydrationWarning>
       <head>
+        <script
+          // Compatibility guard for stale client bundles that still reference a global `theme` variable.
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                  var devCleanupKey = '__incommand_dev_cache_cleared_v2__';
+                  if (isLocalhost && sessionStorage.getItem(devCleanupKey) !== '1') {
+                    var swCleanup = Promise.resolve();
+                    if ('serviceWorker' in navigator) {
+                      try {
+                        // Disable future SW registration in localhost dev.
+                        navigator.serviceWorker.register = function () {
+                          return Promise.reject(new Error('Service workers are disabled in localhost development.'));
+                        };
+                      } catch (_ignored) {}
+
+                      swCleanup = navigator.serviceWorker
+                        .getRegistrations()
+                        .then(function (registrations) {
+                          return Promise.all(registrations.map(function (registration) {
+                            return registration.unregister();
+                          }));
+                        });
+                    }
+
+                    swCleanup
+                      .then(function () {
+                        if ('caches' in window) {
+                          return caches.keys().then(function (keys) {
+                            return Promise.all(keys.map(function (key) {
+                              return caches.delete(key);
+                            }));
+                          });
+                        }
+                      })
+                      .finally(function () {
+                        sessionStorage.setItem(devCleanupKey, '1');
+                        /* Removed auto-reload to prevent full-page refresh and style loss on incidents dashboard */
+                      });
+                  }
+
+                  window.theme = 'light';
+                } catch (e) {
+                  window.theme = 'light';
+                }
+              })();
+            `,
+          }}
+        />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="InCommand" />
@@ -71,7 +122,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
       </head>
-      <body className={`bg-white dark:bg-[#151d34] text-gray-900 dark:text-gray-100 transition-colors duration-300 ${inter.className}`}>
+      <body className={`bg-white text-gray-900 transition-colors duration-300 ${inter.className}`}>
         {/* Skip to content link */}
         <a
           href="#main"
@@ -84,11 +135,11 @@ export default function RootLayout({
 
         <AppProviders>
           <MaintenanceBanner />
-          <OfflineIndicator />
           {/* <PrintInitializer /> */}
           <LayoutWrapper>{children}</LayoutWrapper>
         </AppProviders>
         <Analytics />
+        <WebVitalsReporter />
       </body>
     </html>
   )

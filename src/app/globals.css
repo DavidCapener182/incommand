@@ -14,6 +14,58 @@
   }
 }
 
+/* ===== Accessibility ===== */
+
+/* Global focus-visible ring for keyboard navigation */
+@layer base {
+  *:focus-visible {
+    outline: 2px solid var(--primary-dark-blue, #23408e);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Remove outline for mouse/touch */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+/* High-contrast mode support */
+@media (forced-colors: active) {
+  .badge,
+  .card,
+  button,
+  a {
+    forced-color-adjust: auto;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen-reader only utility (extend Tailwind's sr-only) */
+@layer utilities {
+  .sr-only-focusable:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 1rem;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+}
+
 @keyframes marquee {
   from {
     transform: translateX(0);
@@ -29,6 +81,72 @@
   }
   body {
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  }
+
+  :root {
+    --landing-navy: #1e3a8a;
+    --landing-royal: #23408e;
+    --landing-ink: #0f172a;
+    --landing-soft: #f7f9ff;
+    --landing-border: rgba(35, 64, 142, 0.14);
+    --landing-shadow: 0 28px 80px -45px rgba(30, 58, 138, 0.48);
+    /* InCommand dark palette - single source of truth */
+    --primary-dark-blue: #23408e;
+    --secondary-dark-blue: #1b203b;
+    --tertiary-dark-blue: #0f1a33;
+    --quaternary-dark-blue: #0e1427;
+    --border-blue: #2d437a;
+    --hover-blue: #162447;
+    --surface-dark: #111a33;
+    --surface-dark-alt: #0f1a33;
+    --surface-dark-muted: #152346;
+    --surface-dark-elevated: #1a2a57;
+    --surface-dark-row: #152041;
+    --surface-dark-row-alt: #1b2a52;
+    --nav-hover-blue: #3b4a9b;
+    --nav-hover-blue-light: #4c5aa9;
+    --brand-mobile: #2A3990;
+    --layout-dark: #151d34;
+    --page-bg-dark: #15192c;
+    --input-dark: #1a2f6b;
+    --table-header-dark: #1a1f2d;
+  }
+}
+
+@layer components {
+  /* Incident Dashboard container - distinct from page background; !important prevents broad overrides from flattening */
+  .incident-dashboard-shell {
+    background:
+      linear-gradient(180deg, #e9edf3 0%, #e3e8ef 55%, #dde3eb 100%) !important;
+  }
+
+  .dark .incident-dashboard-shell {
+    background:
+      radial-gradient(circle at 12% 0%, rgba(59, 130, 246, 0.2), transparent 46%),
+      radial-gradient(circle at 92% 4%, rgba(56, 189, 248, 0.18), transparent 40%),
+      linear-gradient(180deg, #0c1429 0%, #111b35 52%, #0f172f 100%) !important;
+  }
+
+  .landing-section-shell {
+    @apply relative overflow-hidden rounded-[2rem] border bg-white;
+    border-color: var(--landing-border);
+    box-shadow: var(--landing-shadow);
+  }
+
+  .landing-surface-gradient {
+    background: linear-gradient(180deg, #f8fbff 0%, #eef3ff 100%);
+  }
+
+  .landing-mesh {
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.18) 0%, transparent 40%),
+      radial-gradient(circle at 86% 2%, rgba(59, 130, 246, 0.16) 0%, transparent 34%),
+      radial-gradient(circle at 70% 88%, rgba(56, 189, 248, 0.1) 0%, transparent 36%);
+  }
+
+  .landing-noise {
+    background-image: radial-gradient(rgba(148, 163, 184, 0.22) 0.75px, transparent 0.75px);
+    background-size: 14px 14px;
   }
 }
 
@@ -251,7 +369,7 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
     }
 
     .dark .card-depth {
-      background-color: #1b203b;
+      background-color: var(--secondary-dark-blue);
       border-color: rgba(255, 255, 255, 0.05);
       box-shadow: var(--shadow-level-1);
     }
@@ -271,10 +389,14 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
 
   .card-depth-subtle {
     background-color: var(--alt-card-bg);
-    @apply rounded-xl border border-slate-100/60 dark:border-white/5 dark:bg-[#1b203b];
+    @apply rounded-xl border border-slate-100/60 dark:border-white/5;
     box-shadow: var(--shadow-level-1);
     padding: var(--card-padding);
     transition: box-shadow 200ms ease, transform 180ms ease-out;
+  }
+  .dark .card-depth-subtle {
+    background-color: var(--secondary-dark-blue);
+    border-color: rgba(255, 255, 255, 0.05);
   }
 
   .card-depth-subtle:hover,
@@ -284,10 +406,13 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
 
   .card-table-row {
     background-color: var(--metrics-card-bg);
-    @apply rounded-xl border border-slate-100/70 dark:border-white/5 dark:bg-[#23408e];
+    @apply rounded-xl border border-slate-100/70 dark:border-white/5;
     box-shadow: var(--shadow-level-1);
     padding: 1rem 1.25rem;
     transition: box-shadow 200ms ease, transform 180ms ease-out;
+  }
+  .dark .card-table-row {
+    background-color: var(--primary-dark-blue);
   }
 
   .card-table-row:hover {
@@ -297,9 +422,12 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
 
   .card-modal {
     background-color: var(--modal-card-bg);
-    @apply rounded-2xl dark:bg-[#1b203b];
+    @apply rounded-2xl;
     box-shadow: var(--shadow-level-3);
     padding: calc(var(--card-padding) * 1.2);
+  }
+  .dark .card-modal {
+    background-color: var(--secondary-dark-blue);
   }
 
   .card-skeleton {
@@ -308,10 +436,13 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
 
   .card-time {
     background-color: var(--dashboard-card-bg);
-    @apply rounded-2xl border border-blue-200/70 dark:border-blue-500/40 dark:bg-[#23408e];
+    @apply rounded-2xl border border-blue-200/70 dark:border-blue-500/40;
     box-shadow: var(--shadow-level-2);
     padding: var(--card-padding);
     transition: box-shadow 250ms ease;
+  }
+  .dark .card-time {
+    background-color: var(--primary-dark-blue);
   }
 
   .card-time:hover {
@@ -320,16 +451,22 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
 
   .card-control {
     background-color: var(--dashboard-card-bg);
-    @apply rounded-lg border border-slate-100/70 dark:border-white/5 dark:bg-[#1b203b];
+    @apply rounded-lg border border-slate-100/70 dark:border-white/5;
     box-shadow: var(--shadow-level-2);
     padding: 1rem;
+  }
+  .dark .card-control {
+    background-color: var(--secondary-dark-blue);
   }
 
   .card-board {
     background-color: var(--dashboard-card-bg);
-    @apply rounded-2xl border border-slate-100/70 dark:border-white/5 dark:bg-[#1b203b];
+    @apply rounded-2xl border border-slate-100/70 dark:border-white/5;
     box-shadow: var(--shadow-level-3);
     padding: calc(var(--card-padding) * 1.25);
+  }
+  .dark .card-board {
+    background-color: var(--secondary-dark-blue);
   }
 
   .card-alt {
@@ -341,6 +478,25 @@ body.chat-open .fixed.bottom-6.right-6.z-50 {
 
   .card-alt:hover {
     box-shadow: var(--shadow-level-2);
+  }
+
+  .card-feature {
+    @apply rounded-2xl border border-slate-200/70 dark:border-white/10 p-6;
+    background-color: var(--dashboard-card-bg);
+    box-shadow: var(--shadow-level-1);
+  }
+  .dark .card-feature {
+    background-color: var(--secondary-dark-blue);
+  }
+
+  .card-mobile {
+    @apply rounded-xl border border-slate-200/80 dark:border-white/10 p-4;
+    background-color: var(--dashboard-card-bg);
+    box-shadow: var(--shadow-level-1);
+    min-height: 44px;
+  }
+  .dark .card-mobile {
+    background-color: var(--surface-dark-alt);
   }
 
   /* Accent and Gradient Treatments */
@@ -1599,6 +1755,29 @@ input:-webkit-autofill {
   * {
     @apply border-border;
   }
+  html[data-force-light='true'],
+  html[data-force-light='true'] body {
+    background-color: #e3e8ef !important;
+    color: #0f172a !important;
+  }
+
+  html[data-force-light='true'] .card-depth,
+  html[data-force-light='true'] .card-depth-subtle,
+  html[data-force-light='true'] .card-hero,
+  html[data-force-light='true'] .card-time,
+  html[data-force-light='true'] .card-control,
+  html[data-force-light='true'] .card-board,
+  html[data-force-light='true'] .card-alt {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: var(--shadow-level-1);
+  }
+
+  html[data-force-light='true'] .text-muted-foreground,
+  html[data-force-light='true'] .text-foreground {
+    color: #475569 !important;
+  }
   body {
     background-color: var(--page-bg) !important;
     @apply dark:from-[#0f172a] dark:via-[#1e293b] dark:to-[#334155] text-foreground !important;
@@ -1646,109 +1825,6 @@ input:-webkit-autofill {
     background: linear-gradient(135deg, #0f172a, #1e293b, #334155) !important;
   }
 
-  /* Automatic section hierarchy - cascade backgrounds */
-  main > section {
-    background-color: var(--section-bg);
-    border-radius: 1rem;
-    padding: 1.5rem;
-  }
-
-  main > section > .card-mobile {
-    background-color: var(--dashboard-card-bg);
-  }
-
-  /* Ensure cards within sections maintain proper contrast */
-  .section-container .card-mobile,
-  .section-container .card-depth {
-    background-color: var(--dashboard-card-bg);
-  }
-
-  /* Ensure Operational Metrics matches Support Tools */
-  .incident-dashboard {
-    background-color: var(--section-bg) !important; /* #E2E8F0 */
-    border-radius: 1rem;
-    padding: 1.5rem;
-  }
-
-  /* If Operational Metrics is nested within Incident Dashboard */
-  .incident-dashboard .operational-metrics {
-    background-color: var(--section-bg) !important;
-  }
-
-  /* Section header bars with rounded upper corners */
-  .section-header {
-    background-color: var(--section-bg);
-    border-radius: 1rem 1rem 0 0; /* Rounded top corners only */
-    padding: 1rem 1.5rem 0.5rem 1.5rem;
-    margin: 0;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Ensure section headers align with container top */
-  .section-container .section-header {
-    margin: -1.5rem -1.5rem 0 -1.5rem; /* Negative margins to align with container */
-    padding: 1rem 1.5rem 0.5rem 1.5rem;
-  }
-
-  /* Alternative: Direct styling for section titles */
-  main > section > h2,
-  main > section > h3,
-  .section-container > h2,
-  .section-container > h3 {
-    background-color: var(--section-bg);
-    border-radius: 1rem 1rem 0 0;
-    padding: 1rem 1.5rem 0.5rem 1.5rem;
-    margin: -1.5rem -1.5rem 0 -1.5rem;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Fix the sticky header bars with rounded corners - DON'T override section background */
-  .sticky.top-16.z-10.-mx-4.-mt-4.px-4.pt-4.pb-2.backdrop-blur-md {
-    border-radius: 1rem 1rem 0 0 !important;
-    margin: -1rem -1rem 0 -1rem !important;
-    padding: 1rem 1rem 0.5rem 1rem !important;
-  }
-
-  /* Dark mode sticky headers - keep existing background */
-  .dark .sticky.top-16.z-10.-mx-4.-mt-4.px-4.pt-4.pb-2.backdrop-blur-md {
-    border-radius: 1rem 1rem 0 0 !important;
-  }
-
-  /* Reduce StatCard height - target the actual classes used */
-  .card-depth .p-3,
-  .card-depth .md\\:p-4 {
-    padding: 0.5rem !important; /* Reduced from p-3 (0.75rem) and md:p-4 (1rem) */
-  }
-
-  /* Reduce minimum height of StatCard content */
-  .flex.items-center.justify-between.w-full.gap-3 {
-    min-height: 32px !important; /* Reduced from min-h-[48px] sm:min-h-[54px] */
-  }
-
-  /* Reduce text size and spacing */
-  .text-2xl.font-bold {
-    font-size: 1.25rem !important; /* Reduced from text-2xl (1.5rem) */
-    line-height: 1.2 !important;
-  }
-
-  .text-sm.font-medium {
-    font-size: 0.75rem !important; /* Reduced from text-sm (0.875rem) */
-    line-height: 1.2 !important;
-  }
-
-  /* Reduce icon size */
-  .h-6.w-6,
-  .md\\:h-8.md\\:w-8 {
-    height: 1.25rem !important; /* Reduced from h-6 (1.5rem) */
-    width: 1.25rem !important;
-  }
-
-  /* Reduce gap between elements */
-  .flex.flex-col.flex-1.gap-1 {
-    gap: 0.125rem !important; /* Reduced from gap-1 (0.25rem) */
-  }
 }
 
 /* Equal height utility for dashboard cards */

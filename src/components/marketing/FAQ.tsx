@@ -1,6 +1,7 @@
 'use client'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { HelpCircle, ShieldCheck } from 'lucide-react'
 
 const faqItems = [
   {
@@ -56,19 +57,45 @@ const faqItems = [
 ]
 
 export const FAQSection = () => (
-  <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-12 md:flex-row md:items-start md:gap-12">
-    <h2 className="text-3xl font-semibold tracking-tight text-[#23408e] md:text-4xl">
-      Frequently Asked
-      <br /> Questions
-    </h2>
-    <Accordion type="single" defaultValue="question-0" className="w-full md:max-w-xl">
-      {faqItems.map(({ question, answer }, index) => (
-        <AccordionItem key={question} value={`question-${index}`}>
-          <AccordionTrigger className="text-left text-lg text-blue-900">{question}</AccordionTrigger>
-          <AccordionContent className="text-base text-blue-700">{answer}</AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
+  <div className="relative mx-auto max-w-6xl px-4 py-4">
+    <div className="landing-section-shell flex flex-col gap-10 px-6 py-10 md:flex-row md:items-start md:gap-14 md:px-10 md:py-12">
+      <div className="md:w-[40%]">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#23408e]/20 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#23408e]">
+          <HelpCircle className="h-3.5 w-3.5" />
+          Support
+        </div>
+        <h2 className="mt-5 text-3xl font-semibold tracking-tight text-[#23408e] md:text-4xl">
+          Frequently Asked
+          <br /> Questions
+        </h2>
+        <p className="mt-4 max-w-sm text-base text-slate-600">
+          Answers to the most common onboarding, billing, security, and operations questions.
+        </p>
+
+        <div className="mt-6 rounded-2xl border border-[#23408e]/15 bg-blue-50/70 p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-[#23408e] p-2 text-white">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+            <p className="text-sm font-medium text-slate-700">
+              Need a tailored answer? Reach our team via the contact options below and we&apos;ll help you map the right setup.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <Accordion type="single" defaultValue="question-0" className="w-full md:max-w-2xl">
+        {faqItems.map(({ question, answer }, index) => (
+          <AccordionItem key={question} value={`question-${index}`} className="border-b border-slate-200">
+            <AccordionTrigger className="text-left text-lg font-semibold text-blue-900 hover:text-[#23408e]">
+              {question}
+            </AccordionTrigger>
+            <AccordionContent className="text-base leading-relaxed text-slate-700">
+              {answer}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
   </div>
 )
-

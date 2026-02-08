@@ -164,7 +164,29 @@ module.exports = {
   			'dashboard-card-bg': 'var(--dashboard-card-bg)',
   			'metrics-card-bg': 'var(--metrics-card-bg)',
   			'modal-card-bg': 'var(--modal-card-bg)',
-  			'alt-card-bg': 'var(--alt-card-bg)'
+  			'alt-card-bg': 'var(--alt-card-bg)',
+  			// InCommand semantic dark palette (use instead of hardcoded hex)
+  			incommand: {
+  				'primary-dark': 'var(--primary-dark-blue)',
+  				'secondary-dark': 'var(--secondary-dark-blue)',
+  				'tertiary-dark': 'var(--tertiary-dark-blue)',
+  				'quaternary-dark': 'var(--quaternary-dark-blue)',
+  				'border': 'var(--border-blue)',
+  				'hover': 'var(--hover-blue)',
+  				'surface': 'var(--surface-dark)',
+  				'surface-alt': 'var(--surface-dark-alt)',
+  				'surface-muted': 'var(--surface-dark-muted)',
+  				'surface-elevated': 'var(--surface-dark-elevated)',
+  				'surface-row': 'var(--surface-dark-row)',
+  				'surface-row-alt': 'var(--surface-dark-row-alt)',
+  				'nav-hover': 'var(--nav-hover-blue)',
+  				'nav-hover-light': 'var(--nav-hover-blue-light)',
+  				'brand-mobile': 'var(--brand-mobile)',
+  				'layout': 'var(--layout-dark)',
+  				'page': 'var(--page-bg-dark)',
+  				'input-dark': 'var(--input-dark)',
+  				'table-header': 'var(--table-header-dark)'
+  			}
   		}
   	}
   },

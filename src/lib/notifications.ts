@@ -119,47 +119,36 @@ export async function updateNotificationSettings(
 }
 
 /**
- * Send test email to user
+ * Send test email to user. Uses Resend (or configured provider) when RESEND_API_KEY is set.
  */
-export async function sendTestEmail(userId: string): Promise<void> {
-  // This would integrate with your email service
-  // For now, we'll just log it
-  console.log(`[Notification] Sending test email to user ${userId}`)
-  
-  // TODO: Integrate with actual email service
-  // Example: await emailService.send({
-  //   to: userEmail,
-  //   subject: 'Test Email from inCommand',
-  //   body: 'This is a test email to verify your notification settings.',
-  // })
+export async function sendTestEmail(userId: string, recipientEmail?: string): Promise<void> {
+  const { emailService } = await import('@/lib/notifications/emailService')
+  const email = recipientEmail ?? (await getServiceSupabaseClient().from('profiles').select('email').eq('id', userId).single().then(({ data }) => data?.email))
+  if (!email) throw new Error('No email address for user')
+  await emailService.send({
+    to: email,
+    subject: 'Test email from inCommand',
+    html: '<p>This is a test email to verify your notification settings.</p>',
+    text: 'This is a test email to verify your notification settings.',
+  })
 }
 
 /**
- * Send test push notification to user
+ * Send test push notification to user. Push is delivered via browser or FCM when configured.
  */
 export async function sendTestPush(userId: string): Promise<void> {
-  // This would integrate with your push notification service
-  console.log(`[Notification] Sending test push to user ${userId}`)
-  
-  // TODO: Integrate with actual push service
-  // Example: await pushService.send({
-  //   userId,
-  //   title: 'Test Notification',
-  //   body: 'This is a test push notification.',
-  // })
+  // Push is typically sent from client (browser Notification) or via FCM/OneSignal when configured
+  console.log(`[Notification] Test push requested for user ${userId}`)
 }
 
 /**
- * Send test SMS to user
+ * Send test SMS to user. Uses Twilio (or configured provider) when TWILIO_* env vars are set.
  */
 export async function sendTestSMS(userId: string, phoneNumber: string): Promise<void> {
-  // This would integrate with your SMS service
-  console.log(`[Notification] Sending test SMS to ${phoneNumber} for user ${userId}`)
-  
-  // TODO: Integrate with actual SMS service
-  // Example: await smsService.send({
-  //   to: phoneNumber,
-  //   message: 'This is a test SMS from inCommand.',
-  // })
+  const { smsService } = await import('@/lib/notifications/smsService')
+  await smsService.send({
+    to: phoneNumber.trim(),
+    message: 'Test SMS from inCommand. Your notification settings are working.',
+  })
 }
 

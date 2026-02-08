@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { ListBulletIcon, BookOpenIcon, SparklesIcon, ClipboardDocumentCheckIcon, CheckCircleIcon, UserMinusIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import { callOpenAI } from '@/services/incidentAIService'
+import { CardFrame, CardHeader } from '@/components/ui/InCommandCard'
 
 export interface DetailedInformationCardProps {
   headline: string | undefined
@@ -93,29 +94,24 @@ export default function DetailedInformationCard({
     }
   }
 
-  // Helper for dynamic textarea resizing (optional, simplified for now)
-  const textareaClass = "w-full rounded-lg border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all resize-none p-3 min-h-[80px]"
-  const inputClass = "w-full rounded-lg border-slate-200 bg-slate-50/50 text-sm focus:bg-white focus:border-blue-500 focus:ring-blue-500 transition-all h-10 px-3"
+  const textareaClass = "min-h-[90px] w-full resize-none rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-800 shadow-sm transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+  const inputClass = "h-11 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-sm text-slate-800 shadow-sm transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      
-      {/* Header */}
-      <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
-        <div className="bg-indigo-100 p-1.5 rounded-md text-indigo-600">
-          <ListBulletIcon className="h-4 w-4" />
-        </div>
-        <h3 className="font-semibold text-slate-800 text-sm">Detailed Information</h3>
-      </div>
-
-      <div className="p-5 space-y-5">
+    <CardFrame>
+      <CardHeader
+        icon={ListBulletIcon}
+        title="Detailed Information"
+        variant="indigo"
+      />
+      <div className="space-y-5">
         
         {/* Row 1: Metadata (Headline & Source) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Headline */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-               <label htmlFor="headline" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Headline</label>
+               <label htmlFor="headline" className="text-xs font-semibold uppercase tracking-wide text-slate-500">Headline</label>
                <div className="flex items-center gap-2">
                  <span className={`text-[10px] font-medium ${getHeadlineWordCount(headline || '') > 15 ? 'text-red-600' : 'text-slate-400'}`}>
                     {getHeadlineWordCount(headline || '')}/15 words
@@ -123,7 +119,7 @@ export default function DetailedInformationCard({
                  <button
                    onClick={handleGenerateHeadline}
                    disabled={generatingHeadline || !factsObserved}
-                   className="flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50"
+                   className="flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 disabled:opacity-50"
                  >
                    {generatingHeadline ? (
                      <>
@@ -152,7 +148,7 @@ export default function DetailedInformationCard({
 
           {/* Source */}
           <div className="space-y-1.5">
-            <label htmlFor="source" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Source</label>
+            <label htmlFor="source" className="text-xs font-semibold uppercase tracking-wide text-slate-500">Source</label>
             <input
               id="source"
               type="text"
@@ -172,17 +168,17 @@ export default function DetailedInformationCard({
           {/* Facts Observed */}
           <div className="space-y-1.5 relative group">
             <div className="flex justify-between items-end mb-1">
-               <label htmlFor="facts" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Facts Observed</label>
+               <label htmlFor="facts" className="text-xs font-semibold uppercase tracking-wide text-slate-500">Facts Observed</label>
                <div className="flex items-center gap-2">
                  {factualValidationWarnings.length > 0 && (
-                   <span className="text-[10px] text-amber-600 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-full">
+                   <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
                      ⚠️ Review Language
                    </span>
                  )}
                  <button
                    onClick={handleAnonymize}
                    disabled={anonymizing || !factsObserved}
-                   className="flex items-center gap-1 text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full hover:bg-slate-200 transition-colors disabled:opacity-50"
+                   className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 transition-colors hover:bg-slate-200 disabled:opacity-50"
                    title="Anonymize Names"
                  >
                    {anonymizing ? (
@@ -213,7 +209,7 @@ export default function DetailedInformationCard({
                        .finally(() => setRefining(false))
                    }}
                    disabled={refining || !factsObserved}
-                   className="flex items-center gap-1 text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50"
+                   className="flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-700 transition-colors hover:bg-purple-100 disabled:opacity-50"
                  >
                    {refining ? (
                      <>
@@ -239,12 +235,12 @@ export default function DetailedInformationCard({
                 onFactualValidationWarningsChange(validation.warnings)
               }}
               placeholder="Describe exactly what was observed (who, what, where). Avoid opinions."
-              className={`${textareaClass} focus:ring-2 focus:ring-purple-500/20`}
+              className={`${textareaClass} focus:ring-purple-500/20`}
               rows={3}
             />
             {/* Validation Warnings */}
             {factualValidationWarnings.length > 0 && (
-              <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded-md border border-amber-100">
+              <div className="rounded-lg border border-amber-100 bg-amber-50 p-2 text-xs text-amber-700">
                 <p className="font-medium mb-1">Language check:</p>
                 <ul className="list-disc list-inside space-y-0.5 opacity-90">
                   {factualValidationWarnings.map((w, i) => <li key={i}>{w}</li>)}
@@ -256,7 +252,7 @@ export default function DetailedInformationCard({
           {/* Actions Taken */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-               <label htmlFor="actions" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions Taken</label>
+               <label htmlFor="actions" className="text-xs font-semibold uppercase tracking-wide text-slate-500">Actions Taken</label>
                
                {/* Action Helpers */}
                <div className="flex gap-2">
@@ -265,7 +261,7 @@ export default function DetailedInformationCard({
                       type="button"
                       onClick={onShowSOPModal}
                       disabled={sopLoading}
-                      className="flex items-center gap-1 text-[10px] font-medium text-indigo-600 hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors"
+                      className="flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-600 transition-colors hover:bg-indigo-100"
                     >
                       <BookOpenIcon className="h-3 w-3" />
                       {sopLoading ? 'Loading...' : 'View SOP'}
@@ -275,7 +271,7 @@ export default function DetailedInformationCard({
                     <button
                       type="button"
                       onClick={onShowGuidedActions}
-                      className="flex items-center gap-1 text-[10px] font-medium text-blue-600 hover:bg-blue-50 px-2 py-0.5 rounded transition-colors"
+                      className="flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 transition-colors hover:bg-blue-100"
                     >
                       <SparklesIcon className="h-3 w-3" />
                       Guided Actions
@@ -313,7 +309,7 @@ export default function DetailedInformationCard({
                         const newText = actionsTaken.replace(tagRegex, ' ').replace(/\s+/g, ' ').trim()
                         onActionsTakenChange(newText)
                       }}
-                      className="px-2 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 hover:text-blue-800 transition-colors cursor-pointer border border-blue-200 flex items-center gap-1 group"
+                      className="group flex cursor-pointer items-center gap-1 rounded-md border border-blue-200 bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700 transition-colors hover:bg-blue-200 hover:text-blue-800"
                       title="Click to remove"
                     >
                       {tag}
@@ -332,7 +328,7 @@ export default function DetailedInformationCard({
 
           {/* Outcome */}
           <div className="space-y-1.5">
-            <label htmlFor="outcome" className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Current Outcome</label>
+            <label htmlFor="outcome" className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current Outcome</label>
             <textarea
               id="outcome"
               value={outcome || ''}
@@ -353,7 +349,7 @@ export default function DetailedInformationCard({
                     <ClipboardDocumentCheckIcon className="h-4 w-4" />
                     <span>Preview Log Entry</span>
                  </summary>
-                 <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-md text-xs font-mono text-slate-700 whitespace-pre-wrap leading-relaxed">
+                 <div className="mt-3 whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs leading-relaxed text-slate-700">
                     {generateStructuredOccurrence({
                       headline, source, facts_observed: factsObserved, actions_taken: actionsTaken, outcome, use_structured_template: true
                     })}
@@ -363,6 +359,6 @@ export default function DetailedInformationCard({
         )}
 
       </div>
-    </div>
+    </CardFrame>
   )
 }

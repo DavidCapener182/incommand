@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import VenueCalendar from '@/components/features/venue-calendar'
+import VenueCalendar from '@/components/calendar/VenueCalendar'
 import { FeatureGate } from '@/components/FeatureGate'
 import { useUserPlan } from '@/hooks/useUserPlan'
 import { PageWrapper } from '@/components/layout/PageWrapper'

@@ -90,16 +90,16 @@ export default function AIToolsPanel({
   ]
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-      <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_20px_55px_-42px_rgba(15,23,42,0.72)]">
+      <div className="flex border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-3 text-[10px] font-medium border-b-2 transition-all flex flex-col items-center gap-1 ${
+            className={`flex flex-1 flex-col items-center gap-1 border-b-2 py-3 text-[10px] font-semibold transition-all ${
               activeTab === tab.id
-                ? 'border-blue-500 text-blue-600 bg-white dark:bg-slate-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? 'border-blue-500 bg-white text-blue-600'
+                : 'border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -107,7 +107,7 @@ export default function AIToolsPanel({
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+      <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50/45 p-4 scroll-smooth">
         {activeTab === 'audit' && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
             <IncidentQualityCard
@@ -204,4 +204,3 @@ export default function AIToolsPanel({
     </div>
   )
 }
-

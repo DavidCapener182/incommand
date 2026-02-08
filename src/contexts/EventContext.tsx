@@ -14,6 +14,7 @@ interface EventContextType {
   loading: boolean
   error: string | null
   refreshEvent: () => Promise<void>
+  switchEvent: (id: string) => Promise<void>
 }
 
 const EventContext = createContext<EventContextType>({
@@ -22,7 +23,8 @@ const EventContext = createContext<EventContextType>({
   eventData: null,
   loading: true,
   error: null,
-  refreshEvent: async () => {}
+  refreshEvent: async () => {},
+  switchEvent: async () => {}
 })
 
 export function EventProvider({ children }: { children: React.ReactNode }) {
@@ -142,6 +144,45 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     await fetchCurrentEvent()
   }, [fetchCurrentEvent])
 
+  // Switch the active event by setting is_current on the target and unsetting others
+  const switchEvent = useCallback(async (targetEventId: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { data: user } = await supabase.auth.getUser()
+      if (!user?.user?.id) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.user.id)
+        .single()
+
+      if (!profile?.company_id) return
+
+      // Unset all events for this company
+      await supabase
+        .from('events')
+        .update({ is_current: false })
+        .eq('company_id', profile.company_id)
+        .eq('is_current', true)
+
+      // Set the target event as current
+      await supabase
+        .from('events')
+        .update({ is_current: true })
+        .eq('id', targetEventId)
+        .eq('company_id', profile.company_id)
+
+      // Refresh to pick up the new event
+      await fetchCurrentEvent()
+    } catch (err) {
+      logger.error('Failed to switch event', err, { component: 'EventContext', action: 'switchEvent' })
+      setError('Failed to switch event')
+    }
+  }, [fetchCurrentEvent])
+
   useEffect(() => {
     fetchCurrentEvent()
   }, [fetchCurrentEvent])
@@ -153,7 +194,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       eventData,
       loading,
       error,
-      refreshEvent
+      refreshEvent,
+      switchEvent
     }}>
       {children}
     </EventContext.Provider>

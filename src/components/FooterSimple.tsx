@@ -56,7 +56,7 @@ export function FooterSimple({
   copyright = `© ${new Date().getFullYear()} InCommand. All rights reserved.`,
 }: FooterSimpleProps) {
   return (
-    <footer role="contentinfo" className="border-t border-border bg-background pb-10">
+    <footer role="contentinfo" className="border-t border-slate-200 bg-white pb-10 text-slate-900">
       <div className="mx-auto max-w-7xl px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -75,18 +75,18 @@ export function FooterSimple({
               className="flex flex-col items-center text-center"
             >
               <FooterBrandLogo companyName={companyName} />
-              <p className="text-foreground/70 mb-6 max-w-md text-sm">
+              <p className="mb-6 max-w-md text-sm text-slate-600">
                 {description}
               </p>
               
               {/* Contact Info */}
               <div className="mb-6 space-y-2">
-                <p className="text-foreground/60 text-sm">
+                <p className="text-sm text-slate-500">
                   <a href="https://www.incommand.uk" target="_blank" rel="noopener noreferrer" className="hover:text-brand transition-colors">
                     www.InCommand.uk
                   </a>
                 </p>
-                <p className="text-foreground/60 text-sm">
+                <p className="text-sm text-slate-500">
                   <a href="mailto:support@incommand.uk" className="hover:text-brand transition-colors">
                     support@incommand.uk
                   </a>
@@ -104,7 +104,7 @@ export function FooterSimple({
                 transition={{ duration: 0.6, delay: 0.2 }}
                 viewport={{ once: true }}
               >
-                <h4 className="text-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+                <h4 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-800">
                   Product
                 </h4>
                 <ul className="space-y-3">
@@ -112,7 +112,7 @@ export function FooterSimple({
                     <li key={link.name}>
                       <a
                         href={link.url}
-                        className="text-foreground/70 hover:text-brand transition-colors text-sm"
+                        className="text-sm text-slate-600 hover:text-brand transition-colors"
                       >
                         {link.name}
                       </a>
@@ -129,7 +129,7 @@ export function FooterSimple({
                 transition={{ duration: 0.6, delay: 0.3 }}
                 viewport={{ once: true }}
               >
-                <h4 className="text-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+                <h4 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-800">
                   Company
                 </h4>
                 <ul className="space-y-3">
@@ -137,7 +137,7 @@ export function FooterSimple({
                     <li key={link.name}>
                       <a
                         href={link.url}
-                        className="text-foreground/70 hover:text-brand transition-colors text-sm"
+                        className="text-sm text-slate-600 hover:text-brand transition-colors"
                       >
                         {link.name}
                       </a>
@@ -154,7 +154,7 @@ export function FooterSimple({
                 transition={{ duration: 0.6, delay: 0.4 }}
                 viewport={{ once: true }}
               >
-                <h4 className="text-foreground mb-4 text-sm font-semibold uppercase tracking-wide">
+                <h4 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-800">
                   Support
                 </h4>
                 <ul className="space-y-3">
@@ -162,7 +162,7 @@ export function FooterSimple({
                     <li key={link.name}>
                       <a
                         href={link.url}
-                        className="text-foreground/70 hover:text-brand transition-colors text-sm"
+                        className="text-sm text-slate-600 hover:text-brand transition-colors"
                       >
                         {link.name}
                       </a>
@@ -183,7 +183,7 @@ export function FooterSimple({
           className="mt-12 border-t border-border pt-8"
         >
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <p className="text-foreground/70 text-sm">{copyright}</p>
+            <p className="text-sm text-slate-600">{copyright}</p>
             
             {/* Social Links */}
             <div className="flex items-center gap-4">
@@ -192,7 +192,7 @@ export function FooterSimple({
                   href={social.twitter}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-foreground/70 hover:text-brand transition-colors"
+                  className="text-slate-600 hover:text-brand transition-colors"
                   aria-label="Twitter"
                 >
                   <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">

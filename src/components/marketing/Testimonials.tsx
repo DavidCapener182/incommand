@@ -1,9 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { ComponentProps } from 'react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import { Marquee } from '@/components/ui/marquee'
 
 const testimonials = [
@@ -58,12 +56,9 @@ const testimonials = [
 ]
 
 export const Testimonials = () => (
-  // The styling here breaks the component out of the parent container to span full width
-  <div className="relative left-[50%] right-[50%] ml-[-50vw] mr-[-50vw] w-screen mt-16">
-    
-    {/* CSS Mask for perfect edge fading regardless of background color */}
-    <div className="relative flex w-full flex-col gap-8 overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]">
-      
+  <div className="relative mt-16">
+    <div className="pointer-events-none absolute inset-x-6 top-2 h-24 rounded-full bg-blue-200/20 blur-2xl" />
+    <div className="relative flex w-full flex-col gap-8 overflow-hidden rounded-3xl border border-[#23408e]/10 bg-white/70 p-5 shadow-[0_35px_80px_-60px_rgba(15,23,42,0.95)] backdrop-blur [mask-image:linear-gradient(to_right,transparent,white_8%,white_92%,transparent)] sm:p-8">
       <Marquee pauseOnHover className="[--duration:40s]">
         <TestimonialList />
       </Marquee>
@@ -71,7 +66,6 @@ export const Testimonials = () => (
       <Marquee pauseOnHover reverse className="[--duration:40s]">
         <TestimonialList />
       </Marquee>
-      
     </div>
   </div>
 )
@@ -81,7 +75,7 @@ const TestimonialList = () => (
     {testimonials.map((testimonial) => (
       <div
         key={testimonial.id}
-        className="mx-4 flex w-[350px] flex-col justify-between rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition-all hover:shadow-md hover:border-blue-200"
+        className="mx-4 flex w-[350px] flex-col justify-between rounded-3xl border border-slate-200/90 bg-white p-8 shadow-[0_24px_55px_-45px_rgba(15,23,42,0.95)] transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-[0_28px_60px_-38px_rgba(37,99,235,0.45)]"
       >
         <div>
           <div className="flex items-center justify-between gap-4">

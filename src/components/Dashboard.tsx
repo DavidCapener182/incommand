@@ -109,20 +109,6 @@ import CardSkeleton from './dashboard/cards/CardSkeleton'
 import StatCard from './dashboard/cards/StatCard'
 import TopIncidentTypesCard from './dashboard/cards/TopIncidentTypesCard'
 
-const EVENT_TYPES = [
-  'Concerts',
-  'Sports Events',
-  'Conferences',
-  'Festivals',
-  'Exhibitions',
-  'Theatre Shows',
-  'Parades',
-  'Ceremonies',
-  'Community Gatherings',
-  'Charity Event',
-  'Corporate Event',
-];
-
 // Card components are now in separate files in ./dashboard/cards/
 
 // Add a helper to fetch What3Words address via API route (to keep API key secret)
@@ -269,6 +255,30 @@ export default function Dashboard() {
   
   // Accessibility: Screen reader announcements
   const { announce } = useScreenReader({ politeness: 'polite' });
+  const previousThemeRef = useRef<null | { hadDark: boolean; forceLight: boolean }>(null);
+
+  // Force light theme on incidents dashboard to match required styling
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const html = document.documentElement;
+    previousThemeRef.current = {
+      hadDark: html.classList.contains('dark'),
+      forceLight: html.getAttribute('data-force-light') === 'true',
+    };
+
+    html.classList.remove('dark');
+    html.setAttribute('data-force-light', 'true');
+
+    return () => {
+      if (!previousThemeRef.current) return;
+      if (previousThemeRef.current.hadDark) {
+        html.classList.add('dark');
+      }
+      if (!previousThemeRef.current.forceLight) {
+        html.removeAttribute('data-force-light');
+      }
+    };
+  }, []);
 
   // Handle event parameter from URL (for invite links)
   useEffect(() => {
@@ -416,16 +426,6 @@ export default function Dashboard() {
 
   // Add a state for showing the event creation modal if not already present
   const [showCreateEvent, setShowCreateEvent] = useState(false);
-
-  // Event types to cycle through
-  const eventTypes = EVENT_TYPES;
-  const [eventTypeIndex, setEventTypeIndex] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setEventTypeIndex((i) => (i + 1) % EVENT_TYPES.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleIncidentsLoaded = useCallback((data: any[]) => {
     const list = Array.isArray(data) ? data : []
@@ -1029,13 +1029,6 @@ export default function Dashboard() {
     }
   }, [isOccupancyModalOpen, currentEventId]);
 
-  // Special handling for david@incommand.uk - redirect to admin instead of showing event creation
-  if (!currentEvent && user?.email === 'david@incommand.uk') {
-    // Redirect to admin page for superadmin
-    window.location.href = '/admin';
-    return null;
-  }
-
   // Splash screen if no current event
   if (!currentEvent) {
     return <NoEventSplash onEventCreated={fetchCurrentEvent} />;
@@ -1044,55 +1037,69 @@ export default function Dashboard() {
   return (
     <>
       {/* Desktop view - Bento Layout */}
-      <section className="hidden md:block rounded-2xl p-4">
+      <section className="hidden md:block rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/95 to-blue-50/70 p-4 shadow-[0_22px_54px_-34px_rgba(15,23,42,0.32)] ring-1 ring-white/75 backdrop-blur-sm dark:border-incommand-border/60 dark:bg-gradient-to-br dark:from-incommand-surface dark:via-incommand-surface/95 dark:to-incommand-tertiary-dark dark:ring-white/5 lg:p-5">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* CurrentEvent - Large card, spans 4 columns */}
-          <div className="flex flex-col h-full lg:col-span-4">
-            <CurrentEvent
-              currentTime={currentTime}
-              currentEvent={currentEvent}
-              loading={loadingCurrentEvent}
-              error={error}
-              onEventCreated={fetchCurrentEvent}
-              eventTimings={eventTimings}
-            />
+          <div className="lg:col-span-4">
+            <div className="relative h-full overflow-hidden rounded-[26px] border border-slate-300/85 bg-gradient-to-br from-white via-slate-50 to-blue-50/55 p-1.5 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.5)] ring-1 ring-white/90 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-tertiary-dark dark:via-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/10">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-blue-100/45 to-transparent dark:from-blue-500/10" />
+              <CurrentEvent
+                currentTime={currentTime}
+                currentEvent={currentEvent}
+                loading={loadingCurrentEvent}
+                error={error}
+                onEventCreated={fetchCurrentEvent}
+                eventTimings={eventTimings}
+              />
+            </div>
           </div>
 
           {/* TimeCard - Medium card, spans 4 columns */}
-          <div className="flex flex-col h-full lg:col-span-4">
-            {loadingCurrentEvent ? (
-              <TimeCardSkeleton />
-            ) : (
-              <TimeCard
-                companyId={companyId}
-                currentTime={currentTime}
-                eventTimings={eventTimings}
-                nextEvent={nextEvent}
-                countdown={countdown}
-                currentSlot={currentSlot}
-                timeSinceLastIncident={timeSinceLastIncident}
-              />
-            )}
+          <div className="lg:col-span-4">
+            <div className="relative h-full overflow-hidden rounded-[26px] border border-slate-300/85 bg-gradient-to-br from-white via-slate-50 to-blue-50/55 p-1.5 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.5)] ring-1 ring-white/90 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-tertiary-dark dark:via-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/10">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-blue-100/45 to-transparent dark:from-blue-500/10" />
+              {loadingCurrentEvent ? (
+                <TimeCardSkeleton />
+              ) : (
+                <TimeCard
+                  companyId={companyId}
+                  currentTime={currentTime}
+                  eventTimings={eventTimings}
+                  nextEvent={nextEvent}
+                  countdown={countdown}
+                  currentSlot={currentSlot}
+                  timeSinceLastIncident={timeSinceLastIncident}
+                />
+              )}
+            </div>
           </div>
 
           {/* ReadinessIndexCard - Medium card, spans 2 columns */}
-          <div className="flex flex-col h-full lg:col-span-2">
-            <ReadinessIndexCard eventId={currentEventId} className="h-full" />
+          <div className="lg:col-span-2">
+            <div className="relative h-full overflow-hidden rounded-[26px] border border-slate-300/85 bg-gradient-to-br from-white via-slate-50 to-blue-50/55 p-1.5 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.5)] ring-1 ring-white/90 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-tertiary-dark dark:via-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/10">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-blue-100/45 to-transparent dark:from-blue-500/10" />
+              <ReadinessIndexCard eventId={currentEventId} className="h-full" />
+            </div>
           </div>
 
           {/* IncidentSummaryBar - Medium card, spans 2 columns */}
-          <div className="flex flex-col h-full lg:col-span-2">
-            <IncidentSummaryBar
-              onFilter={handleSummaryFilter}
-              activeStatus={activeSummaryStatus}
-              className="h-full"
-            />
+          <div className="lg:col-span-2">
+            <div className="relative h-full overflow-hidden rounded-[26px] border border-slate-300/85 bg-gradient-to-br from-white via-slate-50 to-blue-50/55 p-1.5 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.5)] ring-1 ring-white/90 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-tertiary-dark dark:via-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/10">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-blue-100/45 to-transparent dark:from-blue-500/10" />
+              <IncidentSummaryBar
+                onFilter={handleSummaryFilter}
+                activeStatus={activeSummaryStatus}
+                className="h-full"
+              />
+            </div>
           </div>
         </div>
       </section>
       
       <FeatureGate feature="event-dashboard" plan={userPlan} showUpgradeModal={true}>
-        <PageWrapper>
+        <PageWrapper
+          className="relative space-y-5 md:space-y-6 bg-[#f8fafc] dark:bg-[#111a33]"
+        >
           {/* Accessibility: Skip Links */}
           <SkipLinks />
         
@@ -1103,15 +1110,15 @@ export default function Dashboard() {
         />
         
         {/* Event Header - Sticky */}
-        <div>
+        <div className="space-y-4">
           {/* Mobile view */}
-          <div className="md:hidden bg-white/95 dark:bg-[#23408e]/95 backdrop-blur-sm shadow-xl rounded-2xl border border-gray-200/50 dark:border-[#2d437a]/50 transition-colors duration-300 -mt-2">
+          <div className="md:hidden overflow-hidden rounded-2xl border border-slate-200/70 bg-white/95 shadow-lg transition-colors duration-300 dark:border-incommand-border/60 dark:bg-incommand-surface-muted/90">
           {!isFullyReady && <p className="p-3">Loading event...</p>}
           {isFullyReady && currentEvent && (
             <div>
-              <div className="flex justify-between items-center p-3">
+              <div className="flex justify-between items-center p-3.5">
                 <div className="flex items-center">
-                  <span className="text-sm font-medium text-gray-500 mr-2">Event</span>
+                  <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">Event</span>
                   <span className="text-base font-semibold text-gray-900 dark:text-gray-100">
                     {eventType === 'football' 
                       ? currentEvent.event_name.replace(/\s*-\s*\d{2}\/\d{2}\/\d{4}$/, '') // Remove " - DD/MM/YYYY" from end
@@ -1121,14 +1128,14 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <span className="text-base font-bold text-gray-900 dark:text-gray-100">{currentTime}</span>
-                  <div className="text-xs text-orange-600 dark:text-orange-300 font-medium">
+                  <div className="text-xs font-medium text-orange-600 dark:text-orange-300">
                     Last incident: {timeSinceLastIncident}
                   </div>
                 </div>
               </div>
-              <hr className="border-t border-gray-200" />
+              <hr className="border-t border-slate-200/80 dark:border-incommand-border/70" />
               {(currentSlot || nextSlot) ? (
-                <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-b-lg">
+                <div className="flex justify-between items-center bg-gradient-to-r from-blue-50/90 to-cyan-50/80 p-3.5 dark:from-blue-900/30 dark:to-cyan-900/20">
                   {currentSlot ? (
                     <div className="flex flex-col items-start">
                       <span className="text-xs font-semibold text-blue-700 dark:text-blue-200">
@@ -1147,7 +1154,7 @@ export default function Dashboard() {
                   ) : <div />}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 text-center p-3">No timings available</p>
+                <p className="p-3 text-center text-sm text-gray-500">No timings available</p>
               )}
             </div>
           )}
@@ -1164,27 +1171,42 @@ export default function Dashboard() {
         </div>
       </div>
 
-{/* Incident Dashboard */}
-<div className="mb-3 rounded-2xl bg-gray-100/60 dark:bg-[#1a1f3d]/50 p-6 border border-gray-100 dark:border-gray-800">
+{/* Incident Dashboard - matches page background so no visible strip */}
+<div
+  className="relative mb-4 overflow-hidden rounded-3xl border border-slate-200/95 bg-gradient-to-b from-slate-50/95 to-slate-100/80 p-4 shadow-[0_28px_56px_-36px_rgba(15,23,42,0.5)] ring-1 ring-slate-200/50 sm:p-6 dark:border-[#2d437a]/60 dark:from-[#13213f]/95 dark:to-[#0f1934]"
+>
+  <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-blue-100/55 blur-3xl dark:bg-blue-500/12" />
+  <div className="pointer-events-none absolute -left-16 bottom-0 h-32 w-32 rounded-full bg-cyan-100/40 blur-3xl dark:bg-cyan-500/10" />
   {/* Header */}
-  <div className="mb-3 flex flex-col gap-3">
-    <div>
+  <div className="relative mb-4 flex flex-col gap-3">
+    <div className="flex flex-wrap items-start justify-between gap-3">
       <h2
         className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
         data-tour="dashboard"
       >
-        <span className="h-6 w-1.5 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500" />
+        <span className="h-6 w-1.5 rounded-full bg-gradient-to-b from-blue-500 to-cyan-500" />
         Incident Dashboard
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Track and manage security incidents in real time.
       </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-200">
+          Total: {incidentStats.total}
+        </span>
+        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-200">
+          Open: {incidentStats.open}
+        </span>
+        <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700/60 dark:bg-rose-900/30 dark:text-rose-200">
+          High Priority: {incidentStats.high}
+        </span>
+      </div>
     </div>
   </div>
 
   {/* Live Status + Alerts */}
   {currentEvent && (
-    <div className="mt-3 flex flex-col gap-4 lg:flex-row">
+    <div className="mt-4 flex flex-col gap-4 lg:flex-row">
       <div className="flex-1">
         <RealtimeStatusIndicator
           isConnected={realtimeAnalytics.isConnected}
@@ -1206,13 +1228,13 @@ export default function Dashboard() {
 
   {/* Radio Alerts Widget */}
   {currentEvent && (
-    <div className="mt-3">
+    <div className="mt-4">
       <RadioAlertsWidget eventId={currentEvent.id} />
     </div>
   )}
 
   {/* Dashboard Sections */}
-  <div className="mt-3 space-y-3">
+  <div className="relative mt-4 space-y-4">
     {/* Mobile-only Venue Occupancy */}
     <div className="block md:hidden">
       <div className="mb-4">
@@ -1236,16 +1258,19 @@ export default function Dashboard() {
       </div>
     </div>
     {/* Operational Metrics */}
-    <section className="hidden md:block rounded-2xl bg-gray-100/70 p-3 text-gray-900 transition-colors dark:bg-[#1a1f3d]/60 dark:text-white sm:p-4">
-      <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#101426]/60 sm:-mx-5 sm:px-5 sm:pt-5">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <section
+      className="hidden md:block relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/60 to-slate-100/90 p-4 text-gray-900 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-slate-200/50 dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5"
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/70 via-cyan-400/60 to-transparent" />
+      <div className="mb-4 border-b border-slate-200/80 pb-3 dark:border-slate-600/50">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
           Operational Metrics
         </h3>
       </div>
 
       {/* Stat Grid */}
-      <div className="hidden md:block pt-3 pb-4">
-        <div className="mx-auto grid grid-cols-1 gap-px rounded-xl bg-border sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 items-stretch">
+      <div className="hidden md:block pb-4">
+        <div className="mx-auto grid grid-cols-1 gap-3 rounded-xl sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 items-stretch">
           {!isFullyReady ? (
             Array.from({ length: 8 }).map((_, index) => (
               <StatCardSkeleton key={index} />
@@ -1287,6 +1312,7 @@ export default function Dashboard() {
                 showPulse={incidentStats.hasOpenHighPrio}
                 index={0}
                 isFirst={true}
+                forceLight
               />
               <StatCard
                 title="Medicals"
@@ -1304,6 +1330,7 @@ export default function Dashboard() {
                 isFilterable
                 tooltip="Medical-related incidents."
                 index={1}
+                forceLight
               />
               <StatCard
                 title="Open"
@@ -1324,6 +1351,7 @@ export default function Dashboard() {
                 color="yellow"
                 tooltip="Incidents that are currently open (is_closed = false)."
                 index={2}
+                forceLight
               />
               <StatCard
                 title="Ejections"
@@ -1341,6 +1369,7 @@ export default function Dashboard() {
                 isFilterable
                 tooltip="Incidents where someone was ejected."
                 index={3}
+                forceLight
               />
               <StatCard
                 title="Refusals"
@@ -1358,6 +1387,7 @@ export default function Dashboard() {
                 isFilterable
                 tooltip="Incidents where entry was refused."
                 index={4}
+                forceLight
               />
               <StatCard
                 title="Total"
@@ -1370,6 +1400,7 @@ export default function Dashboard() {
                 isFilterable
                 tooltip="All incidents (excluding Attendance and Sit Reps)."
                 index={5}
+                forceLight
               />
               <StatCard
                 title="Closed"
@@ -1390,6 +1421,7 @@ export default function Dashboard() {
                 color="green"
                 tooltip="Incidents that have been closed (is_closed = true)."
                 index={6}
+                forceLight
               />
               <StatCard
                 title="Other"
@@ -1404,6 +1436,7 @@ export default function Dashboard() {
                 tooltip="All other incident types."
                 index={7}
                 isLast={true}
+                forceLight
               />
             </>
           )}
@@ -1418,17 +1451,18 @@ export default function Dashboard() {
     </section>
 
     {/* Divider */}
-    <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-gray-200/60 to-transparent dark:via-gray-700/40" />
+    <div className="my-1 h-px w-full bg-slate-200/80 dark:bg-incommand-border/60" />
 
     {/* Support Tools */}
-    <section className="hidden md:block rounded-2xl bg-gray-100/70 p-3 text-gray-900 transition-colors dark:bg-[#1a1f3d]/60 dark:text-white sm:p-4">
-      <div className="sticky top-16 z-10 -mx-4 -mt-4 px-4 pt-4 pb-2 backdrop-blur-md bg-white/70 dark:bg-[#101426]/60 sm:-mx-5 sm:px-5 sm:pt-5">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <section
+      className="hidden md:block relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/60 to-slate-100/90 p-4 text-gray-900 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-slate-200/50 dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5"
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/70 via-cyan-400/60 to-transparent" />
+      <div className="mb-4 border-b border-slate-200/80 pb-3 dark:border-slate-600/50">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
           Support Tools
         </h3>
       </div>
-
-      <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-gray-200/60 to-transparent dark:via-gray-700/40 mb-2" />
 
       <div>
 
@@ -1842,22 +1876,29 @@ export default function Dashboard() {
         aria-label="Incident logs"
         tabIndex={-1}
       >
-        <Card className="rounded-2xl border border-border/60 shadow-sm bg-background dark:bg-[#101426] dark:border-[#1c2333]">
-          <CardContent className="p-0">
-            <IncidentTable
-              key={refreshKey}
-              filters={filters}
-              onFiltersChange={setFilters}
-              onDataLoaded={handleIncidentsLoaded}
-              onToast={addToast}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              currentUser={user}
-              currentEventId={currentEventId || undefined}
-              currentEvent={currentEvent}
-            />
-          </CardContent>
-        </Card>
+        <div className="overflow-hidden rounded-3xl border border-slate-200/95 bg-gradient-to-br from-white via-slate-50/90 to-blue-50/60 p-4 shadow-[0_24px_50px_-36px_rgba(15,23,42,0.4)] ring-1 ring-white/95 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-surface dark:via-incommand-surface-muted/90 dark:to-incommand-quaternary-dark dark:ring-white/5 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200/80 pb-4 dark:border-incommand-border/60">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Live Incident Log</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Review incidents, apply filters, and open details in one place.</p>
+            </div>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+              {incidents.length} records
+            </span>
+          </div>
+        <IncidentTable
+          key={refreshKey}
+          filters={filters}
+          onFiltersChange={setFilters}
+          onDataLoaded={handleIncidentsLoaded}
+          onToast={addToast}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          currentUser={user}
+          currentEventId={currentEventId || undefined}
+          currentEvent={currentEvent}
+        />
+        </div>
         
         {/* Staff Deployment Overview hidden intentionally */}
       </main>

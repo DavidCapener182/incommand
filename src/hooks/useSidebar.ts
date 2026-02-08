@@ -21,10 +21,10 @@ export function useSidebar(): UseSidebarReturn {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
-  // Detect mobile screens
+  // Detect mobile screens (standardized on md: 768px)
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+      setIsMobile(window.innerWidth < 768);
     };
 
     checkMobile();
