@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { CameraIcon, MicrophoneIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -253,7 +254,14 @@ export default function MobileIncidentForm({ eventId, onSuccess, onCancel }: Mob
             <div className="flex flex-wrap gap-2">
               {photos.map((p) => (
                 <div key={p.id} className="relative">
-                  <img src={p.url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                  <Image
+                    src={p.url}
+                    alt=""
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="h-16 w-16 rounded-lg object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => removePhoto(p.id)}
@@ -308,4 +316,3 @@ export default function MobileIncidentForm({ eventId, onSuccess, onCancel }: Mob
     </div>
   )
 }
-

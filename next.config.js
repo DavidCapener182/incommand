@@ -40,8 +40,8 @@ const nextConfig = {
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react', 'react-icons']
   },
   
-  // Bundle optimization - aggressive code splitting
-  webpack: (config, { dev, isServer }) => {
+  // Keep webpack customization minimal so Next can optimize chunking per route.
+  webpack: (config, { isServer }) => {
     // Mark optional DOCX parsing dependencies as externals to prevent build errors
     // These are only needed if DOCX support is required
     if (isServer) {
@@ -53,54 +53,6 @@ const nextConfig = {
           'pizzip': 'commonjs pizzip',
           'docxtemplater': 'commonjs docxtemplater',
         })
-      }
-    } else {
-      // Client-side optimizations for better code splitting
-      if (!dev) {
-        config.optimization = {
-          ...config.optimization,
-          splitChunks: {
-            chunks: 'all',
-            cacheGroups: {
-              default: false,
-              vendors: false,
-              // Vendor chunk for node_modules
-              vendor: {
-                name: 'vendor',
-                chunks: 'all',
-                test: /[\\/]node_modules[\\/]/,
-                priority: 20,
-              },
-              // Separate chunk for heavy libraries
-              chartjs: {
-                name: 'chartjs',
-                test: /[\\/]node_modules[\\/](chart\.js|react-chartjs-2|chartjs-)[\\/]/,
-                chunks: 'all',
-                priority: 30,
-              },
-              framerMotion: {
-                name: 'framer-motion',
-                test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
-                chunks: 'all',
-                priority: 30,
-              },
-              three: {
-                name: 'three',
-                test: /[\\/]node_modules[\\/](three|ogl)[\\/]/,
-                chunks: 'all',
-                priority: 30,
-              },
-              // Common chunk for shared code
-              common: {
-                name: 'common',
-                minChunks: 2,
-                chunks: 'all',
-                priority: 10,
-                reuseExistingChunk: true,
-              },
-            },
-          },
-        };
       }
     }
     return config;

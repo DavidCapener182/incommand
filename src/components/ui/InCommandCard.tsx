@@ -23,7 +23,7 @@ export const CardFrame = ({
     onMouseLeave={onMouseLeave}
     {...rest}
     className={cn(
-      'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/60 to-slate-100/90 p-4 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-slate-200/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_38px_-24px_rgba(15,23,42,0.46)] dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5',
+      'group relative flex h-full flex-col overflow-hidden rounded-[var(--radius-card-primary)] border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/60 to-slate-100/90 p-3.5 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.38)] ring-1 ring-slate-200/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_40px_-24px_rgba(15,23,42,0.42)] dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5',
       className
     )}
   >

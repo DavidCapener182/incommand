@@ -11,11 +11,11 @@ import { getComplianceSummary } from '@/lib/analytics/complianceMetrics'
 import { getPerformanceSummary } from '@/lib/analytics/performanceMetrics'
 import { calculateLogQualityMetrics } from '@/lib/analytics/logQualityMetrics'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 
 interface AnalyticsKPICardsProps {
   eventId?: string
   className?: string
+  hideActiveNow?: boolean
 }
 
 interface QuickStats {
@@ -44,7 +44,7 @@ function getGradeColor(grade: string): string {
   return gradeColors[grade] || 'text-gray-600 dark:text-gray-400'
 }
 
-export default function AnalyticsKPICards({ eventId, className = '' }: AnalyticsKPICardsProps) {
+export default function AnalyticsKPICards({ eventId, className = '', hideActiveNow = false }: AnalyticsKPICardsProps) {
   const [stats, setStats] = useState<QuickStats | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -92,9 +92,11 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
   }, [eventId])
 
   if (loading) {
+    const skeletonCount = hideActiveNow ? 3 : 4
+    const gridClasses = hideActiveNow ? 'grid grid-cols-1 md:grid-cols-3 gap-2.5' : 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3'
     return (
-      <div className={`grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
-        {[1, 2, 3, 4].map((i) => (
+      <div className={`${gridClasses} ${className}`}>
+        {Array.from({ length: skeletonCount }).map((_, i) => (
           <Card key={i} className="card-skeleton">
             <CardContent className="p-2">
               <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-20 mb-2"></div>
@@ -109,11 +111,13 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
 
   if (!stats) return null
 
+  const gridClasses = hideActiveNow ? 'grid grid-cols-1 md:grid-cols-3 gap-2.5' : 'grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3'
+
   return (
-    <div className={`grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 ${className}`}>
+    <div className={`${gridClasses} ${className}`}>
       {/* Log Quality Score */}
-      <Card className="card-depth group h-[75px] md:h-[80px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
-        <CardContent className="p-1.5 md:p-2 w-full">
+      <Card className="card-depth group h-[72px] md:h-[76px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
+        <CardContent className="p-1.5 w-full">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
               <div className="flex items-center gap-1.5 mb-2">
@@ -163,8 +167,8 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       </Card>
 
       {/* Compliance Grade */}
-      <Card className="card-depth group h-[75px] md:h-[80px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
-        <CardContent className="p-1.5 md:p-2 w-full">
+      <Card className="card-depth group h-[72px] md:h-[76px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
+        <CardContent className="p-1.5 w-full">
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
               <div className="flex items-center gap-1.5 mb-2">
@@ -204,8 +208,8 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
       </Card>
 
       {/* Response Time */}
-      <Card className="card-depth group h-[75px] md:h-[80px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
-        <CardContent className="p-1.5 md:p-2 w-full">
+      <Card className="card-depth group h-[72px] md:h-[76px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
+        <CardContent className="p-1.5 w-full">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-1.5 mb-2">
@@ -230,47 +234,48 @@ export default function AnalyticsKPICards({ eventId, className = '' }: Analytics
         </CardContent>
       </Card>
 
-      {/* Active Incidents */}
-      <Card className="card-depth group h-[75px] md:h-[80px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
-        <CardContent className="p-1.5 md:p-2 w-full">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-1.5 mb-2">
-                <div className="relative flex h-4 w-4">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                  <ChartBarIcon className="h-4 w-4 text-orange-500 relative" />
+      {!hideActiveNow && (
+        <Card className="card-depth group h-[72px] md:h-[76px] flex items-center shadow-sm dark:shadow-md hover:shadow transition-transform duration-150 hover:-translate-y-[1px]">
+          <CardContent className="p-1.5 w-full">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <div className="relative flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <ChartBarIcon className="h-4 w-4 text-orange-500 relative" />
+                  </div>
+                  <span className="text-[11px] font-semibold text-muted-foreground tracking-tight">
+                    Active Now
+                  </span>
                 </div>
-                <span className="text-[11px] font-semibold text-muted-foreground tracking-tight">
-                  Active Now
-                </span>
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <span
+                    className={`text-2xl font-bold ${
+                      stats.activeIncidents === 0 ? 'text-green-600 dark:text-green-400'
+                        : stats.activeIncidents < 5 ? 'text-blue-600 dark:text-blue-400'
+                        : stats.activeIncidents < 10 ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }`}
+                  >
+                    {stats.activeIncidents}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    Open incidents
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span
-                  className={`text-2xl font-bold ${
-                    stats.activeIncidents === 0 ? 'text-green-600 dark:text-green-400'
-                      : stats.activeIncidents < 5 ? 'text-blue-600 dark:text-blue-400'
-                      : stats.activeIncidents < 10 ? 'text-amber-600 dark:text-amber-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}
-                >
-                  {stats.activeIncidents}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Open incidents
-                </span>
-              </div>
+              {stats.activeIncidents > 0 && (
+                <div className="mt-0.5">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                </div>
+              )}
             </div>
-            {stats.activeIncidents > 0 && (
-              <div className="mt-0.5">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

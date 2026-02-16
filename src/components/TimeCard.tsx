@@ -51,14 +51,14 @@ const TimeCard: React.FC<TimeCardProps> = ({
       />
 
       {/* 2-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0 mt-1">
+      <div className="mt-0.5 grid flex-1 min-h-0 grid-cols-1 gap-4 lg:grid-cols-2">
         
         {/* LEFT COLUMN: Time & Active Status */}
-        <div className="flex flex-col justify-between gap-4">
+        <div className="flex flex-col justify-between gap-3">
           
           {/* 1. Time & Incident Pulse */}
           <div>
-            <h2 className="text-4xl font-mono font-bold tracking-tight text-slate-900 tabular-nums dark:text-white">
+            <h2 className="text-[2.45rem] font-mono font-bold tracking-tight text-slate-900 tabular-nums dark:text-white">
               {currentTime}
             </h2>
             <div className="mt-2 flex items-center gap-2">
@@ -74,7 +74,7 @@ const TimeCard: React.FC<TimeCardProps> = ({
 
           {/* 2. Highlight Card (Happening Now OR Up Next) */}
           {(currentSlot || activeNext) && (
-             <div className="rounded-xl border border-blue-200/80 bg-gradient-to-br from-blue-50/90 to-cyan-50/75 p-4 shadow-sm dark:border-blue-400/35 dark:bg-gradient-to-br dark:from-blue-900/25 dark:to-cyan-900/20">
+             <div className="rounded-xl border border-blue-200/80 bg-gradient-to-br from-blue-50/90 to-cyan-50/75 p-3 shadow-sm dark:border-blue-400/35 dark:bg-gradient-to-br dark:from-blue-900/25 dark:to-cyan-900/20">
                 <div className="flex items-center justify-between mb-2">
                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
                      {currentSlot?.isActuallyHappeningNow ? 'Happening Now' : 'Up Next'}
@@ -96,7 +96,7 @@ const TimeCard: React.FC<TimeCardProps> = ({
                    )}
                    
                    <div className="min-w-0">
-                      <h3 className="text-base font-bold leading-tight text-slate-900 line-clamp-2 dark:text-slate-100">
+                      <h3 className="line-clamp-2 text-[15px] font-bold leading-tight text-slate-900 dark:text-slate-100">
                         {currentSlot?.title || activeNext?.title}
                       </h3>
                       {/* Show countdown only if looking at next event */}
@@ -112,7 +112,7 @@ const TimeCard: React.FC<TimeCardProps> = ({
         </div>
 
         {/* RIGHT COLUMN: Schedule List */}
-        <div className="flex flex-col h-full min-h-0 border-l border-slate-100 pl-0 lg:pl-6 border-t lg:border-t-0 pt-4 lg:pt-0">
+        <div className="flex h-full min-h-0 flex-col border-t border-slate-100 pt-2 lg:border-t-0 lg:border-l lg:pl-4 lg:pt-0">
           <div className="mb-3 flex items-center gap-2">
              <Calendar className="h-4 w-4 text-blue-600" />
              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Event Schedule</h3>
@@ -128,7 +128,7 @@ const TimeCard: React.FC<TimeCardProps> = ({
                   <div 
                     key={index} 
                     className={cn(
-                      "flex items-center justify-between py-2 px-2.5 rounded-lg transition-colors",
+                      "flex items-center justify-between rounded-lg px-2 py-1.5 transition-colors",
                       isHighlighted ? "border border-blue-200 bg-blue-50/80 dark:border-blue-400/35 dark:bg-blue-900/20" : "border border-transparent hover:bg-slate-50 dark:hover:bg-[#1a2a52]/50"
                     )}
                   >

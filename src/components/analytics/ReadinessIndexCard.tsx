@@ -28,7 +28,7 @@ const CardFrame = ({ children, className, onClick }: { children: React.ReactNode
   <div 
     onClick={onClick}
     className={cn(
-      "group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-5 shadow-[0_16px_34px_-22px_rgba(15,23,42,0.45)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-24px_rgba(15,23,42,0.45)] dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5", 
+      "group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-[var(--radius-card-primary)] border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-4 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.38)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_40px_-24px_rgba(15,23,42,0.42)] dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5", 
       className
     )}
   >
@@ -38,12 +38,12 @@ const CardFrame = ({ children, className, onClick }: { children: React.ReactNode
 )
 
 const CardHeader = ({ icon: Icon, title, action }: { icon: any; title: string; action?: boolean }) => (
-  <div className="flex items-center justify-between mb-4">
+  <div className="mb-3 flex items-center justify-between">
     <div className="flex items-center gap-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-700 ring-1 ring-blue-200/70 dark:from-blue-500/25 dark:to-cyan-500/20 dark:text-blue-200 dark:ring-blue-400/35">
-        <Icon className="h-4 w-4" />
+      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-700 ring-1 ring-blue-200/70 dark:from-blue-500/25 dark:to-cyan-500/20 dark:text-blue-200 dark:ring-blue-400/35">
+        <Icon className="h-3.5 w-3.5" />
       </div>
-      <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">{title}</span>
+      <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-100">{title}</span>
     </div>
     {action && (
       <button className="text-slate-400 transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200">
@@ -151,9 +151,9 @@ export default function ReadinessIndexCard({
     return (
       <CardFrame className={className}>
         <CardHeader icon={ShieldCheckIcon} title="Readiness Score" />
-        <div className="flex flex-col items-center justify-center flex-1 gap-4">
-           <div className="h-24 w-24 rounded-full border-4 border-slate-100 border-t-blue-500 animate-spin" />
-           <span className="text-sm text-slate-400 animate-pulse">Calculating Score...</span>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+           <div className="h-24 w-24 rounded-full border-[5px] border-slate-200 border-t-blue-500 animate-spin" />
+           <span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400 animate-pulse">Calculating readiness</span>
         </div>
       </CardFrame>
     )
@@ -164,9 +164,15 @@ export default function ReadinessIndexCard({
     return (
       <CardFrame className={className}>
         <CardHeader icon={ShieldCheckIcon} title="Readiness Score" />
-        <div className="flex flex-col items-center justify-center flex-1 text-center text-slate-400">
-           <ExclamationTriangleIcon className="h-10 w-10 mb-2 opacity-50" />
-           <p className="text-sm">Score unavailable</p>
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+           <div className="relative mb-2 flex h-24 w-24 items-center justify-center">
+             <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100">
+               <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="10" className="text-slate-200 dark:text-slate-700" />
+             </svg>
+             <ExclamationTriangleIcon className="h-8 w-8 text-slate-400 dark:text-slate-500" />
+           </div>
+           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">Readiness unavailable</p>
+           <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Awaiting live readiness inputs</p>
         </div>
       </CardFrame>
     )
@@ -174,7 +180,8 @@ export default function ReadinessIndexCard({
 
   const score = readiness.overall_score
   const statusColors = getStatusColor(score)
-  const strokeDash = 2 * Math.PI * 42 // r=42
+  const GAUGE_RADIUS = 40
+  const strokeDash = 2 * Math.PI * GAUGE_RADIUS
   const strokeOffset = strokeDash - (score / 100) * strokeDash
 
   return (
@@ -182,23 +189,23 @@ export default function ReadinessIndexCard({
       <CardFrame className={className} onClick={() => setShowDetails(true)}>
         <CardHeader icon={ShieldCheckIcon} title="Readiness Score" action />
         
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-2.5">
            {/* Radial Progress Chart */}
-           <div className="relative flex h-20 w-20 items-center justify-center">
+           <div className="relative flex h-32 w-32 items-center justify-center">
               {/* Track */}
               <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100">
                 <circle
-                  className="text-slate-100"
-                  cx="50" cy="50" r="42"
-                  fill="none" stroke="currentColor" strokeWidth="8"
+                  className="text-slate-100 dark:text-[#20315e]"
+                  cx="50" cy="50" r={GAUGE_RADIUS}
+                  fill="none" stroke="currentColor" strokeWidth="10"
                 />
                 {/* Progress Ring */}
                 <circle
                   className={cn("transition-all duration-1000 ease-out", statusColors.text)}
-                  cx="50" cy="50" r="42"
+                  cx="50" cy="50" r={GAUGE_RADIUS}
                   fill="none" 
                   stroke="currentColor" 
-                  strokeWidth="8"
+                  strokeWidth="10"
                   strokeLinecap="round"
                   strokeDasharray={strokeDash}
                   strokeDashoffset={strokeOffset}
@@ -207,10 +214,14 @@ export default function ReadinessIndexCard({
               
               {/* Center Text */}
               <div className="flex flex-col items-center">
-                 <span className={cn("text-xl font-bold leading-none", statusColors.text)}>{score}</span>
+                 <span className={cn("text-4xl font-black leading-none tracking-tight", statusColors.text)}>{score}</span>
+                 <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">/100</span>
                  <div className="mt-0.5">{getTrendIcon()}</div>
               </div>
            </div>
+           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-300">
+             Event Stability Index
+           </p>
            
            {/* Metrics List */}
            <div className="w-full space-y-2.5">

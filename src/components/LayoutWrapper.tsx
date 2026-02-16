@@ -2,31 +2,51 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useAuth } from '../contexts/AuthContext'
-import Navigation from './Navigation'
-import BottomNav from './BottomNav'
-import HelpCenterPanel from './HelpCenterModal'
-import ChatPanel from './ChatPanel'
 import { usePathname, useRouter } from 'next/navigation'
-import IncidentCreationModal from './IncidentCreationModal'
-import { useNotificationDrawer } from '../contexts/NotificationDrawerContext'
 import { IncidentSummaryProvider } from '@/contexts/IncidentSummaryContext'
 import { EscalationToastProvider } from '@/contexts/EscalationToastContext'
 import { supabase } from '../lib/supabase'
 import type { Database } from '@/types/supabase'
-import GlobalEscalationToast from './GlobalEscalationToast'
-import PWAInstallPrompt from './PWAInstallPrompt'
-import OfflineIndicator from './OfflineIndicator'
-import PWAUpdateNotification from './PWAUpdateNotification'
-import PWASplashScreen from './PWASplashScreen'
-import FloatingActionButton from './FloatingActionButton'
-import { FooterSimple } from './FooterSimple'
-import LoginLoadingScreen from './LoginLoadingScreen'
-import MobileAppShell from './mobile/MobileAppShell'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { MOBILE_MEDIA_QUERY } from '@/lib/constants'
-import QuickActionPalette, { type QuickActionItem } from './QuickActionPalette'
+import type { QuickActionItem } from './QuickActionPalette'
 // FAB components removed (FloatingAIChat, Dock)
+
+const Navigation = dynamic(() => import('./Navigation'))
+const BottomNav = dynamic(() => import('./BottomNav'))
+const HelpCenterPanel = dynamic(() => import('./HelpCenterModal'))
+const ChatPanel = dynamic(() => import('./ChatPanel'))
+const IncidentCreationModal = dynamic(() => import('./IncidentCreationModal'))
+const GlobalEscalationToast = dynamic(() => import('./GlobalEscalationToast'))
+const PWAInstallPrompt = dynamic(() => import('./PWAInstallPrompt'), { ssr: false })
+const OfflineIndicator = dynamic(() => import('./OfflineIndicator'), { ssr: false })
+const PWAUpdateNotification = dynamic(() => import('./PWAUpdateNotification'), { ssr: false })
+const PWASplashScreen = dynamic(() => import('./PWASplashScreen'), { ssr: false })
+const FloatingActionButton = dynamic(() => import('./FloatingActionButton'))
+const FooterSimple = dynamic(() => import('./FooterSimple').then((module) => module.FooterSimple))
+const LoginLoadingScreen = dynamic(() => import('./LoginLoadingScreen'), { ssr: false })
+const MobileAppShell = dynamic(() => import('./mobile/MobileAppShell'))
+const QuickActionPalette = dynamic(() => import('./QuickActionPalette'))
+
+const PUBLIC_ROUTES = new Set([
+  '/',
+  '/features',
+  '/pricing',
+  '/about',
+  '/help',
+  '/privacy',
+  '/terms',
+  '/login',
+  '/signup',
+  '/staffing',
+  '/admin/green-guide',
+  '/invite',
+  '/auth/magic-link',
+])
+
+const NO_NAV_ROUTES = new Set(['/', '/features', '/pricing', '/about', '/privacy', '/terms', '/login', '/signup'])
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -34,10 +54,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
 
   React.useEffect(() => {
-    // Define public routes that don't require authentication
-    const publicRoutes = ['/', '/features', '/pricing', '/about', '/help', '/privacy', '/terms', '/login', '/signup', '/staffing', '/admin/green-guide', '/invite', '/auth/magic-link'];
-    
-    if (!loading && !user && !publicRoutes.includes(pathname)) {
+    if (!loading && !user && !PUBLIC_ROUTES.has(pathname)) {
       router.push('/login');
     }
     if (!loading && user && ['/login', '/signup'].includes(pathname)) {
@@ -65,34 +82,39 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const [isIncidentModalOpen, setIsIncidentModalOpen] = React.useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = React.useState(false);
   // Removed floating AI chat state
-  const { isOpen: notificationDrawerOpen } = useNotificationDrawer();
   const [hasCurrentEvent, setHasCurrentEvent] = useState<boolean>(true);
   const [isHelpCenterOpen, setIsHelpCenterOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const { user } = useAuth();
   const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY);
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isAuthRoute = pathname === '/login' || pathname === '/signup';
+  const showNav = Boolean(user) && !NO_NAV_ROUTES.has(pathname);
 
   useEffect(() => {
-    // Skip effects for style-lab route
-    if (pathname.startsWith('/style-lab')) return;
-    
-    // Fetch current event on mount
+    if (pathname.startsWith('/style-lab') || !showNav || isAdminRoute) {
+      setCurrentEventId(null);
+      return;
+    }
+
+    let isMounted = true;
     const fetchCurrentEvent = async () => {
       const { data } = await supabase
         .from<Database['public']['Tables']['events']['Row'], Database['public']['Tables']['events']['Update']>('events')
         .select('id')
         .eq('is_current', true)
         .single();
+      if (!isMounted) return;
       setHasCurrentEvent(!!data);
-      if (data) {
-        setCurrentEventId(data.id);
-      } else {
-        setCurrentEventId(null);
-      }
+      setCurrentEventId(data ? data.id : null);
     };
+
     fetchCurrentEvent();
-  }, [pathname]);
+    return () => {
+      isMounted = false;
+    };
+  }, [pathname, showNav, isAdminRoute]);
 
   useEffect(() => {
     // Skip effects for style-lab route
@@ -104,12 +126,16 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   }, [pathname]);
 
   useEffect(() => {
+    if (!showNav) return;
+
     const openQuickActions = () => setIsQuickActionsOpen(true);
     window.addEventListener('openQuickActions', openQuickActions as EventListener);
     return () => window.removeEventListener('openQuickActions', openQuickActions as EventListener);
-  }, []);
+  }, [showNav]);
 
   useEffect(() => {
+    if (!showNav) return;
+
     const handleQuickActionHotkey = (event: KeyboardEvent) => {
       const isQuickActionHotkey = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
       if (!isQuickActionHotkey) {
@@ -130,7 +156,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
 
     document.addEventListener('keydown', handleQuickActionHotkey);
     return () => document.removeEventListener('keydown', handleQuickActionHotkey);
-  }, []);
+  }, [showNav]);
 
   useEffect(() => {
     setIsQuickActionsOpen(false);
@@ -143,18 +169,6 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       </div>
     );
   }
-
-  // Define routes that should never show the main application navigation
-  // Marketing pages have their own navigation, so hide the main nav on all of them
-  // Note: '/help' is intentionally excluded so Help pages show the top nav
-  // Admin routes use SuperAdminLayout which has its own navigation, so hide main nav
-  const noNavRoutes = ['/', '/features', '/pricing', '/about', '/privacy', '/terms', '/login', '/signup'];
-  const isAdminRoute = pathname.startsWith('/admin');
-  const isAuthRoute = pathname === '/login' || pathname === '/signup';
-  
-  // Only show the main application navigation for authenticated users on operational pages
-  // Don't show nav on admin routes (they use SuperAdminLayout)
-  const showNav = user && !noNavRoutes.includes(pathname);
 
   const quickActions: QuickActionItem[] = showNav
     ? [
@@ -366,7 +380,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           
           {/* FABs removed; sticky BottomNav will provide actions */}
           {/* Modals - Always available */}
-          {showNav && (
+          {showNav && isIncidentModalOpen && (
             <IncidentCreationModal
               isOpen={isIncidentModalOpen}
               onClose={() => setIsIncidentModalOpen(false)}
@@ -388,7 +402,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           <LoginLoadingScreen />
 
           {/* Global Quick Actions */}
-          {showNav && (
+          {showNav && isQuickActionsOpen && (
             <QuickActionPalette
               isOpen={isQuickActionsOpen}
               onClose={() => setIsQuickActionsOpen(false)}

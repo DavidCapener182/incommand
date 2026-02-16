@@ -28,8 +28,6 @@ import {
   navigationMenuTriggerStyle,
 } from './ui/navigation-menu'
 
-const GREETINGS = ['Welcome', 'Hello', 'Hi', 'Greetings', 'Hey', 'Good to see you', 'Salutations'];
-
 // Helper component for navigation list items
 function ListItem({ title, children, href, ...props }: React.ComponentPropsWithoutRef<'li'> & { href: string }) {
   return (
@@ -42,18 +40,6 @@ function ListItem({ title, children, href, ...props }: React.ComponentPropsWitho
       </NavigationMenuLink>
     </li>
   );
-}
-
-function getRandomGreeting() {
-  if (typeof window !== 'undefined') {
-    let greeting = sessionStorage.getItem('greeting');
-    if (!greeting) {
-      greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-      sessionStorage.setItem('greeting', greeting);
-    }
-    return greeting;
-  }
-  return GREETINGS[0];
 }
 
 export default function Navigation({ minimal = false }: { minimal?: boolean }) {
@@ -79,13 +65,11 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   const [currentEvent, setCurrentEvent] = useState<any>(null);
   const [selectedEventChatId, setSelectedEventChatId] = useState<string | null>(null);
 
-  console.log("Navigation component mounted");
-
   const isActive = (path: string) => {
     if (path === '/incidents' && pathname === '/') {
-      return 'border-red-500 text-white'
+      return 'border-cyan-300 text-white'
     }
-    return pathname === path ? 'border-red-500 text-white' : 'border-transparent text-white/90 hover:border-white/50 hover:text-white transition-all duration-200'
+    return pathname === path ? 'border-cyan-300 text-white' : 'border-transparent text-white/90 hover:border-white/45 hover:text-white transition-all duration-200'
   }
 
   useEffect(() => {
@@ -105,14 +89,11 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
     if (user) {
       setProfileLoading(true);
       (async () => {
-        console.log('Fetching profile for user:', user.id);
         const { data, error } = await supabase
           .from<Database['public']['Tables']['profiles']['Row'], Database['public']['Tables']['profiles']['Update']>('profiles')
           .select('full_name, email, company, avatar_url')
           .eq('id', user.id)
           .single();
-        
-        console.log('Profile fetch result:', { data, error });
         
         if (error) {
           console.error('Profile fetch failed, using user metadata as fallback');
@@ -254,7 +235,6 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
         .select('id, event_name')
         .eq('is_current', true)
         .single();
-      console.log('Fetched current event:', event, error);
       setCurrentEvent(event);
     }
     fetchCurrentEvent();
@@ -263,14 +243,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
   useEffect(() => {
     async function fetchChats() {
       if (!currentEvent?.id) {
-        console.log('No current event, skipping chat fetch');
         return;
       }
       const { data, error } = await supabase
         .from<Database['public']['Tables']['event_chats']['Row'], Database['public']['Tables']['event_chats']['Update']>('event_chats')
         .select('id, name, type')
         .eq('event_id', currentEvent.id);
-      console.log('Fetched event chats:', data, error);
       if (!error) setEventChats(data);
     }
     fetchChats();
@@ -288,10 +266,10 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
       <nav
         role="navigation"
         aria-label="Main navigation"
-        className="bg-[#2A3990] border-b border-[#1e2a6a] sticky top-0 z-50 shadow font-sans"
+        className="sticky top-0 z-50 border-b border-white/15 bg-[rgba(31,45,117,0.82)] shadow-[0_12px_30px_-18px_rgba(15,23,42,0.7)] backdrop-blur-xl supports-[backdrop-filter]:bg-[rgba(31,45,117,0.72)] font-sans"
       >
         <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
+          <div className="flex justify-between h-[52px] items-center">
             {/* Logo - Left side */}
             <div className="flex items-center flex-shrink-0">
               <Link href="/incidents" className="flex items-center" data-tour="dashboard">
@@ -341,7 +319,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               {/* Desktop Nav */}
               {!minimal && (
                 <div className="hidden xl:flex xl:items-center">
-                  <div className="flex items-center gap-8">
+                  <div className="flex items-center gap-10">
                     <a 
                       href="/incidents" 
                       onClick={(e) => {
@@ -349,7 +327,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                         e.stopPropagation()
                         router.push('/incidents')
                       }}
-                      className={`${isActive('/incidents')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                      className={`${isActive('/incidents')} inline-flex items-center px-3 py-1.5 border-b text-[15px] font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
                     >
                           Incidents
                     </a>
@@ -359,7 +337,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                       <NavigationMenuList className="gap-0">
                       <NavigationMenuItem>
                         <NavigationMenuTrigger 
-                          className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-red-500 !text-white' : ''} ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+                          className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/45 !border-b px-3 py-1.5 text-[15px] font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/reports') || pathname.startsWith('/analytics') ? '!border-cyan-300 !text-white' : ''} ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                           onClick={() => {
                             if (!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN)) {
                               setShowNoEventModal(true);
@@ -426,7 +404,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                         e.stopPropagation()
                         router.push('/staffing')
                       }}
-                      className={`${isActive('/staffing')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+                      className={`${isActive('/staffing')} inline-flex items-center px-3 py-1.5 border-b text-[15px] font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                         >
                           Staff
                     </a>
@@ -442,7 +420,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                             }
                         router.push('/tasks')
                           }}
-                      className={`${isActive('/tasks')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
+                      className={`${isActive('/tasks')} inline-flex items-center px-3 py-1.5 border-b text-[15px] font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer ${!hasCurrentEvent && !(role === ROLES.ADMIN || role === ROLES.SUPERADMIN) ? 'opacity-50' : ''}`}
                         >
                           Tasks
                     </a>
@@ -454,7 +432,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                         e.stopPropagation()
                         router.push('/help')
                       }}
-                      className={`${isActive('/help')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                      className={`${isActive('/help')} inline-flex items-center px-3 py-1.5 border-b text-[15px] font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
                     >
                           Help
                     </a>
@@ -467,7 +445,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                           e.stopPropagation()
                           router.push('/settings')
                         }}
-                        className={`${isActive('/settings')} inline-flex items-center px-3 py-2 border-b-2 text-base font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
+                        className={`${isActive('/settings')} inline-flex items-center px-3 py-1.5 border-b text-[15px] font-medium tracking-tight text-white hover:text-gray-100 font-sans cursor-pointer`}
                       >
                             Settings
                       </a>
@@ -478,7 +456,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                       <NavigationMenuList className="gap-0">
                       <NavigationMenuItem>
                         <NavigationMenuTrigger
-                          className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/50 px-3 py-2 text-base font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-red-500 !text-white' : ''}`}
+                          className={`!bg-transparent !text-white/90 hover:!text-white !border-transparent hover:!border-white/45 !border-b px-3 py-1.5 text-[15px] font-medium tracking-tight transition-all duration-200 font-sans ${pathname.startsWith('/blog') || pathname.startsWith('/careers') || pathname.startsWith('/status') || pathname.startsWith('/vendors') || pathname.startsWith('/maintenance') || pathname.startsWith('/lost-and-found') ? '!border-cyan-300 !text-white' : ''}`}
                         >
                           More
                         </NavigationMenuTrigger>
@@ -625,7 +603,7 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
                           e.stopPropagation()
                           router.push('/admin')
                         }}
-                        className={`${isActive('/admin')} inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium text-white hover:text-gray-100 font-sans cursor-pointer`}
+                        className={`${isActive('/admin')} inline-flex items-center px-3 py-1.5 border-b text-sm font-medium text-white hover:text-gray-100 font-sans cursor-pointer`}
                       >
                             Admin
                       </a>
@@ -638,12 +616,12 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               {!minimal && (
                 <button
                   onClick={openQuickActionsPanel}
-                  className="hidden 2xl:flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="hidden 2xl:flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-2.5 py-1.5 text-[11px] font-medium text-white/90 hover:bg-white/12 focus:outline-none focus:ring-2 focus:ring-blue-300"
                   aria-label="Open quick actions"
                   title="Open quick actions (Cmd/Ctrl+K)"
                 >
                   <span>Quick Actions</span>
-                  <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wide">
+                  <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide">
                     Cmd/Ctrl+K
                   </span>
                 </button>
@@ -653,13 +631,24 @@ export default function Navigation({ minimal = false }: { minimal?: boolean }) {
               <div className="flex items-center gap-4">
               {user && (
                 <div className="relative flex items-center gap-4">
-                  {/* Welcome message with first name, left of avatar */}
-                  <div className="hidden md:flex md:items-center md:gap-3">
-                    <span className="text-white font-semibold text-base font-sans">
-                      {getRandomGreeting()}, {(() => {
-                        if (profile?.full_name) return profile.full_name.split(' ')[0];
-                        return '';
-                      })()}
+                  {/* Event status + profile context */}
+                  <div className="hidden md:flex md:items-center md:gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                        hasCurrentEvent
+                          ? 'border-emerald-300/70 bg-emerald-500/15 text-emerald-100'
+                          : 'border-amber-300/70 bg-amber-500/15 text-amber-100'
+                      }`}
+                    >
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          hasCurrentEvent ? 'bg-emerald-300 animate-pulse' : 'bg-amber-300'
+                        }`}
+                      />
+                      {hasCurrentEvent ? 'Event Mode' : 'Standby'}
+                    </span>
+                    <span className="text-white/85 text-sm font-medium">
+                      {profile?.full_name?.split(' ')[0] || 'Operator'}
                     </span>
                     {isTemporaryMember && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 font-sans">

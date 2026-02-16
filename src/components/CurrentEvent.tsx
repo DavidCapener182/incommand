@@ -48,19 +48,19 @@ interface AIInsight {
 
 // --- Helper Components ---
 const CardFrame = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("group relative flex h-full flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-5 shadow-[0_16px_34px_-22px_rgba(15,23,42,0.45)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_42px_-24px_rgba(15,23,42,0.45)] dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5", className)}>
+  <div className={cn("group relative flex h-full flex-col justify-between overflow-hidden rounded-[var(--radius-card-primary)] border border-slate-200/90 bg-gradient-to-br from-white via-white to-slate-50/80 p-4 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.38)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_40px_-24px_rgba(15,23,42,0.42)] dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5", className)}>
     <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/75 via-cyan-400/60 to-transparent" />
     {children}
   </div>
 )
 
 const CardHeader = ({ icon: Icon, title, action }: { icon: any; title: string; action?: () => void }) => (
-  <div className="flex items-center justify-between mb-4">
+  <div className="mb-3 flex items-center justify-between">
     <div className="flex items-center gap-2.5">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-700 ring-1 ring-blue-200/70 dark:from-blue-500/25 dark:to-cyan-500/20 dark:text-blue-200 dark:ring-blue-400/35">
-        <Icon className="h-4 w-4" />
+      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 text-blue-700 ring-1 ring-blue-200/70 dark:from-blue-500/25 dark:to-cyan-500/20 dark:text-blue-200 dark:ring-blue-400/35">
+        <Icon className="h-3.5 w-3.5" />
       </div>
-      <span className="text-sm font-semibold text-slate-700 dark:text-slate-100">{title}</span>
+      <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-100">{title}</span>
     </div>
     {action && (
       <button onClick={action} className="text-slate-400 transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200">
@@ -214,6 +214,15 @@ export default function CurrentEvent({
 
   // --- Render: Main Card ---
   const currentInsight = aiInsights[currentInsightIndex]
+  const insightSnippets = (() => {
+    const raw = (currentInsight?.content || '').replace(/\s+/g, ' ').trim()
+    if (!raw) return []
+    return raw
+      .split(/[.;|•]/)
+      .map((segment) => segment.trim())
+      .filter((segment) => segment.length >= 8)
+      .slice(0, 3)
+  })()
 
   return (
     <CardFrame>
@@ -226,7 +235,7 @@ export default function CurrentEvent({
         
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h3 className="text-[1.9rem] font-black text-slate-900 tracking-tight">
               {currentEvent.venue_name}
             </h3>
             {isEventLive() && (
@@ -237,8 +246,8 @@ export default function CurrentEvent({
             )}
           </div>
           
-          <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
-            <Calendar className="h-4 w-4" />
+          <div className="flex items-center gap-1.5 text-[13px] font-semibold text-blue-700">
+            <Calendar className="h-3.5 w-3.5" />
             <span>
               {eventType === 'football'
                 ? currentEvent.event_name.replace(/\s*-\s*\d{2}\/\d{2}\/\d{4}$/, '')
@@ -261,13 +270,18 @@ export default function CurrentEvent({
              if (!hasActs) return null;
 
              return (
-               <div className="flex items-center gap-2 text-xs text-slate-400 pl-6 mt-1">
-                  <Music className="h-3 w-3" />
-                  <span className="truncate max-w-[250px]">
-                    {typeof currentEvent.support_acts === 'string'
-                      ? JSON.parse(currentEvent.support_acts).map((a: any) => a.act_name).join(', ')
-                      : (currentEvent.support_acts as any[]).map((a: any) => a.act_name).join(', ')}
-                  </span>
+               <div className="mt-1.5 flex flex-wrap gap-1.5 pl-5">
+                 {(typeof currentEvent.support_acts === 'string'
+                   ? JSON.parse(currentEvent.support_acts)
+                   : (currentEvent.support_acts as any[])
+                 )
+                   .slice(0, 2)
+                   .map((act: any) => (
+                     <span key={act.act_name} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                       <Music className="h-3 w-3" />
+                       {act.act_name}
+                     </span>
+                   ))}
                </div>
              );
           })()}
@@ -277,7 +291,7 @@ export default function CurrentEvent({
       </div>
 
       {/* AI Status Box */}
-      <div className="mt-6 flex-1">
+      <div className="mt-3.5 flex-1">
         <AnimatePresence mode='wait'>
           <motion.div
             key={currentInsightIndex}
@@ -285,7 +299,7 @@ export default function CurrentEvent({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
-            className="min-h-[100px] rounded-xl border border-slate-200/80 bg-white/85 p-4 shadow-sm dark:border-[#2d437a]/55 dark:bg-[#0f1a35]/70"
+            className="min-h-[86px] rounded-xl border border-slate-200/80 bg-white/90 p-3.5 shadow-sm dark:border-[#2d437a]/55 dark:bg-[#0f1a35]/70"
           >
             {aiLoading ? (
                <div className="space-y-2 w-full">
@@ -302,28 +316,41 @@ export default function CurrentEvent({
                  </div>
                </div>
             ) : (
-               <>
-                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm text-blue-600 ring-1 ring-slate-200 dark:bg-[#13213f] dark:text-blue-200 dark:ring-[#2d437a]/50">
-                   {currentInsight?.title.includes('Security') ? <AlertCircle className="h-5 w-5" /> :
-                    currentInsight?.title.includes('Crowd') ? <TrendingUp className="h-5 w-5" /> :
-                    <Sparkles className="h-5 w-5" />}
+               <div className="flex items-start gap-3">
+                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm text-blue-600 ring-1 ring-slate-200 dark:bg-[#13213f] dark:text-blue-200 dark:ring-[#2d437a]/50">
+                   {currentInsight?.title.includes('Security') ? <AlertCircle className="h-[18px] w-[18px]" /> :
+                    currentInsight?.title.includes('Crowd') ? <TrendingUp className="h-[18px] w-[18px]" /> :
+                    <Sparkles className="h-[18px] w-[18px]" />}
                  </div>
                  <div className="flex-1 min-w-0">
-                    <div className="mb-0.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
                       {currentInsight?.title || 'Event Update'}
                     </div>
-                    <div className="line-clamp-3 text-sm font-medium leading-snug text-slate-900 dark:text-slate-100">
-                      {currentInsight?.content}
+                    <div className="flex flex-wrap gap-1.5">
+                      {insightSnippets.length > 0 ? (
+                        insightSnippets.map((snippet) => (
+                          <span
+                            key={snippet}
+                            className="inline-flex rounded-full border border-slate-200 bg-slate-100/85 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:border-[#324b82] dark:bg-[#1a2a52]/75 dark:text-slate-200"
+                          >
+                            {snippet}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-100/85 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:border-[#324b82] dark:bg-[#1a2a52]/75 dark:text-slate-200">
+                          No notable change
+                        </span>
+                      )}
                     </div>
                  </div>
-               </>
+               </div>
             )}
           </motion.div>
         </AnimatePresence>
       </div>
 
       {/* Pagination / Progress Bars */}
-      <div className="mt-5 flex items-center gap-1.5 h-2">
+      <div className="mt-3 flex h-2 items-center gap-1.5">
          {aiInsights.length > 1 && aiInsights.map((_, i) => (
            <button
              key={i}

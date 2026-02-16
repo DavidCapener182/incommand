@@ -91,18 +91,18 @@ const getRowStyle = (incident: Incident) => {
     'Queue Build-Up' // Consider filtering for severe/urgent only in future
   ];
   if (highPriorityTypes.includes(incident.incident_type)) {
-    return 'bg-red-50 hover:bg-red-100';
+    return 'bg-rose-100/85 hover:bg-rose-200/85 dark:bg-rose-950/40 dark:hover:bg-rose-900/45';
   }
   const priority = (incident as any).priority as string | undefined;
   if (!incident.is_closed && priority) {
     const p = priority.toLowerCase();
-    if (p === 'urgent' || p === 'high') return 'bg-red-50 hover:bg-red-100';
-    if (p === 'medium') return 'bg-yellow-50 hover:bg-yellow-100';
+    if (p === 'urgent' || p === 'high') return 'bg-rose-100/85 hover:bg-rose-200/85 dark:bg-rose-950/40 dark:hover:bg-rose-900/45';
+    if (p === 'medium') return 'bg-amber-100/75 hover:bg-amber-200/80 dark:bg-amber-950/35 dark:hover:bg-amber-900/40';
   }
   if (!incident.is_closed && incident.incident_type !== 'Attendance' && incident.incident_type !== 'Sit Rep') {
-    return 'bg-yellow-50 hover:bg-yellow-100';
+    return 'bg-amber-50/90 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-900/30';
   }
-  return 'hover:bg-gray-50';
+  return 'hover:bg-slate-100/85 dark:hover:bg-slate-800/60';
 };
 
 // Global subscription tracking to prevent duplicates
@@ -975,9 +975,9 @@ export default function IncidentTable({
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-100/65 p-3 shadow-[0_24px_50px_-36px_rgba(15,23,42,0.45)] ring-1 ring-white/80 dark:border-incommand-border/70 dark:bg-gradient-to-b dark:from-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/5 md:p-4">
+    <div className="flex h-full flex-col">
       {/* Enhanced Search Bar and Last Updated */}
-      <div className="relative mb-3 rounded-xl border border-slate-200/90 bg-white/85 p-3 shadow-sm dark:border-incommand-border/60 dark:bg-incommand-surface-muted/65">
+      <div className="relative mb-3 rounded-[var(--radius-card-secondary)] border border-slate-200/90 bg-white/85 p-3 dark:border-incommand-border/60 dark:bg-incommand-surface-muted/65">
         {/* Mobile: Enhanced Search Bar Above Everything */}
         <div className="mb-2 block md:hidden">
           <EnhancedSearch
@@ -1177,7 +1177,7 @@ export default function IncidentTable({
         <>
           {/* Enhanced Empty State */}
           {sortedIncidents.length === 0 ? (
-            <div className="mt-4 rounded-3xl border border-slate-200 bg-gradient-to-br from-gray-50 to-blue-50 p-12 text-center shadow-xl transition-colors duration-300 dark:border-incommand-border dark:from-incommand-surface-elevated dark:to-incommand-primary-dark">
+            <div className="mt-4 rounded-[var(--radius-section)] border border-slate-200 bg-gradient-to-br from-gray-50 to-blue-50 p-12 text-center transition-colors duration-300 dark:border-incommand-border dark:from-incommand-surface-elevated dark:to-incommand-primary-dark">
               <div className="text-6xl mb-4">📋</div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No incidents to display</h3>
               <p className="text-gray-600 dark:text-gray-300">When incidents are logged, they will appear here in real-time.</p>
@@ -1187,7 +1187,7 @@ export default function IncidentTable({
             <div className="mt-2 flex flex-col gap-6 overflow-hidden lg:flex-row lg:items-start">
               <div className="w-full lg:flex-1">
                 {/* Regular Incident List for Desktop */}
-                <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm dark:border-incommand-border/60 dark:bg-incommand-surface/85">
+                <div className="overflow-hidden rounded-[var(--radius-card-secondary)] border border-slate-200/80 bg-white/95 dark:border-incommand-border/60 dark:bg-incommand-surface/85">
                   <div className="max-h-[600px] overflow-y-auto">
                     {sortedIncidents.length === 0 ? (
                       <div className="text-center py-12">
@@ -1198,13 +1198,13 @@ export default function IncidentTable({
                         <p className="text-gray-500 dark:text-gray-400">Incidents will appear here as they&apos;re logged</p>
                       </div>
                     ) : (
-                      <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                      <div className="divide-y divide-slate-300/70 dark:divide-slate-700/70">
                         {sortedIncidents.map((incident) => {
                           const isMatchFlowLog = incident.type === 'match_log'
                           return (
                           <div
                             key={incident.id}
-                            className={`p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors ${
+                            className={`p-4 hover:bg-slate-100/85 dark:hover:bg-slate-700/55 cursor-pointer transition-colors ${
                               isMatchFlowLog ? 'bg-gray-50/50 dark:bg-gray-800/50 opacity-75' : ''
                             }`}
                             onClick={() => handleIncidentClick(incident)}
@@ -1268,7 +1268,7 @@ export default function IncidentTable({
           <div className="w-full lg:flex-1">
           {/* Enhanced Mobile Card Layout with Pull-to-Refresh */}
           <div 
-            className="relative mt-4 flex-1 space-y-3 overflow-hidden overflow-y-auto rounded-2xl border border-slate-200/80 bg-white/90 px-1 scroll-smooth dark:border-incommand-border/60 dark:bg-incommand-surface-alt/85 md:hidden"
+            className="relative mt-4 flex-1 space-y-3 overflow-hidden overflow-y-auto rounded-[var(--radius-card-secondary)] border border-slate-200/80 bg-white/90 px-1 scroll-smooth dark:border-incommand-border/60 dark:bg-incommand-surface-alt/85 md:hidden"
             style={{ height: 'calc(100vh - 200px)' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
@@ -1475,14 +1475,14 @@ export default function IncidentTable({
           {/* Enhanced Desktop Table Layout */}
           <div
             ref={tableContainerRef}
-            className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-incommand-border/60 dark:bg-incommand-surface-alt/90 md:block"
+            className="hidden overflow-hidden rounded-[var(--radius-card-secondary)] border border-slate-200/80 bg-white dark:border-incommand-border/55 dark:bg-incommand-surface-alt/90 md:block"
             style={{
               height: 'calc(100vh - 260px)'
             }}
           >
             <div className="h-full overflow-auto">
               <table className="w-full min-w-[960px] caption-bottom text-sm table-auto">
-                <thead className="sticky top-0 z-30 border-b border-border/60 bg-slate-50/95 shadow-sm backdrop-blur-sm dark:bg-incommand-table-header/95">
+                <thead className="sticky top-0 z-30 border-b border-slate-300/70 bg-slate-100/95 shadow-sm backdrop-blur-sm dark:bg-incommand-table-header/95">
                   <tr className="hover:bg-transparent border-none">
                     <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.log}`}>Log</th>
                     <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 border-r border-border/30 ${tableColumnWidths.callsign}`}>From</th>
@@ -1493,19 +1493,19 @@ export default function IncidentTable({
                     <th className={`h-12 px-4 py-3 text-center align-middle text-sm font-medium text-muted-foreground dark:text-gray-300 uppercase tracking-wider border-b border-border/60 ${tableColumnWidths.status}`}>Status</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-incommand-surface divide-y divide-gray-200 dark:divide-incommand-border">
+                <tbody className="divide-y divide-slate-300/70 bg-white dark:divide-slate-700/70 dark:bg-incommand-surface">
                 {sortedIncidents.map((incident, idx) => {
                   const isMatchFlowLog = incident.type === 'match_log'
                   const priorityBorderClass = getPriorityBorderClass(incident.priority as Priority)
                   const { icon: IncidentTypeIcon } = getIncidentTypeIcon(incident.incident_type)
                   const isGoalType = /goal/i.test(incident.incident_type || '')
                   let rowColor = getRowStyle(incident);
-                  if (rowColor === 'hover:bg-gray-50') {
-                    rowColor = idx % 2 === 0 ? 'bg-white dark:bg-incommand-surface hover:bg-gray-50 dark:hover:bg-incommand-hover' : 'bg-gray-50 dark:bg-incommand-surface-row hover:bg-gray-100 dark:hover:bg-incommand-surface-row-alt';
+                  if (rowColor.includes('hover:bg-slate-100')) {
+                    rowColor = idx % 2 === 0 ? 'bg-white dark:bg-incommand-surface hover:bg-slate-100/90 dark:hover:bg-incommand-hover' : 'bg-slate-50 dark:bg-incommand-surface-row hover:bg-slate-100 dark:hover:bg-incommand-surface-row-alt';
                   }
                   // Match flow logs get grey styling
                   if (isMatchFlowLog) {
-                    rowColor = 'bg-gray-50/50 dark:bg-gray-800/50 opacity-75'
+                            rowColor = 'bg-slate-100/60 dark:bg-gray-800/55 opacity-80'
                   }
                   return (
                     <tr
@@ -1515,7 +1515,7 @@ export default function IncidentTable({
                           ? 'hover:bg-gray-100/50 dark:hover:bg-gray-700/50 border-gray-300 dark:border-gray-600' 
                           : isHighPriorityAndOpen(incident)
                           ? 'ring-2 ring-red-400 border-red-300 z-20 animate-pulse-bg motion-reduce:animate-none transition-colors duration-200'
-                          : 'hover:bg-muted/40 dark:hover:bg-incommand-surface-elevated/60 transition-colors duration-200 hover:border-blue-300 dark:hover:border-blue-500'
+                          : 'hover:bg-slate-100/90 dark:hover:bg-incommand-surface-elevated/70 transition-colors duration-150 hover:border-slate-300 dark:hover:border-blue-500'
                       }`}
                       onClick={(e) => {
                         // Only open modal if not clicking on a button
@@ -1524,7 +1524,7 @@ export default function IncidentTable({
                         }
                       }}
                     >
-                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30 ${tableColumnWidths.log}`}>
+                      <td className={`px-4 py-2.5 align-middle text-xs text-gray-600 dark:text-gray-300 border-r border-border/30 ${tableColumnWidths.log}`}>
                         <div className="flex flex-col items-center gap-0.5">
                           <div className="flex items-center gap-1 justify-center">
                             {isHighPriorityAndOpen(incident) && !isMatchFlowLog && (
@@ -1548,7 +1548,7 @@ export default function IncidentTable({
                           </div>
                         </div>
                       </td>
-                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
+                      <td className={`px-4 py-2.5 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
                         <div className="max-w-[80px] mx-auto">
                           <span
                             title={callsignShortToName[incident.callsign_from?.toUpperCase()] || callsignAssignments[incident.callsign_from?.toUpperCase()] || undefined}
@@ -1568,7 +1568,7 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
+                      <td className={`px-4 py-2.5 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.callsign}`}>
                         <div className="max-w-[80px] mx-auto">
                           <span
                             title={callsignShortToName[incident.callsign_to?.toUpperCase()] || callsignAssignments[incident.callsign_to?.toUpperCase()] || undefined}
@@ -1588,7 +1588,7 @@ export default function IncidentTable({
                           </span>
                         </div>
                       </td>
-                      <td className={`px-4 py-3 align-middle text-xs leading-relaxed border-r border-border/30 ${tableColumnWidths.occurrence} ${
+                      <td className={`px-4 py-2.5 align-middle text-xs leading-relaxed border-r border-border/30 ${tableColumnWidths.occurrence} ${
                         isMatchFlowLog ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'
                       }`} style={{
                         lineHeight: '1.3',
@@ -1606,7 +1606,7 @@ export default function IncidentTable({
                           {incident.occurrence}
                         </span>
                       </td>
-                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.type}`}>
+                      <td className={`px-4 py-2.5 align-middle text-xs text-gray-600 dark:text-gray-300 text-center border-r border-border/30 ${tableColumnWidths.type}`}>
                         <div className="flex items-center justify-center">
                           {isMatchFlowLog ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full shadow-sm bg-gray-400 text-white">
@@ -1621,7 +1621,7 @@ export default function IncidentTable({
                           )}
                         </div>
                       </td>
-                      <td className={`px-4 py-3 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30 ${tableColumnWidths.action}`} style={{
+                      <td className={`px-4 py-2.5 align-middle text-xs text-gray-600 dark:text-gray-300 leading-relaxed border-r border-border/30 ${tableColumnWidths.action}`} style={{
                         lineHeight: '1.3',
                         maxHeight: '2.6em',
                         overflow: 'hidden',
@@ -1637,7 +1637,7 @@ export default function IncidentTable({
                           {incident.action_taken}
                         </span>
                       </td>
-                      <td className={`px-4 py-3 align-middle text-center ${tableColumnWidths.status}`}>
+                      <td className={`px-4 py-2.5 align-middle text-center ${tableColumnWidths.status}`}>
                         <div className="flex flex-col items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
                           <div className="flex flex-wrap gap-1.5 items-center justify-center">
                             <PriorityBadge priority={incident.priority} />
@@ -1713,7 +1713,7 @@ export default function IncidentTable({
         </>
       ) : viewMode === 'board' ? (
         isMobile ? (
-          <div className="mt-6 rounded-3xl border border-dashed border-blue-300 bg-blue-50/60 p-6 text-center text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+          <div className="mt-6 rounded-[var(--radius-section)] border border-dashed border-blue-300 bg-blue-50/60 p-6 text-center text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
             Board view is available on larger screens.
           </div>
         ) : (

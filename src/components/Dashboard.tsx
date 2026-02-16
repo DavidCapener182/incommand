@@ -4,10 +4,6 @@
 import React, { useState, useEffect, useRef, Fragment, useCallback, useMemo } from 'react'
 import IncidentTable from './IncidentTable'
 import CurrentEvent from './CurrentEvent'
-import EventCreationModal from './EventCreationModal'
-import IncidentCreationModal, {
-  incidentTypes,
-} from './IncidentCreationModal'
 import VenueOccupancy from './VenueOccupancy'
 import { supabase } from '../lib/supabase'
 import { RealtimeChannel } from '@supabase/supabase-js'
@@ -43,13 +39,14 @@ import TimeCard, { type EventTiming } from './TimeCard'
 import { geocodeAddress } from '../utils/geocoding'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '../contexts/AuthContext'
-// @ts-ignore-next-line
-import Modal from 'react-modal'
-import what3words from '@what3words/api'
 import { Menu, Transition, Dialog } from '@headlessui/react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
+import dynamicImport from 'next/dynamic'
 // Lazy load AttendanceModal since it uses chart.js
 const AttendanceModal = dynamicImport(() => import('./AttendanceModal'), {
+  ssr: false
+})
+const IncidentCreationModal = dynamicImport(() => import('./IncidentCreationModal'), {
   ssr: false
 })
 import { getIncidentTypeStyle } from '../utils/incidentStyles'
@@ -68,7 +65,6 @@ import { useIncidentSummary } from '@/contexts/IncidentSummaryContext'
 import LogReviewReminder from './LogReviewReminder'
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor'
 // Lazy load heavy chart components
-import dynamicImport from 'next/dynamic'
 
 const AnalyticsKPICards = dynamicImport(() => import('./analytics/AnalyticsKPICards'), {
   ssr: false,
@@ -80,15 +76,9 @@ const MiniTrendChart = dynamicImport(() => import('./MiniTrendChart'), {
   loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-48 rounded-lg" />
 })
 
-const ReadinessIndexCard = dynamicImport(() => import('./analytics/ReadinessIndexCard'), {
-  ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-48 rounded-lg" />
-})
+import ReadinessIndexCard from './analytics/ReadinessIndexCard'
 
-const RadioAlertsWidget = dynamicImport(() => import('./monitoring/RadioAlertsWidget'), {
-  ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-32 rounded-lg" />
-})
+import RadioAlertsWidget from './monitoring/RadioAlertsWidget'
 
 // Keep lightweight components as regular imports
 import RealtimeAlertBanner from './analytics/RealtimeAlertBanner'
@@ -111,24 +101,21 @@ import TopIncidentTypesCard from './dashboard/cards/TopIncidentTypesCard'
 
 // Card components are now in separate files in ./dashboard/cards/
 
-// Add a helper to fetch What3Words address via API route (to keep API key secret)
-async function fetchWhat3Words(lat: number, lon: number): Promise<string | null> {
-  try {
-    const res = await fetch(`/api/what3words?lat=${lat}&lon=${lon}`);
-    const data = await res.json();
-    return data.words ? data.words : null;
-  } catch {
-    return null;
-  }
-}
-
-const w3wApiKey = process.env.NEXT_PUBLIC_WHAT3WORDS_API_KEY;
-const w3wApi = w3wApiKey ? what3words(w3wApiKey) : null;
-const w3wRegex = /^(?:\s*\/{0,3})?([a-zA-Z]+)\.([a-zA-Z]+)\.([a-zA-Z]+)$/;
-
-
-
-// TopIncidentTypesCard is now in ./dashboard/cards/TopIncidentTypesCard.tsx
+const HIGH_PRIORITY_TYPES = [
+  'Ejection',
+  'Code Green',
+  'Code Black',
+  'Code Pink',
+  'Aggressive Behaviour',
+  'Missing Child/Person',
+  'Hostile Act',
+  'Counter-Terror Alert',
+  'Fire Alarm',
+  'Evacuation',
+  'Medical',
+  'Suspicious Behaviour',
+  'Queue Build-Up',
+]
 
 
 
@@ -178,8 +165,6 @@ export default function Dashboard() {
     return null
   }, [safeFilters.statuses])
 
-
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false)
   
   // Listen for custom event to close incident modal (bypasses React state if stuck)
@@ -212,10 +197,6 @@ export default function Dashboard() {
     }
   })
   
-  // Debug logging for currentEvent
-  useEffect(() => {
-    console.log('🔍 Dashboard currentEvent changed:', currentEvent)
-  }, [currentEvent])
   const [coordinates, setCoordinates] = useState<{ lat: number; lon: number }>({
     lat: 51.5074,
     lon: -0.1278
@@ -225,11 +206,12 @@ export default function Dashboard() {
     total: 0,
     high: 0,
     open: 0,
+    inProgress: 0,
+    activeNow: 0,
     closed: 0,
     refusals: 0,
     ejections: 0,
     medicals: 0,
-    other: 0,
     hasOpenHighPrio: false,
   })
   const subscriptionRef = useRef<RealtimeChannel | null>(null)
@@ -241,15 +223,6 @@ export default function Dashboard() {
   // Combined loading state - wait for both Dashboard and EventContext to be ready
   const isFullyReady = !loadingCurrentEvent && isEventContextReady
   
-  // Debug logging to track event type in Dashboard
-  console.log('🔍 Dashboard: Event type state', {
-    eventType,
-    eventLoading,
-    loadingCurrentEvent,
-    isEventContextReady,
-    isFullyReady,
-    currentEvent: currentEvent?.event_name
-  })
   const [currentTime, setCurrentTime] = useState<string>(new Date().toLocaleTimeString('en-GB'));
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   
@@ -367,9 +340,6 @@ export default function Dashboard() {
           if (isIncidentModalOpen) {
             setIsIncidentModalOpen(false)
             announce('Incident form closed')
-          } else if (isEventModalOpen) {
-            setIsEventModalOpen(false)
-            announce('Event form closed')
           } else if (showKeyboardShortcuts) {
             setShowKeyboardShortcuts(false)
             announce('Keyboard shortcuts closed')
@@ -423,9 +393,6 @@ export default function Dashboard() {
   
   // Toast notifications
   const { messages, addToast, removeToast } = useToast();
-
-  // Add a state for showing the event creation modal if not already present
-  const [showCreateEvent, setShowCreateEvent] = useState(false);
 
   const handleIncidentsLoaded = useCallback((data: any[]) => {
     const list = Array.isArray(data) ? data : []
@@ -947,32 +914,34 @@ export default function Dashboard() {
 
       const countableIncidents = incidents.filter(isCountable);
       
-      const highPriorityIncidentTypes = [
-        'Ejection',
-        'Code Green',
-        'Code Black',
-        'Code Pink',
-        'Aggressive Behaviour',
-        'Missing Child/Person',
-        'Hostile Act',
-        'Counter-Terror Alert',
-        'Fire Alarm',
-        'Evacuation',
-        'Medical',
-        'Suspicious Behaviour',
-        'Queue Build-Up' // Consider filtering for severe/urgent only in future
-      ];
-      const highPriorityIncidents = countableIncidents.filter(i => highPriorityIncidentTypes.includes(i.incident_type));
-      
+      const highPriorityIncidents = countableIncidents.filter(i => HIGH_PRIORITY_TYPES.includes(i.incident_type));
+      const getIncidentTimestamp = (incident: any) =>
+        new Date(
+          incident.timestamp ||
+          incident.time_logged ||
+          incident.time_of_occurrence ||
+          incident.created_at ||
+          0
+        ).getTime()
+      const isInProgress = (incident: any) => {
+        const status = String(incident.status || '').toLowerCase()
+        return status === 'in_progress' || status === 'in progress'
+      }
+      const oneHourAgo = Date.now() - 60 * 60 * 1000
+
       const total = incidents.length; // Include all incidents (including Attendance) in total
       const high = highPriorityIncidents.length;
       const hasOpenHighPrio = highPriorityIncidents.some(i => !i.is_closed);
       const open = countableIncidents.filter(i => !i.is_closed).length;
+      const inProgress = countableIncidents.filter((incident) => isInProgress(incident)).length;
+      const activeNow = countableIncidents.filter((incident) => {
+        const incidentTime = getIncidentTimestamp(incident)
+        return isInProgress(incident) || (!incident.is_closed && incidentTime >= oneHourAgo)
+      }).length;
       const closed = countableIncidents.filter(i => i.is_closed).length;
       const refusals = countableIncidents.filter(i => i.incident_type === 'Refusal').length;
       const ejections = countableIncidents.filter(i => i.incident_type === 'Ejection').length;
       const medicals = countableIncidents.filter(i => i.incident_type === 'Medical').length;
-      const other = countableIncidents.filter(i => !['Refusal', 'Ejection', 'Medical'].includes(i.incident_type)).length;
       
       // Debug: Log the stats calculations
       logger.debug('Stats calculations', {
@@ -991,11 +960,12 @@ export default function Dashboard() {
         total,
         high,
         open,
+        inProgress,
+        activeNow,
         closed,
         refusals,
         ejections,
         medicals,
-        other,
         hasOpenHighPrio,
       });
     }
@@ -1014,6 +984,91 @@ export default function Dashboard() {
   const resetToTotal = () => {
     setFilters({ types: [], statuses: [], priorities: [], query: '' });
   };
+
+  const activeFilterCount =
+    safeFilters.types.length +
+    safeFilters.statuses.length +
+    safeFilters.priorities.length +
+    (safeFilters.query ? 1 : 0);
+  const hasActiveFilters = activeFilterCount > 0;
+
+  const metricTrends = useMemo(() => {
+    const now = Date.now()
+    const WINDOW_MS = 60 * 60 * 1000
+    const currentWindowStart = now - WINDOW_MS
+    const previousWindowStart = now - WINDOW_MS * 2
+    const BIN_COUNT = 12
+    const BIN_MS = WINDOW_MS / BIN_COUNT
+
+    const getIncidentTimestamp = (incident: any) =>
+      new Date(
+        incident.timestamp ||
+        incident.time_logged ||
+        incident.time_of_occurrence ||
+        incident.created_at ||
+        0
+      ).getTime()
+
+    const isCountable = (incident: any) =>
+      incident.type !== 'match_log' && !['Attendance', 'Sit Rep'].includes(incident.incident_type)
+
+    const isInProgressStatus = (incident: any) => {
+      const status = String(incident.status || '').toLowerCase()
+      return status === 'in_progress' || status === 'in progress'
+    }
+
+    const countableIncidents = incidents.filter(isCountable)
+
+    const buildTrend = (predicate: (incident: any) => boolean, increaseIsBad = true) => {
+      const series = Array.from({ length: BIN_COUNT }, () => 0)
+      let currentWindowCount = 0
+      let previousWindowCount = 0
+
+      for (const incident of countableIncidents) {
+        if (!predicate(incident)) continue
+
+        const timestamp = getIncidentTimestamp(incident)
+        if (!Number.isFinite(timestamp) || timestamp <= 0) continue
+
+        if (timestamp >= currentWindowStart && timestamp <= now) {
+          currentWindowCount += 1
+          const bucket = Math.min(
+            BIN_COUNT - 1,
+            Math.max(0, Math.floor((timestamp - currentWindowStart) / BIN_MS))
+          )
+          series[bucket] += 1
+        } else if (timestamp >= previousWindowStart && timestamp < currentWindowStart) {
+          previousWindowCount += 1
+        }
+      }
+
+      let percentage = 0
+      if (previousWindowCount === 0) {
+        percentage = currentWindowCount === 0 ? 0 : 100
+      } else {
+        percentage = Math.round(((currentWindowCount - previousWindowCount) / previousWindowCount) * 100)
+      }
+
+      const changeLabel = `${percentage > 0 ? '+' : ''}${percentage}%`
+      const changeType: 'positive' | 'negative' | 'neutral' =
+        percentage === 0
+          ? 'neutral'
+          : (increaseIsBad ? (percentage > 0 ? 'negative' : 'positive') : (percentage > 0 ? 'positive' : 'negative'))
+
+      return { series, changeLabel, changeType }
+    }
+
+    return {
+      high: buildTrend((incident) => HIGH_PRIORITY_TYPES.includes(incident.incident_type), true),
+      open: buildTrend((incident) => !incident.is_closed, true),
+      activeNow: buildTrend((incident) => isInProgressStatus(incident) || !incident.is_closed, true),
+      medicals: buildTrend((incident) => incident.incident_type === 'Medical', true),
+      ejections: buildTrend((incident) => incident.incident_type === 'Ejection', true),
+      refusals: buildTrend((incident) => incident.incident_type === 'Refusal', true),
+      total: buildTrend(() => true, true),
+      closed: buildTrend((incident) => Boolean(incident.is_closed), false),
+    }
+  }, [incidents])
 
   // Fetch attendance timeline when modal opens
   useEffect(() => {
@@ -1037,68 +1092,56 @@ export default function Dashboard() {
   return (
     <>
       {/* Desktop view - Bento Layout */}
-      <section className="hidden md:block rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/95 to-blue-50/70 p-4 shadow-[0_22px_54px_-34px_rgba(15,23,42,0.32)] ring-1 ring-white/75 backdrop-blur-sm dark:border-incommand-border/60 dark:bg-gradient-to-br dark:from-incommand-surface dark:via-incommand-surface/95 dark:to-incommand-tertiary-dark dark:ring-white/5 lg:p-5">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <section className="hidden md:block px-3 pt-3 md:px-4 md:pt-4 pb-3 md:pb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
           {/* CurrentEvent - Large card, spans 4 columns */}
-          <div className="lg:col-span-4">
-            <div className="relative h-full overflow-hidden rounded-[26px] border border-slate-300/85 bg-gradient-to-br from-white via-slate-50 to-blue-50/55 p-1.5 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.5)] ring-1 ring-white/90 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-tertiary-dark dark:via-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/10">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-blue-100/45 to-transparent dark:from-blue-500/10" />
-              <CurrentEvent
-                currentTime={currentTime}
-                currentEvent={currentEvent}
-                loading={loadingCurrentEvent}
-                error={error}
-                onEventCreated={fetchCurrentEvent}
-                eventTimings={eventTimings}
-              />
-            </div>
+          <div className="lg:col-span-4 min-h-0">
+            <CurrentEvent
+              currentTime={currentTime}
+              currentEvent={currentEvent}
+              loading={loadingCurrentEvent}
+              error={error}
+              onEventCreated={fetchCurrentEvent}
+              eventTimings={eventTimings}
+            />
           </div>
 
           {/* TimeCard - Medium card, spans 4 columns */}
-          <div className="lg:col-span-4">
-            <div className="relative h-full overflow-hidden rounded-[26px] border border-slate-300/85 bg-gradient-to-br from-white via-slate-50 to-blue-50/55 p-1.5 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.5)] ring-1 ring-white/90 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-tertiary-dark dark:via-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/10">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-blue-100/45 to-transparent dark:from-blue-500/10" />
-              {loadingCurrentEvent ? (
-                <TimeCardSkeleton />
-              ) : (
-                <TimeCard
-                  companyId={companyId}
-                  currentTime={currentTime}
-                  eventTimings={eventTimings}
-                  nextEvent={nextEvent}
-                  countdown={countdown}
-                  currentSlot={currentSlot}
-                  timeSinceLastIncident={timeSinceLastIncident}
-                />
-              )}
-            </div>
+          <div className="lg:col-span-4 min-h-0">
+            {loadingCurrentEvent ? (
+              <TimeCardSkeleton />
+            ) : (
+              <TimeCard
+                companyId={companyId}
+                currentTime={currentTime}
+                eventTimings={eventTimings}
+                nextEvent={nextEvent}
+                countdown={countdown}
+                currentSlot={currentSlot}
+                timeSinceLastIncident={timeSinceLastIncident}
+              />
+            )}
           </div>
 
           {/* ReadinessIndexCard - Medium card, spans 2 columns */}
-          <div className="lg:col-span-2">
-            <div className="relative h-full overflow-hidden rounded-[26px] border border-slate-300/85 bg-gradient-to-br from-white via-slate-50 to-blue-50/55 p-1.5 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.5)] ring-1 ring-white/90 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-tertiary-dark dark:via-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/10">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-blue-100/45 to-transparent dark:from-blue-500/10" />
-              <ReadinessIndexCard eventId={currentEventId} className="h-full" />
-            </div>
+          <div className="lg:col-span-2 min-h-0">
+            <ReadinessIndexCard eventId={currentEventId} className="h-full" />
           </div>
 
           {/* IncidentSummaryBar - Medium card, spans 2 columns */}
-          <div className="lg:col-span-2">
-            <div className="relative h-full overflow-hidden rounded-[26px] border border-slate-300/85 bg-gradient-to-br from-white via-slate-50 to-blue-50/55 p-1.5 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.5)] ring-1 ring-white/90 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-tertiary-dark dark:via-incommand-surface dark:to-incommand-tertiary-dark dark:ring-white/10">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-blue-100/45 to-transparent dark:from-blue-500/10" />
-              <IncidentSummaryBar
-                onFilter={handleSummaryFilter}
-                activeStatus={activeSummaryStatus}
-                className="h-full"
-              />
-            </div>
+          <div className="lg:col-span-2 min-h-0">
+            <IncidentSummaryBar
+              onFilter={handleSummaryFilter}
+              activeStatus={activeSummaryStatus}
+              className="h-full"
+            />
           </div>
         </div>
       </section>
       
       <FeatureGate feature="event-dashboard" plan={userPlan} showUpgradeModal={true}>
         <PageWrapper
-          className="relative space-y-5 md:space-y-6 bg-[#f8fafc] dark:bg-[#111a33]"
+          className="relative overflow-hidden space-y-4 md:space-y-5 bg-gradient-to-b from-[#f7faff] via-[#f4f8ff] to-[#ecf2ff] dark:bg-[#111a33]"
         >
           {/* Accessibility: Skip Links */}
           <SkipLinks />
@@ -1108,6 +1151,13 @@ export default function Dashboard() {
           isOpen={showKeyboardShortcuts} 
           onClose={() => setShowKeyboardShortcuts(false)} 
         />
+
+        {/* Ambient background accents */}
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute -top-24 left-1/2 h-80 w-[44rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-300/28 via-cyan-200/24 to-blue-100/20 blur-3xl dark:from-blue-500/14 dark:via-cyan-500/10 dark:to-transparent" />
+          <div className="absolute bottom-0 right-[-6rem] h-64 w-64 rounded-full bg-cyan-200/28 blur-3xl dark:bg-cyan-500/12" />
+          <div className="absolute top-1/3 left-[-5rem] h-56 w-56 rounded-full bg-indigo-200/22 blur-3xl dark:bg-indigo-500/12" />
+        </div>
         
         {/* Event Header - Sticky */}
         <div className="space-y-4">
@@ -1171,43 +1221,59 @@ export default function Dashboard() {
         </div>
       </div>
 
-{/* Incident Dashboard - matches page background so no visible strip */}
+{/* Incident Dashboard */}
 <div
-  className="relative mb-4 overflow-hidden rounded-3xl border border-slate-200/95 bg-gradient-to-b from-slate-50/95 to-slate-100/80 p-4 shadow-[0_28px_56px_-36px_rgba(15,23,42,0.5)] ring-1 ring-slate-200/50 sm:p-6 dark:border-[#2d437a]/60 dark:from-[#13213f]/95 dark:to-[#0f1934]"
+  className="relative mb-3 overflow-hidden rounded-[var(--radius-section)] bg-[var(--surface-section)] p-3.5 shadow-none sm:p-5 dark:bg-[#13213f]/90"
 >
-  <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-blue-100/55 blur-3xl dark:bg-blue-500/12" />
-  <div className="pointer-events-none absolute -left-16 bottom-0 h-32 w-32 rounded-full bg-cyan-100/40 blur-3xl dark:bg-cyan-500/10" />
+  <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-200/60 blur-3xl dark:bg-blue-500/16" />
+  <div className="pointer-events-none absolute -left-16 bottom-0 h-36 w-36 rounded-full bg-cyan-200/50 blur-3xl dark:bg-cyan-500/12" />
+  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-300/70 to-transparent dark:via-blue-500/45" />
   {/* Header */}
-  <div className="relative mb-4 flex flex-col gap-3">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <h2
-        className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
-        data-tour="dashboard"
-      >
-        <span className="h-6 w-1.5 rounded-full bg-gradient-to-b from-blue-500 to-cyan-500" />
-        Incident Dashboard
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Track and manage security incidents in real time.
-      </p>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-200">
-          Total: {incidentStats.total}
+  <div className="relative mb-4 flex flex-col gap-3 border-b border-slate-200/80 pb-3 dark:border-slate-700/40">
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="space-y-2">
+        <h2
+          className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+          data-tour="dashboard"
+        >
+          <span className="h-6 w-1.5 rounded-full bg-gradient-to-b from-blue-500 to-cyan-500" />
+          Incident Dashboard
+        </h2>
+        <p className="text-xs text-slate-600 dark:text-slate-300">
+          Live command view: prioritize risk and action.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
+            realtimeAnalytics.isConnected
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-700/60 dark:bg-emerald-900/30 dark:text-emerald-200"
+              : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-700/60 dark:bg-rose-900/30 dark:text-rose-200"
+          )}
+        >
+          <span className={cn("h-2 w-2 rounded-full", realtimeAnalytics.isConnected ? "bg-emerald-500 animate-pulse" : "bg-rose-500")} />
+          {realtimeAnalytics.isConnected ? "Live Feed Connected" : "Live Feed Reconnecting"}
         </span>
-        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-200">
-          Open: {incidentStats.open}
-        </span>
-        <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700/60 dark:bg-rose-900/30 dark:text-rose-200">
-          High Priority: {incidentStats.high}
-        </span>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={resetToTotal}
+            className="inline-flex items-center rounded-full border border-blue-200 bg-white/90 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 dark:border-blue-700/60 dark:bg-blue-950/40 dark:text-blue-200 dark:hover:bg-blue-900/50"
+          >
+            Clear {activeFilterCount} Filter{activeFilterCount === 1 ? '' : 's'}
+          </button>
+        )}
       </div>
     </div>
+
   </div>
 
   {/* Live Status + Alerts */}
   {currentEvent && (
-    <div className="mt-4 flex flex-col gap-4 lg:flex-row">
-      <div className="flex-1">
+    <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="rounded-[var(--radius-card-secondary)] border border-slate-200/80 bg-white/85 px-2.5 py-2 dark:border-slate-700/50 dark:bg-slate-900/35">
         <RealtimeStatusIndicator
           isConnected={realtimeAnalytics.isConnected}
           error={realtimeAnalytics.error}
@@ -1216,7 +1282,7 @@ export default function Dashboard() {
           onRefresh={realtimeAnalytics.refresh}
         />
       </div>
-      <div className="lg:w-96">
+      <div className="rounded-[var(--radius-card-secondary)] border border-slate-200/80 bg-white/85 px-2.5 py-2 dark:border-slate-700/50 dark:bg-slate-900/35">
         <RealtimeAlertBanner
           alerts={realtimeAnalytics.alerts}
           onDismiss={realtimeAnalytics.dismissAlert}
@@ -1228,13 +1294,11 @@ export default function Dashboard() {
 
   {/* Radio Alerts Widget */}
   {currentEvent && (
-    <div className="mt-4">
-      <RadioAlertsWidget eventId={currentEvent.id} />
-    </div>
+    <RadioAlertsWidget eventId={currentEvent.id} className="mt-3" />
   )}
 
   {/* Dashboard Sections */}
-  <div className="relative mt-4 space-y-4">
+  <div className="relative mt-3 space-y-3">
     {/* Mobile-only Venue Occupancy */}
     <div className="block md:hidden">
       <div className="mb-4">
@@ -1259,18 +1323,28 @@ export default function Dashboard() {
     </div>
     {/* Operational Metrics */}
     <section
-      className="hidden md:block relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-slate-50/60 to-slate-100/90 p-4 text-gray-900 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.42)] ring-1 ring-slate-200/50 dark:border-[#2d437a]/70 dark:bg-gradient-to-br dark:from-[#162346] dark:via-[#14203f] dark:to-[#0f1934] dark:ring-white/5"
+      className="hidden md:block relative overflow-hidden rounded-[var(--radius-section)] border border-slate-300/70 bg-white/85 p-3.5 text-gray-900 shadow-none dark:border-[#2d437a]/60 dark:bg-[#13213f]/90"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/70 via-cyan-400/60 to-transparent" />
-      <div className="mb-4 border-b border-slate-200/80 pb-3 dark:border-slate-600/50">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
-          Operational Metrics
-        </h3>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500/75 via-cyan-400/65 to-violet-400/40" />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-2.5 dark:border-slate-600/50">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+            Operational Metrics
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Click any card to focus the incident timeline.
+          </p>
+        </div>
+        {hasActiveFilters && (
+          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:border-blue-700/60 dark:bg-blue-900/30 dark:text-blue-200">
+            {activeFilterCount} active filter{activeFilterCount === 1 ? '' : 's'}
+          </span>
+        )}
       </div>
 
       {/* Stat Grid */}
-      <div className="hidden md:block pb-4">
-        <div className="mx-auto grid grid-cols-1 gap-3 rounded-xl sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 items-stretch">
+      <div className="hidden md:block pb-2">
+        <div className="mx-auto grid grid-cols-1 gap-2.5 rounded-xl sm:grid-cols-2 lg:grid-cols-6 xl:grid-cols-12 items-stretch">
           {!isFullyReady ? (
             Array.from({ length: 8 }).map((_, index) => (
               <StatCardSkeleton key={index} />
@@ -1280,68 +1354,38 @@ export default function Dashboard() {
               <StatCard
                 title="High Priority"
                 value={incidentStats.high}
-                icon={<ExclamationTriangleIcon className="h-4 w-4 text-red-400" />}
-                isSelected={safeFilters.types.some(type =>
-                  ['Ejection', 'Code Green', 'Code Black', 'Code Pink', 'Aggressive Behaviour', 'Missing Child/Person', 'Hostile Act', 'Counter-Terror Alert', 'Fire Alarm', 'Evacuation', 'Medical', 'Suspicious Behaviour', 'Queue Build-Up'].includes(type)
-                )}
+                icon={<ExclamationTriangleIcon className="h-4 w-4 text-red-500" />}
+                isSelected={safeFilters.types.some((type) => HIGH_PRIORITY_TYPES.includes(type))}
                 onClick={() =>
-                  setFilters(prev => ({
+                  setFilters((prev) => ({
                     ...prev,
-                    types: [
-                      'Ejection',
-                      'Code Green',
-                      'Code Black',
-                      'Code Pink',
-                      'Aggressive Behaviour',
-                      'Missing Child/Person',
-                      'Hostile Act',
-                      'Counter-Terror Alert',
-                      'Fire Alarm',
-                      'Evacuation',
-                      'Medical',
-                      'Suspicious Behaviour',
-                      'Queue Build-Up',
-                    ],
+                    types: HIGH_PRIORITY_TYPES,
                     statuses: [],
                     priorities: [],
                   }))
                 }
                 isFilterable
                 color="red"
-                tooltip="High priority incident types including Medical, Ejection, Code alerts, etc."
+                tooltip="Highest-risk incidents requiring immediate command awareness."
                 showPulse={incidentStats.hasOpenHighPrio}
+                trendData={metricTrends.high.series}
+                change={metricTrends.high.changeLabel}
+                changeType={metricTrends.high.changeType}
+                size="hero"
+                className="sm:col-span-2 lg:col-span-2 xl:col-span-4"
                 index={0}
-                isFirst={true}
                 forceLight
               />
               <StatCard
-                title="Medicals"
-                value={incidentStats.medicals}
-                icon={<HeartIcon className="h-4 w-4 text-red-400" />}
-                isSelected={safeFilters.types.includes('Medical')}
-                onClick={() =>
-                  setFilters(prev => ({
-                    ...prev,
-                    types: prev.types.includes('Medical')
-                      ? prev.types.filter(t => t !== 'Medical')
-                      : ['Medical'],
-                  }))
-                }
-                isFilterable
-                tooltip="Medical-related incidents."
-                index={1}
-                forceLight
-              />
-              <StatCard
-                title="Open"
+                title="Open Incidents"
                 value={incidentStats.open}
-                icon={<FolderOpenIcon className="h-4 w-4 text-yellow-400" />}
+                icon={<FolderOpenIcon className="h-4 w-4 text-amber-500" />}
                 isSelected={safeFilters.statuses.includes('open')}
                 onClick={() =>
-                  setFilters(prev => ({
+                  setFilters((prev) => ({
                     ...prev,
                     statuses: prev.statuses.includes('open')
-                      ? prev.statuses.filter(s => s !== 'open')
+                      ? prev.statuses.filter((status) => status !== 'open')
                       : ['open'],
                     types: [],
                     priorities: [],
@@ -1349,69 +1393,134 @@ export default function Dashboard() {
                 }
                 isFilterable
                 color="yellow"
-                tooltip="Incidents that are currently open (is_closed = false)."
+                tooltip="Incidents currently open and requiring action."
+                trendData={metricTrends.open.series}
+                change={metricTrends.open.changeLabel}
+                changeType={metricTrends.open.changeType}
+                size="hero"
+                className="sm:col-span-2 lg:col-span-2 xl:col-span-4"
+                index={1}
+                forceLight
+              />
+              <StatCard
+                title="Active Now"
+                value={incidentStats.activeNow}
+                icon={<BellAlertIcon className="h-4 w-4 text-violet-500" />}
+                isSelected={safeFilters.statuses.some((status) =>
+                  ['open', 'in_progress', 'in progress'].includes(String(status).toLowerCase())
+                )}
+                onClick={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    statuses: ['open', 'in_progress', 'in progress'],
+                    types: [],
+                    priorities: [],
+                  }))
+                }
+                isFilterable
+                tooltip="Open or in-progress incidents active in the past hour."
+                trendData={metricTrends.activeNow.series}
+                change={metricTrends.activeNow.changeLabel}
+                changeType={metricTrends.activeNow.changeType}
+                size="hero"
+                className="sm:col-span-2 lg:col-span-2 xl:col-span-4"
                 index={2}
+                forceLight
+              />
+              <StatCard
+                title="Medicals"
+                value={incidentStats.medicals}
+                icon={<HeartIcon className="h-4 w-4 text-rose-500" />}
+                isSelected={safeFilters.types.includes('Medical')}
+                onClick={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    types: prev.types.includes('Medical')
+                      ? prev.types.filter((type) => type !== 'Medical')
+                      : ['Medical'],
+                  }))
+                }
+                isFilterable
+                tooltip="Medical-related incidents."
+                trendData={metricTrends.medicals.series}
+                change={metricTrends.medicals.changeLabel}
+                changeType={metricTrends.medicals.changeType}
+                className="lg:col-span-2 xl:col-span-3"
+                index={3}
                 forceLight
               />
               <StatCard
                 title="Ejections"
                 value={incidentStats.ejections}
-                icon={<UsersIcon className="h-4 w-4 text-gray-400" />}
+                icon={<UsersIcon className="h-4 w-4 text-slate-500" />}
                 isSelected={safeFilters.types.includes('Ejection')}
                 onClick={() =>
-                  setFilters(prev => ({
+                  setFilters((prev) => ({
                     ...prev,
                     types: prev.types.includes('Ejection')
-                      ? prev.types.filter(t => t !== 'Ejection')
+                      ? prev.types.filter((type) => type !== 'Ejection')
                       : ['Ejection'],
                   }))
                 }
                 isFilterable
-                tooltip="Incidents where someone was ejected."
-                index={3}
+                tooltip="Incidents where someone was removed."
+                trendData={metricTrends.ejections.series}
+                change={metricTrends.ejections.changeLabel}
+                changeType={metricTrends.ejections.changeType}
+                className="xl:col-span-3"
+                index={4}
                 forceLight
               />
               <StatCard
                 title="Refusals"
                 value={incidentStats.refusals}
-                icon={<UserGroupIcon className="h-4 w-4 text-gray-400" />}
+                icon={<UserGroupIcon className="h-4 w-4 text-slate-500" />}
                 isSelected={safeFilters.types.includes('Refusal')}
                 onClick={() =>
-                  setFilters(prev => ({
+                  setFilters((prev) => ({
                     ...prev,
                     types: prev.types.includes('Refusal')
-                      ? prev.types.filter(t => t !== 'Refusal')
+                      ? prev.types.filter((type) => type !== 'Refusal')
                       : ['Refusal'],
                   }))
                 }
                 isFilterable
-                tooltip="Incidents where entry was refused."
-                index={4}
+                tooltip="Incidents where entry was denied."
+                trendData={metricTrends.refusals.series}
+                change={metricTrends.refusals.changeLabel}
+                changeType={metricTrends.refusals.changeType}
+                className="xl:col-span-2"
+                index={5}
                 forceLight
               />
               <StatCard
                 title="Total"
                 value={incidentStats.total}
-                icon={<ExclamationTriangleIcon className="h-4 w-4 text-gray-400" />}
+                icon={<ExclamationTriangleIcon className="h-4 w-4 text-slate-500" />}
                 isSelected={
                   safeFilters.types.length + safeFilters.statuses.length + safeFilters.priorities.length === 0
                 }
                 onClick={resetToTotal}
                 isFilterable
-                tooltip="All incidents (excluding Attendance and Sit Reps)."
-                index={5}
+                tooltip="All incidents, including non-critical categories."
+                trendData={metricTrends.total.series}
+                change={metricTrends.total.changeLabel}
+                changeType={metricTrends.total.changeType}
+                size="compact"
+                className="xl:col-span-2"
+                index={6}
                 forceLight
               />
               <StatCard
                 title="Closed"
                 value={incidentStats.closed}
-                icon={<CheckCircleIcon className="h-4 w-4 text-green-400" />}
+                icon={<CheckCircleIcon className="h-4 w-4 text-emerald-500" />}
                 isSelected={safeFilters.statuses.includes('closed')}
                 onClick={() =>
-                  setFilters(prev => ({
+                  setFilters((prev) => ({
                     ...prev,
                     statuses: prev.statuses.includes('closed')
-                      ? prev.statuses.filter(s => s !== 'closed')
+                      ? prev.statuses.filter((status) => status !== 'closed')
                       : ['closed'],
                     types: [],
                     priorities: [],
@@ -1419,23 +1528,14 @@ export default function Dashboard() {
                 }
                 isFilterable
                 color="green"
-                tooltip="Incidents that have been closed (is_closed = true)."
-                index={6}
-                forceLight
-              />
-              <StatCard
-                title="Other"
-                value={incidentStats.other}
-                icon={<QuestionMarkCircleIcon className="h-4 w-4 text-gray-400" />}
-                isSelected={
-                  safeFilters.types.length > 0 &&
-                  !['Refusal', 'Ejection', 'Medical'].some(t => safeFilters.types.includes(t))
-                }
-                onClick={() => setFilters(prev => ({ ...prev, types: [] }))}
-                isFilterable
-                tooltip="All other incident types."
+                tooltip="Resolved incidents. Moved lower in hierarchy by design."
+                trendData={metricTrends.closed.series}
+                change={metricTrends.closed.changeLabel}
+                changeType={metricTrends.closed.changeType}
+                size="compact"
+                muted
+                className="xl:col-span-2"
                 index={7}
-                isLast={true}
                 forceLight
               />
             </>
@@ -1445,15 +1545,25 @@ export default function Dashboard() {
 
       {currentEvent && (
         <div className="hidden md:block" data-tour="analytics">
-          <AnalyticsKPICards eventId={currentEvent.id} className="mt-1.5 mb-1" />
+          <AnalyticsKPICards eventId={currentEvent.id} className="mt-1 mb-0.5" hideActiveNow />
         </div>
       )}
 
       {/* Support Tools - same card as Operational Metrics, no second accent */}
-      <div className="hidden md:block mt-6 pt-4 border-t border-slate-200/80 dark:border-slate-600/50">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300 mb-4">
-          Support Tools
-        </h3>
+      <div className="hidden md:block mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-600/50">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-300">
+              Support Tools
+            </h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Decision support cards tuned for this event type.
+            </p>
+          </div>
+          <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-600/60 dark:bg-slate-800/40 dark:text-slate-300">
+            {eventType ? `${eventType.charAt(0).toUpperCase()}${eventType.slice(1)} mode` : 'Default mode'}
+          </span>
+        </div>
       </div>
 
       <div className="hidden md:block">
@@ -1863,12 +1973,12 @@ export default function Dashboard() {
       {/* Incident Table and Staff Deployment */}
       <main 
         id="main-content" 
-        className="mt-7 lg:mt-9 mb-6"
+        className="relative mt-7 mb-6 rounded-[var(--radius-section)] bg-white dark:bg-[#13213f] lg:mt-9"
         role="main"
         aria-label="Incident logs"
         tabIndex={-1}
       >
-        <div className="overflow-hidden rounded-3xl border border-slate-200/95 bg-gradient-to-br from-white via-slate-50/90 to-blue-50/60 p-4 shadow-[0_24px_50px_-36px_rgba(15,23,42,0.4)] ring-1 ring-white/95 dark:border-incommand-border/70 dark:bg-gradient-to-br dark:from-incommand-surface dark:via-incommand-surface-muted/90 dark:to-incommand-quaternary-dark dark:ring-white/5 sm:p-5">
+        <div className="relative z-10 overflow-hidden rounded-[inherit] bg-white p-4 dark:bg-[#13213f] sm:p-5">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-slate-200/80 pb-4 dark:border-incommand-border/60">
             <div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Live Incident Log</h3>
@@ -1895,12 +2005,14 @@ export default function Dashboard() {
         {/* Staff Deployment Overview hidden intentionally */}
       </main>
 
-        <IncidentCreationModal
-          isOpen={isIncidentModalOpen}
-          onClose={() => setIsIncidentModalOpen(false)}
-          onIncidentCreated={handleIncidentCreated}
-          initialIncidentType={initialIncidentType}
-        />
+        {isIncidentModalOpen && (
+          <IncidentCreationModal
+            isOpen={isIncidentModalOpen}
+            onClose={() => setIsIncidentModalOpen(false)}
+            onIncidentCreated={handleIncidentCreated}
+            initialIncidentType={initialIncidentType}
+          />
+        )}
 
         {/* Venue Occupancy Modal */}
         <AttendanceModal isOpen={isOccupancyModalOpen} onClose={() => setIsOccupancyModalOpen(false)} currentEventId={currentEventId} />
@@ -1912,7 +2024,7 @@ export default function Dashboard() {
         <LogReviewReminder />
 
         {/* Mobile FAB - New Incident (only show if there's an active event and no modals are open) */}
-        {hasCurrentEvent && !showCreateEvent && !isIncidentModalOpen && (
+        {hasCurrentEvent && !isIncidentModalOpen && (
           <div className="md:hidden fixed bottom-6 right-6 z-50" data-fab>
             <button
               onClick={() => setIsIncidentModalOpen(true)}
