@@ -121,7 +121,7 @@ const HIGH_PRIORITY_TYPES = [
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { updateCounts } = useIncidentSummary()
+  const { counts: incidentCounts, updateCounts } = useIncidentSummary()
   const { eventType, eventData, loading: eventLoading } = useEventContext()
   const userPlan = useUserPlan() || 'starter' // Default to starter if plan not loaded yet
   
